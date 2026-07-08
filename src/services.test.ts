@@ -1,0 +1,81 @@
+import { describe, expect, it, vi } from 'vitest'
+import type { AncherClient } from './api/client'
+import { createImagePromptRepository, createWebSessionRepository } from './services'
+
+function makeRepository() {
+  const get = vi.fn()
+  const post = vi.fn()
+  const put = vi.fn()
+  const del = vi.fn()
+  const client = {
+    api: { get, post, put, delete: del },
+  } as unknown as AncherClient
+
+  return { WebSession: createWebSessionRepository(client), get, post, put, del }
+}
+
+describe('WebSessionRepository', () => {
+  it('reads the current cookie session', async () => {
+    const { WebSession, get } = makeRepository()
+    const session = { id: 'session-1' }
+    get.mockResolvedValueOnce(session)
+
+    await expect(WebSession.current()).resolves.toBe(session)
+    expect(get).toHaveBeenCalledWith('/api/v1/web-session')
+  })
+
+  it('logs in with credentials (headers sent empty)', async () => {
+    const { WebSession, post } = makeRepository()
+    post.mockResolvedValueOnce(undefined)
+
+    await WebSession.login({ email: 'a@b.c', password: 'pw' })
+
+    expect(post).toHaveBeenCalledWith('/api/v1/web-session', {
+      header: {},
+      body: { email: 'a@b.c', password: 'pw' },
+    })
+  })
+
+  it('logs in with an OAuth ID token', async () => {
+    const { WebSession, post } = makeRepository()
+    post.mockResolvedValueOnce(undefined)
+
+    await WebSession.loginWithProvider('google', { id_token: 'token' })
+
+    expect(post).toHaveBeenCalledWith('/api/v1/web-session/{provider}', {
+      path: { provider: 'google' },
+      header: {},
+      body: { id_token: 'token' },
+    })
+  })
+
+  it('refreshes and logs out', async () => {
+    const { WebSession, put, del } = makeRepository()
+    put.mockResolvedValueOnce(undefined)
+    del.mockResolvedValueOnce(undefined)
+
+    await WebSession.refresh()
+    await WebSession.logout()
+
+    expect(put).toHaveBeenCalledWith('/api/v1/web-session', { header: {} })
+    expect(del).toHaveBeenCalledWith('/api/v1/web-session')
+  })
+})
+
+describe('ImagePromptRepository', () => {
+  it("uploads under the endpoint's `image` multipart field", async () => {
+    const upload = vi.fn().mockResolvedValueOnce({ prompt: 'a cat' })
+    const client = { upload } as unknown as AncherClient
+    const ImagePrompt = createImagePromptRepository(client)
+    const image = new Blob(['png'])
+    const signal = new AbortController().signal
+
+    const result = await ImagePrompt.generate(image, { signal })
+
+    expect(upload).toHaveBeenCalledWith('/api/v1/image-prompts/', image, {
+      signal,
+      fieldName: 'image',
+    })
+    expect(result).toEqual({ prompt: 'a cat' })
+  })
+})

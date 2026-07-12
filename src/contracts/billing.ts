@@ -278,6 +278,21 @@ export interface CheckoutSessionResponse {
   session_token: string | null
 }
 
+/** `POST /me/billing/plan` request. */
+export interface PlanChangeRequest {
+  plan_slug: string
+  provider: BillingProvider
+}
+
+/** `POST /me/billing/plan` response. */
+export interface PlanChangeResponse {
+  /** Hosted-checkout URL to redirect to (only when kind='checkout'). */
+  hosted_url: string | null
+  kind: PlanChangeKind
+  /** Provider-side checkout session id (kind='checkout'). */
+  session_token: string | null
+}
+
 /** `GET /me/billing/checkout-session/{session_id}` — post-checkout verification. */
 export interface CheckoutSessionStatusResponse {
   /** True once a one-time purchase's credits are in the balance; always false for subscriptions. */

@@ -434,6 +434,14 @@ export type Artifact = {
    */
   files: Record<string, File>;
   /**
+   * MIME type of the active content file
+   */
+  mimetype: (string | null);
+  /**
+   * Size in bytes of the active content file
+   */
+  size: (number | null);
+  /**
    * Primary (content) file ID
    */
   content_file_id: string;
@@ -571,7 +579,6 @@ export type BeginConnectResponse = {
    */
   authorize_url: string;
 }
-export type Body_authorize_post_api_v1_oauth2_authorize_post = { email: string, password: string, response_type: string, client_id: string, redirect_uri: string, code_challenge: string, code_challenge_method?: string | undefined, scope?: string | undefined, state?: string | undefined }
 export type Body_confirm_verification_api_v1_users_verification_put = {
   /**
    * User's email
@@ -1332,7 +1339,8 @@ export type ExactCriteria_Literal__queued____processing____ready____error___ = P
 export type Criteria_Article_ = Partial<{ and: (Array<Criteria_Article_> | null), or: (Array<Criteria_Article_> | null), not: (Criteria_Article_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), status: (ExactCriteria_Literal__queued____processing____ready____error___ | null), error_message: (TextCriteria_str_ | null), title: (TextCriteria_str_ | null), description: (TextCriteria_str_ | null), author: (TextCriteria_str_ | null), published_date: (NumericCriteria_datetime_ | null), site_name: (TextCriteria_str_ | null), language: (TextCriteria_str_ | null), url: (TextCriteria_str_ | null), source: (TextCriteria_str_ | null), origin_files_hash: (TextCriteria_str_ | null), origin_files_hash_md5: (TextCriteria_str_ | null) }>
 export type NumericCriteria_bool_ = Partial<{ eq: (boolean | null), is_null: (boolean | null), ne: (boolean | null), in: (Array<boolean> | null), not_in: (Array<boolean> | null), lt: (boolean | null), le: (boolean | null), gt: (boolean | null), ge: (boolean | null) }>
 export type ExactCriteria_Literal__like____dislike____neutral___ = Partial<{ eq: (("like" | "dislike" | "neutral") | null), is_null: (boolean | null), ne: (("like" | "dislike" | "neutral") | null), in: (Array<("like" | "dislike" | "neutral")> | null), not_in: (Array<("like" | "dislike" | "neutral")> | null) }>
-export type Criteria_Artifact_ = Partial<{ and: (Array<Criteria_Artifact_> | null), or: (Array<Criteria_Artifact_> | null), not: (Criteria_Artifact_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), name: (TextCriteria_str_ | null), description: (TextCriteria_str_ | null), is_public: (NumericCriteria_bool_ | null), slug: (TextCriteria_str_ | null), reaction: (ExactCriteria_Literal__like____dislike____neutral___ | null) }>
+export type NumericCriteria_int_ = Partial<{ eq: (number | null), is_null: (boolean | null), ne: (number | null), in: (Array<number> | null), not_in: (Array<number> | null), lt: (number | null), le: (number | null), gt: (number | null), ge: (number | null) }>
+export type Criteria_Artifact_ = Partial<{ and: (Array<Criteria_Artifact_> | null), or: (Array<Criteria_Artifact_> | null), not: (Criteria_Artifact_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), name: (TextCriteria_str_ | null), description: (TextCriteria_str_ | null), is_public: (NumericCriteria_bool_ | null), slug: (TextCriteria_str_ | null), reaction: (ExactCriteria_Literal__like____dislike____neutral___ | null), mimetype: (TextCriteria_str_ | null), size: (NumericCriteria_int_ | null) }>
 export type NumericCriteria_float_ = Partial<{ eq: (number | null), is_null: (boolean | null), ne: (number | null), in: (Array<number> | null), not_in: (Array<number> | null), lt: (number | null), le: (number | null), gt: (number | null), ge: (number | null) }>
 export type ExactCriteria_Literal__pending____accepted____dismissed___ = Partial<{ eq: (("pending" | "accepted" | "dismissed") | null), is_null: (boolean | null), ne: (("pending" | "accepted" | "dismissed") | null), in: (Array<("pending" | "accepted" | "dismissed")> | null), not_in: (Array<("pending" | "accepted" | "dismissed")> | null) }>
 export type Criteria_CollectionSuggestion_ = Partial<{ and: (Array<Criteria_CollectionSuggestion_> | null), or: (Array<Criteria_CollectionSuggestion_> | null), not: (Criteria_CollectionSuggestion_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), note_id: (NumericCriteria_UUID_ | null), collection_id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), confidence: (NumericCriteria_float_ | null), reason: (TextCriteria_str_ | null), status: (ExactCriteria_Literal__pending____accepted____dismissed___ | null) }>
@@ -1341,9 +1349,8 @@ export type ExactCriteria_Literal__active____archived___ = Partial<{ eq: (("acti
 export type Criteria_Collection_ = Partial<{ and: (Array<Criteria_Collection_> | null), or: (Array<Criteria_Collection_> | null), not: (Criteria_Collection_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), name: (TextCriteria_str_ | null), description: (TextCriteria_str_ | null), color: (ExactCriteria_Literal__neutral____slate____gray____zinc____stone____red____orange____amber____yellow____lime____green____emerald____teal____cyan____sky____blue____indigo____violet____purple____fuchsia____pink____rose___ | null), user_id: (NumericCriteria_UUID_ | null), status: (ExactCriteria_Literal__active____archived___ | null) }>
 export type Criteria_Conversation_ = Partial<{ and: (Array<Criteria_Conversation_> | null), or: (Array<Criteria_Conversation_> | null), not: (Criteria_Conversation_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), name: (TextCriteria_str_ | null), pinned: (NumericCriteria_bool_ | null) }>
 export type Criteria_FileReference_ = Partial<{ and: (Array<Criteria_FileReference_> | null), or: (Array<Criteria_FileReference_> | null), not: (Criteria_FileReference_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), file_id: (NumericCriteria_UUID_ | null), owner_id: (NumericCriteria_UUID_ | null), mutable: (NumericCriteria_bool_ | null), label: (TextCriteria_str_ | null), category: (TextCriteria_str_ | null) }>
-export type NumericCriteria_int_ = Partial<{ eq: (number | null), is_null: (boolean | null), ne: (number | null), in: (Array<number> | null), not_in: (Array<number> | null), lt: (number | null), le: (number | null), gt: (number | null), ge: (number | null) }>
 export type Criteria_FileRevision_ = Partial<{ and: (Array<Criteria_FileRevision_> | null), or: (Array<Criteria_FileRevision_> | null), not: (Criteria_FileRevision_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), file_id: (NumericCriteria_UUID_ | null), s3_object_id: (NumericCriteria_UUID_ | null), revision_number: (NumericCriteria_int_ | null) }>
-export type Criteria_File_ = Partial<{ and: (Array<Criteria_File_> | null), or: (Array<Criteria_File_> | null), not: (Criteria_File_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), parent_file_id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), filename: (TextCriteria_str_ | null), current_revision_id: (NumericCriteria_UUID_ | null), is_public: (NumericCriteria_bool_ | null), expires_at: (NumericCriteria_datetime_ | null) }>
+export type Criteria_File_ = Partial<{ and: (Array<Criteria_File_> | null), or: (Array<Criteria_File_> | null), not: (Criteria_File_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), parent_file_id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), filename: (TextCriteria_str_ | null), current_revision_id: (NumericCriteria_UUID_ | null), is_public: (NumericCriteria_bool_ | null), expires_at: (NumericCriteria_datetime_ | null), size: (NumericCriteria_int_ | null), mimetype: (TextCriteria_str_ | null) }>
 export type Criteria_KeyFrame_ = Partial<{ and: (Array<Criteria_KeyFrame_> | null), or: (Array<Criteria_KeyFrame_> | null), not: (Criteria_KeyFrame_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), milliseconds: (NumericCriteria_int_ | null), description: (TextCriteria_str_ | null), video_id: (NumericCriteria_UUID_ | null) }>
 export type ExactCriteria_Literal__user____assistant___ = Partial<{ eq: (("user" | "assistant") | null), is_null: (boolean | null), ne: (("user" | "assistant") | null), in: (Array<("user" | "assistant")> | null), not_in: (Array<("user" | "assistant")> | null) }>
 export type Criteria_Message_ = Partial<{ and: (Array<Criteria_Message_> | null), or: (Array<Criteria_Message_> | null), not: (Criteria_Message_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), conversation_id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), role: (ExactCriteria_Literal__user____assistant___ | null), content: (TextCriteria_str_ | null), enable_kb_search: (NumericCriteria_bool_ | null), enable_web_search: (NumericCriteria_bool_ | null), reaction: (ExactCriteria_Literal__like____dislike____neutral___ | null), agent_run_id: (NumericCriteria_UUID_ | null), clarification_request_id: (NumericCriteria_UUID_ | null) }>
@@ -2343,6 +2350,51 @@ export type NotificationTokenUpdate = {
   notification_token: string;
 }
 /**
+ * JSON body posted by the web-app consent page on Approve.
+ * 
+ * Carries the OAuth2 parameters the consent page received from
+ * ``GET /oauth2/authorize``; everything is re-validated here before a code
+ * is issued, so the page itself never needs to be trusted.
+ */
+export type OAuth2AuthorizationGrantRequest = {
+  /**
+   * Our OAuth2 client_id
+   */
+  client_id: string;
+  /**
+   * Original redirect_uri from authorize
+   */
+  redirect_uri: string;
+  /**
+   * Original PKCE code_challenge
+   */
+  code_challenge: string;
+  /**
+   * JSON body posted by the web-app consent page on Approve.
+   * 
+   * Carries the OAuth2 parameters the consent page received from
+   * ``GET /oauth2/authorize``; everything is re-validated here before a code
+   * is issued, so the page itself never needs to be trusted.
+   */
+  code_challenge_method?: string | undefined;
+  /**
+   * JSON body posted by the web-app consent page on Approve.
+   * 
+   * Carries the OAuth2 parameters the consent page received from
+   * ``GET /oauth2/authorize``; everything is re-validated here before a code
+   * is issued, so the page itself never needs to be trusted.
+   */
+  scope?: string | undefined;
+  /**
+   * JSON body posted by the web-app consent page on Approve.
+   * 
+   * Carries the OAuth2 parameters the consent page received from
+   * ``GET /oauth2/authorize``; everything is re-validated here before a code
+   * is issued, so the page itself never needs to be trusted.
+   */
+  state?: string | undefined;
+}
+/**
  * RFC 7591 client registration request (subset we support).
  */
 export type OAuth2ClientRegistrationRequest = {
@@ -2370,59 +2422,6 @@ export type OAuth2ClientRegistrationRequest = {
    * RFC 7591 client registration request (subset we support).
    */
   scope?: string | undefined;
-}
-/**
- * JSON body for the browser-side social-login flow.
- * 
- * The browser obtains an ID token via Google Identity Services / Apple
- * Sign-In JS SDK, then POSTs it here along with the original OAuth2
- * parameters from the authorize form.
- */
-export type OAuth2SocialLoginRequest = {
-  /**
-   * OAuth provider that issued the id_token
-   */
-  provider: ("google" | "apple");
-  /**
-   * ID token from the OAuth provider
-   */
-  id_token: string;
-  /**
-   * Our OAuth2 client_id
-   */
-  client_id: string;
-  /**
-   * Original redirect_uri from authorize
-   */
-  redirect_uri: string;
-  /**
-   * Original PKCE code_challenge
-   */
-  code_challenge: string;
-  /**
-   * JSON body for the browser-side social-login flow.
-   * 
-   * The browser obtains an ID token via Google Identity Services / Apple
-   * Sign-In JS SDK, then POSTs it here along with the original OAuth2
-   * parameters from the authorize form.
-   */
-  code_challenge_method?: string | undefined;
-  /**
-   * JSON body for the browser-side social-login flow.
-   * 
-   * The browser obtains an ID token via Google Identity Services / Apple
-   * Sign-In JS SDK, then POSTs it here along with the original OAuth2
-   * parameters from the authorize form.
-   */
-  scope?: string | undefined;
-  /**
-   * JSON body for the browser-side social-login flow.
-   * 
-   * The browser obtains an ID token via Google Identity Services / Apple
-   * Sign-In JS SDK, then POSTs it here along with the original OAuth2
-   * parameters from the authorize form.
-   */
-  state?: string | undefined;
 }
 /**
  * Schema for OAuth login request.
@@ -3075,6 +3074,16 @@ export type TagCreate = {
  * Request schema for updating a tag.
  */
 export type TagUpdate = Partial<{ name: (string | null), color: (("neutral" | "slate" | "gray" | "zinc" | "stone" | "red" | "orange" | "amber" | "yellow" | "lime" | "green" | "emerald" | "teal" | "cyan" | "sky" | "blue" | "indigo" | "violet" | "purple" | "fuchsia" | "pink" | "rose") | null) }>
+export type TwitterArticle = Partial<({ title: (string | null), plain_text: (string | null), preview_text: (string | null), cover_media: (string | null), media_entities: (Array<string> | null) } & Record<string, any>)>
+export type TwitterTweetAttachments = Partial<({ media_keys: (Array<string> | null), poll_ids: (Array<string> | null) } & Record<string, any>)>
+export type TwitterNoteTweet = Partial<({ text: (string | null) } & Record<string, any>)>
+export type TwitterTweetPublicMetrics = Partial<({ retweet_count: (number | null), reply_count: (number | null), like_count: (number | null), quote_count: (number | null), bookmark_count: (number | null), impression_count: (number | null) } & Record<string, any>)>
+export type TwitterUserPublicMetrics = Partial<({ followers_count: (number | null), following_count: (number | null), listed_count: (number | null), tweet_count: (number | null), like_count: (number | null) } & Record<string, any>)>
+export type TwitterUser = ({ id: string, name: string, username: string, affiliation?: (Record<string, unknown> | null) | undefined, connection_status?: (Array<string> | null) | undefined, created_at?: (string | null) | undefined, description?: (string | null) | undefined, entities?: (Record<string, unknown> | null) | undefined, location?: (string | null) | undefined, most_recent_tweet_id?: (string | null) | undefined, pinned_tweet_id?: (string | null) | undefined, profile_banner_url?: (string | null) | undefined, profile_image_url?: (string | null) | undefined, protected?: (boolean | null) | undefined, public_metrics?: (TwitterUserPublicMetrics | null) | undefined, receives_your_dm?: (boolean | null) | undefined, subscription_type?: (string | null) | undefined, url?: (string | null) | undefined, verified?: (boolean | null) | undefined, verified_type?: (string | null) | undefined, withheld?: (Record<string, unknown> | null) | undefined } & Record<string, any>)
+export type TwitterMediaVariant = Partial<({ content_type: (string | null), url: (string | null), bit_rate: (number | null) } & Record<string, any>)>
+export type TwitterMedia = ({ media_key: string, type: string, url?: (string | null) | undefined, preview_image_url?: (string | null) | undefined, variants?: (Array<TwitterMediaVariant> | null) | undefined, width?: (number | null) | undefined, height?: (number | null) | undefined, duration_ms?: (number | null) | undefined, alt_text?: (string | null) | undefined } & Record<string, any>)
+export type TwitterTweet = ({ id: string, text: string, edit_history_tweet_ids?: (Array<string> | null) | undefined, article?: (TwitterArticle | null) | undefined, attachments?: (TwitterTweetAttachments | null) | undefined, author_id?: (string | null) | undefined, created_at?: (string | null) | undefined, lang?: (string | null) | undefined, note_tweet?: (TwitterNoteTweet | null) | undefined, possibly_sensitive?: (boolean | null) | undefined, public_metrics?: (TwitterTweetPublicMetrics | null) | undefined, author?: (TwitterUser | null) | undefined, media?: Array<TwitterMedia> | undefined, url: string } & Record<string, any>)
+export type TwitterBookmarkPage = Partial<({ tweets: Array<TwitterTweet>, next_cursor: (string | null), result_count: number } & Record<string, any>)>
 /**
  * Transmuter for UserDemographic model.
  */
@@ -3569,7 +3578,7 @@ export type get_List_artifacts_api_v1_artifacts__get = {
       path: "/api/v1/artifacts/",
       requestFormat: "json",
       parameters: {
-            query:  Partial<{ and: (Array<Schemas.Criteria_Artifact_> | null), or: (Array<Schemas.Criteria_Artifact_> | null), not: (Schemas.Criteria_Artifact_ | null), cursor: (Schemas.Cursor_Artifact_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+user_id" | "-user_id" | "+name" | "-name" | "+description" | "-description" | "+is_public" | "-is_public" | "+slug" | "-slug" | "+reaction" | "-reaction")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), name: (Schemas.TextCriteria_str_ | null), description: (Schemas.TextCriteria_str_ | null), is_public: (Schemas.NumericCriteria_bool_ | null), slug: (Schemas.TextCriteria_str_ | null), reaction: (Schemas.ExactCriteria_Literal__like____dislike____neutral___ | null) }>,
+            query:  Partial<{ and: (Array<Schemas.Criteria_Artifact_> | null), or: (Array<Schemas.Criteria_Artifact_> | null), not: (Schemas.Criteria_Artifact_ | null), cursor: (Schemas.Cursor_Artifact_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+user_id" | "-user_id" | "+name" | "-name" | "+description" | "-description" | "+is_public" | "-is_public" | "+slug" | "-slug" | "+reaction" | "-reaction" | "+mimetype" | "-mimetype" | "+size" | "-size")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), name: (Schemas.TextCriteria_str_ | null), description: (Schemas.TextCriteria_str_ | null), is_public: (Schemas.NumericCriteria_bool_ | null), slug: (Schemas.TextCriteria_str_ | null), reaction: (Schemas.ExactCriteria_Literal__like____dislike____neutral___ | null), mimetype: (Schemas.TextCriteria_str_ | null), size: (Schemas.NumericCriteria_int_ | null) }>,
         
         
         
@@ -3685,8 +3694,15 @@ export type put_Update_artifact_content_api_v1_artifacts__artifact_id__content_p
  * rewritten to presigned URLs so embedded images/media render inline —
  * mirroring the note content endpoint. Only files linked to this artifact
  * are resolved; unauthorized references keep the raw marker. Other MIME
- * types are served verbatim. Accessible to the owner or, when the artifact
- * is public, any authenticated caller.
+ * types are served verbatim.
+ * 
+ * Auth is lenient so the public share viewer (``/s/a/{slug}``) can fetch a
+ * public markdown/HTML artifact's resolved body without a session — the
+ * ``files.content.presigned_url`` is deliberately null for resolvable text, so
+ * this endpoint is the only way an anonymous viewer reads it. A valid token
+ * still lets owners read their own private artifacts; a missing or invalid
+ * token degrades to anonymous (public-only), and a private artifact then
+ * returns 404 rather than 401.
  */
 export type get_Get_artifact_content_api_v1_artifacts__artifact_id__content_get = {
       method: "GET",
@@ -5503,6 +5519,47 @@ export type get_Stream_conversation_run_api_v1_conversations__conversation_id__s
 },
     }
 /**
+ * Text-only projection of the `/stream` replay: the root agent's assistant text
+ * is emitted as plain `content` deltas, while tool-call, sub-agent, thinking, and
+ * every other trace event are dropped, so consumers (MCP servers, other AI agents)
+ * can render the reply without decoding pydantic-ai trace payloads.
+ * 
+ * ## Event Types
+ * - **content**: Assistant response text. `delta` is a text chunk.
+ * - **review_rejected**: Pro-mode reviewer rejected the draft; a fresh draft
+ *   streams next. Consumers should discard text accumulated so far.
+ * - **clarification_requested / clarification_resolved**: The run paused for /
+ *   resumed after human input; see `clarification`.
+ * - **resource_updated / citations / done / error**: Same as `/stream`.
+ * 
+ * Frames are `event: <type>\ndata: <ConversationStreamResponse JSON>\n\n`
+ * with a final `data: [DONE]\n\n`. Ping frames use `event: ping` and
+ * `data: {}`. The stream is live-tail only: when no run is active it ends
+ * immediately; the completed reply is available as the assistant message's
+ * `content`.
+ */
+export type get_Stream_conversation_run_text_api_v1_conversations__conversation_id__stream_text_get = {
+      method: "GET",
+      path: "/api/v1/conversations/{conversation_id}/stream-text",
+      requestFormat: "json",
+      parameters: {
+            query:  Partial<{
+  /**
+   * Redis Stream event ID to resume after
+   */
+  after: (string | null);
+}>,
+        path:  {conversation_id: string,
+},
+        
+        
+          }
+      responses: {200: unknown,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
+/**
  * Request interruption of the in-flight AI run for a conversation. The run is stopped asynchronously — the server aborts the LLM connection — and the interruption surfaces on the SSE stream as a `done` event with `finish_reason=cancelled`. Returns 409 when no run is active for the conversation.
  */
 export type post_Interrupt_conversation_run_api_v1_conversations__conversation_id__interruption_post = {
@@ -5923,7 +5980,7 @@ export type get_List_collection_artifacts_api_v1_collections__collection_id__art
       path: "/api/v1/collections/{collection_id}/artifacts",
       requestFormat: "json",
       parameters: {
-            query:  Partial<{ and: (Array<Schemas.Criteria_Artifact_> | null), or: (Array<Schemas.Criteria_Artifact_> | null), not: (Schemas.Criteria_Artifact_ | null), cursor: (Schemas.Cursor_Artifact_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+user_id" | "-user_id" | "+name" | "-name" | "+description" | "-description" | "+is_public" | "-is_public" | "+slug" | "-slug" | "+reaction" | "-reaction")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), name: (Schemas.TextCriteria_str_ | null), description: (Schemas.TextCriteria_str_ | null), is_public: (Schemas.NumericCriteria_bool_ | null), slug: (Schemas.TextCriteria_str_ | null), reaction: (Schemas.ExactCriteria_Literal__like____dislike____neutral___ | null) }>,
+            query:  Partial<{ and: (Array<Schemas.Criteria_Artifact_> | null), or: (Array<Schemas.Criteria_Artifact_> | null), not: (Schemas.Criteria_Artifact_ | null), cursor: (Schemas.Cursor_Artifact_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+user_id" | "-user_id" | "+name" | "-name" | "+description" | "-description" | "+is_public" | "-is_public" | "+slug" | "-slug" | "+reaction" | "-reaction" | "+mimetype" | "-mimetype" | "+size" | "-size")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), name: (Schemas.TextCriteria_str_ | null), description: (Schemas.TextCriteria_str_ | null), is_public: (Schemas.NumericCriteria_bool_ | null), slug: (Schemas.TextCriteria_str_ | null), reaction: (Schemas.ExactCriteria_Literal__like____dislike____neutral___ | null), mimetype: (Schemas.TextCriteria_str_ | null), size: (Schemas.NumericCriteria_int_ | null) }>,
         path:  {collection_id: string,
 },
         
@@ -6206,33 +6263,6 @@ export type post_Begin_authorization_api_v1_external_connections__provider__auth
 },
       
     }
-/**
- * Provider redirect target. Exchanges the code, persists the connection.
- * 
- * The path ``{provider}`` is passed to the service as ``expected_provider``
- * and cross-checked against the provider bound to the state row *before* the
- * state is consumed or the code exchanged — defence-in-depth against a client
- * invoking ``/external-connections/foo/callback?state=<bar-state>``, without
- * burning the legitimate state on a mismatched path.
- */
-export type get_Oauth_callback_api_v1_external_connections__provider__callback_get = {
-      method: "GET",
-      path: "/api/v1/external-connections/{provider}/callback",
-      requestFormat: "json",
-      parameters: {
-            query:  {state: string,
-code: string,
-},
-        path:  {provider: string,
-},
-        
-        
-          }
-      responses: {200: unknown,
-422: Schemas.HTTPValidationError,
-},
-      
-    }
 export type get_List_connections_api_v1_external_connections_get = {
       method: "GET",
       path: "/api/v1/external-connections",
@@ -6260,6 +6290,50 @@ export type delete_Disconnect_api_v1_external_connections__connection_id__delete
         
           }
       responses: {204: unknown,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
+/**
+ * Provider redirect target. Exchanges the code, persists the connection.
+ * 
+ * Re-binds the ``state`` to the calling user: the state row's ``user_id`` must
+ * match the session, so an attacker who tricks a victim into authorizing with
+ * the attacker's ``state`` cannot link the victim's provider account onto the
+ * attacker's account (OAuth account-linking CSRF). The path ``{provider}`` is
+ * also cross-checked against the provider bound to the state row *before* the
+ * state is consumed or the code exchanged — defence-in-depth against a client
+ * invoking ``/callbacks/foo?state=<bar-state>`` without burning the state.
+ */
+export type get_Oauth_callback_api_v1_callbacks__provider__get = {
+      method: "GET",
+      path: "/api/v1/callbacks/{provider}",
+      requestFormat: "json",
+      parameters: {
+            query:  {state: string,
+code: string,
+},
+        path:  {provider: string,
+},
+        
+        
+          }
+      responses: {200: unknown,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
+export type get_List_twitter_bookmarks_api_v1_twitter_bookmarks_get = {
+      method: "GET",
+      path: "/api/v1/twitter/bookmarks",
+      requestFormat: "json",
+      parameters: {
+            query:  Partial<{ limit: number, cursor: (string | null), connection_id: (string | null) }>,
+        
+        
+        
+          }
+      responses: {200: Schemas.TwitterBookmarkPage,
 422: Schemas.HTTPValidationError,
 },
       
@@ -6310,6 +6384,7 @@ export type get_Health_health_get = {
 "/api/v1/users/me/preferences": Endpoints.get_Get_preferences_api_v1_users_me_preferences_get,
 "/api/v1/conversations": Endpoints.get_List_conversations_api_v1_conversations_get,
 "/api/v1/conversations/{conversation_id}/stream": Endpoints.get_Stream_conversation_run_api_v1_conversations__conversation_id__stream_get,
+"/api/v1/conversations/{conversation_id}/stream-text": Endpoints.get_Stream_conversation_run_text_api_v1_conversations__conversation_id__stream_text_get,
 "/api/v1/conversations/{conversation_id}": Endpoints.get_Get_conversation_api_v1_conversations__conversation_id__get,
 "/api/v1/conversations/{conversation_id}/messages": Endpoints.get_List_messages_api_v1_conversations__conversation_id__messages_get,
 "/api/v1/conversations/{conversation_id}/messages/{message_id}": Endpoints.get_Get_message_api_v1_conversations__conversation_id__messages__message_id__get,
@@ -6322,8 +6397,9 @@ export type get_Health_health_get = {
 "/api/v1/pinned/": Endpoints.get_List_pinned_items_api_v1_pinned__get,
 "/api/v1/suggestions/": Endpoints.get_List_suggestions_api_v1_suggestions__get,
 "/api/v1/recommendations/": Endpoints.get_List_recommendations_api_v1_recommendations__get,
-"/api/v1/external-connections/{provider}/callback": Endpoints.get_Oauth_callback_api_v1_external_connections__provider__callback_get,
 "/api/v1/external-connections": Endpoints.get_List_connections_api_v1_external_connections_get,
+"/api/v1/callbacks/{provider}": Endpoints.get_Oauth_callback_api_v1_callbacks__provider__get,
+"/api/v1/twitter/bookmarks": Endpoints.get_List_twitter_bookmarks_api_v1_twitter_bookmarks_get,
 "/health": Endpoints.get_Health_health_get
          },
 post: {

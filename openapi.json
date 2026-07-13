@@ -359,7 +359,11 @@
                       "+slug",
                       "-slug",
                       "+reaction",
-                      "-reaction"
+                      "-reaction",
+                      "+mimetype",
+                      "-mimetype",
+                      "+size",
+                      "-size"
                     ],
                     "type": "string"
                   }
@@ -545,6 +549,38 @@
                 }
               ],
               "title": "Reaction"
+            }
+          },
+          {
+            "name": "mimetype",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TextCriteria_str_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Mimetype"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/NumericCriteria_int_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Size"
             }
           },
           {
@@ -1019,7 +1055,7 @@
           "Artifacts"
         ],
         "summary": "Get Artifact Content",
-        "description": "Return the artifact's content with embedded references resolved.\n\nFor markdown and HTML bodies, ``streamify-file://{UUID}`` references are\nrewritten to presigned URLs so embedded images/media render inline —\nmirroring the note content endpoint. Only files linked to this artifact\nare resolved; unauthorized references keep the raw marker. Other MIME\ntypes are served verbatim. Accessible to the owner or, when the artifact\nis public, any authenticated caller.",
+        "description": "Return the artifact's content with embedded references resolved.\n\nFor markdown and HTML bodies, ``streamify-file://{UUID}`` references are\nrewritten to presigned URLs so embedded images/media render inline —\nmirroring the note content endpoint. Only files linked to this artifact\nare resolved; unauthorized references keep the raw marker. Other MIME\ntypes are served verbatim.\n\nAuth is lenient so the public share viewer (``/s/a/{slug}``) can fetch a\npublic markdown/HTML artifact's resolved body without a session — the\n``files.content.presigned_url`` is deliberately null for resolvable text, so\nthis endpoint is the only way an anonymous viewer reads it. A valid token\nstill lets owners read their own private artifacts; a missing or invalid\ntoken degrades to anonymous (public-only), and a private artifact then\nreturns 404 rather than 401.",
         "operationId": "get_artifact_content_api_v1_artifacts__artifact_id__content_get",
         "security": [
           {
@@ -10899,6 +10935,108 @@
         }
       }
     },
+    "/api/v1/conversations/{conversation_id}/stream-text": {
+      "get": {
+        "tags": [
+          "Conversations"
+        ],
+        "summary": "Replay or tail a conversation run as a text-only stream",
+        "description": "Text-only projection of the `/stream` replay: the root agent's assistant text\nis emitted as plain `content` deltas, while tool-call, sub-agent, thinking, and\nevery other trace event are dropped, so consumers (MCP servers, other AI agents)\ncan render the reply without decoding pydantic-ai trace payloads.\n\n## Event Types\n- **content**: Assistant response text. `delta` is a text chunk.\n- **review_rejected**: Pro-mode reviewer rejected the draft; a fresh draft\n  streams next. Consumers should discard text accumulated so far.\n- **clarification_requested / clarification_resolved**: The run paused for /\n  resumed after human input; see `clarification`.\n- **resource_updated / citations / done / error**: Same as `/stream`.\n\nFrames are `event: <type>\\ndata: <ConversationStreamResponse JSON>\\n\\n`\nwith a final `data: [DONE]\\n\\n`. Ping frames use `event: ping` and\n`data: {}`. The stream is live-tail only: when no run is active it ends\nimmediately; the completed reply is available as the assistant message's\n`content`.",
+        "operationId": "stream_conversation_run_text_api_v1_conversations__conversation_id__stream_text_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Conversation ID",
+              "title": "Conversation Id"
+            },
+            "description": "Conversation ID"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Redis Stream event ID to resume after",
+              "title": "After"
+            },
+            "description": "Redis Stream event ID to resume after"
+          },
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server-Sent Events stream of text-only `ConversationStreamResponse` frames, terminated by `data: [DONE]`.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "SSE frames. Parse each `data:` payload as `ConversationStreamResponse` JSON unless the payload is `[DONE]`."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/conversations/{conversation_id}/interruption": {
       "post": {
         "tags": [
@@ -15046,7 +15184,11 @@
                       "+slug",
                       "-slug",
                       "+reaction",
-                      "-reaction"
+                      "-reaction",
+                      "+mimetype",
+                      "-mimetype",
+                      "+size",
+                      "-size"
                     ],
                     "type": "string"
                   }
@@ -15232,6 +15374,38 @@
                 }
               ],
               "title": "Reaction"
+            }
+          },
+          {
+            "name": "mimetype",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TextCriteria_str_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Mimetype"
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/NumericCriteria_int_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Size"
             }
           },
           {
@@ -18197,102 +18371,6 @@
         }
       }
     },
-    "/api/v1/external-connections/{provider}/callback": {
-      "get": {
-        "tags": [
-          "External Connections"
-        ],
-        "summary": "Oauth Callback",
-        "description": "Provider redirect target. Exchanges the code, persists the connection.\n\nThe path ``{provider}`` is passed to the service as ``expected_provider``\nand cross-checked against the provider bound to the state row *before* the\nstate is consumed or the code exchanged — defence-in-depth against a client\ninvoking ``/external-connections/foo/callback?state=<bar-state>``, without\nburning the legitimate state on a mismatched path.",
-        "operationId": "oauth_callback_api_v1_external_connections__provider__callback_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "provider",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Provider"
-            }
-          },
-          {
-            "name": "state",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "State"
-            }
-          },
-          {
-            "name": "code",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Code"
-            }
-          },
-          {
-            "name": "streamify_csrf_token",
-            "in": "cookie",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Streamify Csrf Token"
-            }
-          },
-          {
-            "name": "streamify_access_token",
-            "in": "cookie",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Streamify Access Token"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/external-connections": {
       "get": {
         "tags": [
@@ -18426,6 +18504,217 @@
         "responses": {
           "204": {
             "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/callbacks/{provider}": {
+      "get": {
+        "tags": [
+          "External Connections"
+        ],
+        "summary": "Oauth Callback",
+        "description": "Provider redirect target. Exchanges the code, persists the connection.\n\nRe-binds the ``state`` to the calling user: the state row's ``user_id`` must\nmatch the session, so an attacker who tricks a victim into authorizing with\nthe attacker's ``state`` cannot link the victim's provider account onto the\nattacker's account (OAuth account-linking CSRF). The path ``{provider}`` is\nalso cross-checked against the provider bound to the state row *before* the\nstate is consumed or the code exchanged — defence-in-depth against a client\ninvoking ``/callbacks/foo?state=<bar-state>`` without burning the state.",
+        "operationId": "oauth_callback_api_v1_callbacks__provider__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "provider",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Provider"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "State"
+            }
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Code"
+            }
+          },
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/twitter/bookmarks": {
+      "get": {
+        "tags": [
+          "Twitter"
+        ],
+        "summary": "List Twitter Bookmarks",
+        "operationId": "list_twitter_bookmarks_api_v1_twitter_bookmarks_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "connection_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Connection Id"
+            }
+          },
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TwitterBookmarkPage"
+                }
+              }
+            }
           },
           "422": {
             "description": "Validation Error",
@@ -19068,6 +19357,32 @@
             "title": "Files",
             "description": "Files attached to this artifact, keyed by category."
           },
+          "mimetype": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mimetype",
+            "description": "MIME type of the active content file",
+            "readOnly": true
+          },
+          "size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Size",
+            "description": "Size in bytes of the active content file",
+            "readOnly": true
+          },
           "content_file_id": {
             "type": "string",
             "format": "uuid",
@@ -19147,6 +19462,8 @@
           "slug",
           "reaction",
           "files",
+          "mimetype",
+          "size",
           "content_file_id",
           "display_file_id",
           "thumbnail_file_id",
@@ -19438,59 +19755,6 @@
         ],
         "title": "BeginConnectResponse",
         "description": "Response for POST /external-connections/{provider}/authorization."
-      },
-      "Body_authorize_post_api_v1_oauth2_authorize_post": {
-        "properties": {
-          "email": {
-            "type": "string",
-            "title": "Email"
-          },
-          "password": {
-            "type": "string",
-            "title": "Password"
-          },
-          "response_type": {
-            "type": "string",
-            "title": "Response Type"
-          },
-          "client_id": {
-            "type": "string",
-            "title": "Client Id"
-          },
-          "redirect_uri": {
-            "type": "string",
-            "title": "Redirect Uri"
-          },
-          "code_challenge": {
-            "type": "string",
-            "title": "Code Challenge"
-          },
-          "code_challenge_method": {
-            "type": "string",
-            "title": "Code Challenge Method",
-            "default": "S256"
-          },
-          "scope": {
-            "type": "string",
-            "title": "Scope",
-            "default": "full_access"
-          },
-          "state": {
-            "type": "string",
-            "title": "State",
-            "default": ""
-          }
-        },
-        "type": "object",
-        "required": [
-          "email",
-          "password",
-          "response_type",
-          "client_id",
-          "redirect_uri",
-          "code_challenge"
-        ],
-        "title": "Body_authorize_post_api_v1_oauth2_authorize_post"
       },
       "Body_confirm_verification_api_v1_users_verification_put": {
         "properties": {
@@ -21922,6 +22186,26 @@
                 "type": "null"
               }
             ]
+          },
+          "mimetype": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TextCriteria_str_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "size": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumericCriteria_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -23411,6 +23695,26 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/NumericCriteria_datetime_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "size": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumericCriteria_int_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mimetype": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TextCriteria_str_"
               },
               {
                 "type": "null"
@@ -30161,6 +30465,48 @@
         "type": "object",
         "title": "NumericCriteria[int]"
       },
+      "OAuth2AuthorizationGrantRequest": {
+        "properties": {
+          "client_id": {
+            "type": "string",
+            "title": "Client Id",
+            "description": "Our OAuth2 client_id"
+          },
+          "redirect_uri": {
+            "type": "string",
+            "title": "Redirect Uri",
+            "description": "Original redirect_uri from authorize"
+          },
+          "code_challenge": {
+            "type": "string",
+            "title": "Code Challenge",
+            "description": "Original PKCE code_challenge"
+          },
+          "code_challenge_method": {
+            "type": "string",
+            "title": "Code Challenge Method",
+            "default": "S256"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope",
+            "default": "full_access"
+          },
+          "state": {
+            "type": "string",
+            "title": "State",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "client_id",
+          "redirect_uri",
+          "code_challenge"
+        ],
+        "title": "OAuth2AuthorizationGrantRequest",
+        "description": "JSON body posted by the web-app consent page on Approve.\n\nCarries the OAuth2 parameters the consent page received from\n``GET /oauth2/authorize``; everything is re-validated here before a code\nis issued, so the page itself never needs to be trusted."
+      },
       "OAuth2ClientRegistrationRequest": {
         "properties": {
           "client_name": {
@@ -30214,64 +30560,6 @@
         ],
         "title": "OAuth2ClientRegistrationRequest",
         "description": "RFC 7591 client registration request (subset we support)."
-      },
-      "OAuth2SocialLoginRequest": {
-        "properties": {
-          "provider": {
-            "type": "string",
-            "enum": [
-              "google",
-              "apple"
-            ],
-            "title": "Provider",
-            "description": "OAuth provider that issued the id_token"
-          },
-          "id_token": {
-            "type": "string",
-            "title": "Id Token",
-            "description": "ID token from the OAuth provider"
-          },
-          "client_id": {
-            "type": "string",
-            "title": "Client Id",
-            "description": "Our OAuth2 client_id"
-          },
-          "redirect_uri": {
-            "type": "string",
-            "title": "Redirect Uri",
-            "description": "Original redirect_uri from authorize"
-          },
-          "code_challenge": {
-            "type": "string",
-            "title": "Code Challenge",
-            "description": "Original PKCE code_challenge"
-          },
-          "code_challenge_method": {
-            "type": "string",
-            "title": "Code Challenge Method",
-            "default": "S256"
-          },
-          "scope": {
-            "type": "string",
-            "title": "Scope",
-            "default": "full_access"
-          },
-          "state": {
-            "type": "string",
-            "title": "State",
-            "default": ""
-          }
-        },
-        "type": "object",
-        "required": [
-          "provider",
-          "id_token",
-          "client_id",
-          "redirect_uri",
-          "code_challenge"
-        ],
-        "title": "OAuth2SocialLoginRequest",
-        "description": "JSON body for the browser-side social-login flow.\n\nThe browser obtains an ID token via Google Identity Services / Apple\nSign-In JS SDK, then POSTs it here along with the original OAuth2\nparameters from the authorize form."
       },
       "OAuthLoginRequest": {
         "properties": {
@@ -32645,6 +32933,797 @@
         "additionalProperties": false,
         "type": "object",
         "title": "TextCriteria[str]"
+      },
+      "TwitterArticle": {
+        "properties": {
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "plain_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plain Text"
+          },
+          "preview_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Text"
+          },
+          "cover_media": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Media"
+          },
+          "media_entities": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Entities"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "TwitterArticle"
+      },
+      "TwitterBookmarkPage": {
+        "properties": {
+          "tweets": {
+            "items": {
+              "$ref": "#/components/schemas/TwitterTweet"
+            },
+            "type": "array",
+            "title": "Tweets"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "result_count": {
+            "type": "integer",
+            "title": "Result Count",
+            "default": 0
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "TwitterBookmarkPage"
+      },
+      "TwitterMedia": {
+        "properties": {
+          "media_key": {
+            "type": "string",
+            "title": "Media Key"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "preview_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Image Url"
+          },
+          "variants": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TwitterMediaVariant"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variants"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "alt_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alt Text"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "media_key",
+          "type"
+        ],
+        "title": "TwitterMedia"
+      },
+      "TwitterMediaVariant": {
+        "properties": {
+          "content_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Type"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "bit_rate": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bit Rate"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "TwitterMediaVariant"
+      },
+      "TwitterNoteTweet": {
+        "properties": {
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "TwitterNoteTweet"
+      },
+      "TwitterTweet": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "edit_history_tweet_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edit History Tweet Ids"
+          },
+          "article": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TwitterArticle"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attachments": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TwitterTweetAttachments"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "author_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Id"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "lang": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lang"
+          },
+          "note_tweet": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TwitterNoteTweet"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "possibly_sensitive": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Possibly Sensitive"
+          },
+          "public_metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TwitterTweetPublicMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "author": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TwitterUser"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "media": {
+            "items": {
+              "$ref": "#/components/schemas/TwitterMedia"
+            },
+            "type": "array",
+            "title": "Media"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "readOnly": true
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "url"
+        ],
+        "title": "TwitterTweet"
+      },
+      "TwitterTweetAttachments": {
+        "properties": {
+          "media_keys": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Keys"
+          },
+          "poll_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poll Ids"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "TwitterTweetAttachments"
+      },
+      "TwitterTweetPublicMetrics": {
+        "properties": {
+          "retweet_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retweet Count"
+          },
+          "reply_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Count"
+          },
+          "like_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Like Count"
+          },
+          "quote_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote Count"
+          },
+          "bookmark_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bookmark Count"
+          },
+          "impression_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Impression Count"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "TwitterTweetPublicMetrics"
+      },
+      "TwitterUser": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "affiliation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affiliation"
+          },
+          "connection_status": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connection Status"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "entities": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entities"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "most_recent_tweet_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Most Recent Tweet Id"
+          },
+          "pinned_tweet_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pinned Tweet Id"
+          },
+          "profile_banner_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Banner Url"
+          },
+          "profile_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Image Url"
+          },
+          "protected": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protected"
+          },
+          "public_metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TwitterUserPublicMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "receives_your_dm": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receives Your Dm"
+          },
+          "subscription_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subscription Type"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified"
+          },
+          "verified_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified Type"
+          },
+          "withheld": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Withheld"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "username"
+        ],
+        "title": "TwitterUser"
+      },
+      "TwitterUserPublicMetrics": {
+        "properties": {
+          "followers_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Followers Count"
+          },
+          "following_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Following Count"
+          },
+          "listed_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Listed Count"
+          },
+          "tweet_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tweet Count"
+          },
+          "like_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Like Count"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "TwitterUserPublicMetrics"
       },
       "User": {
         "properties": {

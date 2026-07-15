@@ -131,13 +131,32 @@ export type ClarificationMessagePayload =
   | ClarificationResolvedPayload
 
 /**
+ * A suggested next-step action produced after the main agent completes. The
+ * `description` summarizes the action, while `prompt` is an editable draft a
+ * client can offer in its composer rather than sending immediately. Clients can
+ * use `confidence` to rank multiple actions; it remains optional because the
+ * backend may omit it.
+ *
+ * Hand-defined overlay: the generated `Schemas.Message` does not yet carry
+ * `suggested_actions` (the backend field is not deployed to the spec endpoint).
+ * Remove this and derive from `Schemas` once a codegen refresh picks it up.
+ */
+export interface SuggestedAction {
+  description: string
+  prompt: string
+  confidence?: number
+}
+
+/**
  * Chat message. The backend's `clarification` / `clarification_request_id`
  * are overridden with the FE clarification payload types (which carry extra
- * client-side UI metadata the clarification feature relies on).
+ * client-side UI metadata the clarification feature relies on). `suggested_actions`
+ * is overlaid until the generated schema includes it (see {@link SuggestedAction}).
  */
 export type Message = Omit<Schemas.Message, 'clarification' | 'clarification_request_id'> & {
   clarification?: ClarificationMessagePayload | null
   clarification_request_id?: UUID | null
+  suggested_actions?: SuggestedAction[] | null
 }
 
 /** Tag attached to a message */
@@ -444,6 +463,7 @@ export interface SSEDoneEvent {
   created_at: UnixTimestamp
   finish_reason: 'stop' | 'error' | 'clarification_requested'
   message_id: UUID
+  suggested_actions?: SuggestedAction[] | null
   type: 'done'
 }
 

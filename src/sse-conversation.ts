@@ -26,6 +26,7 @@ import type {
   SSEMessageEvent,
   SSEResourceUpdatedEvent,
   SSETraceEvent,
+  SuggestedAction,
 } from './contracts/conversation'
 
 // ============================================================================
@@ -156,6 +157,12 @@ export interface SSEStreamState {
   seenRunIds: Set<string>
   /** True once Redis produced any non-terminal conversation payload. */
   streamPayloadReceived: boolean
+  /**
+   * Suggested next-step actions carried on the terminal `done` envelope (empty
+   * until then). Consumers rank/pick one (e.g. the highest-`confidence` prompt)
+   * to offer as a composer hint after the turn completes.
+   */
+  suggestedActions?: SuggestedAction[]
   /** True once a terminal SSE envelope has been processed. */
   terminalReceived: boolean
 }
@@ -554,6 +561,7 @@ export function dispatchSSEEvent(
       setIfValid(state, 'conversationId', event.conversation_id)
       setIfValid(state, 'messageId', event.message_id)
       state.finishReason = event.finish_reason
+      state.suggestedActions = event.suggested_actions ?? undefined
       state.terminalReceived = true
       handlers.onDone?.(state.conversationId, state.messageId, event.finish_reason)
       break

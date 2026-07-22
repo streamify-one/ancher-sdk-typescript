@@ -169,3 +169,30 @@ export function createImagePromptRepository(client: AncherClient): ImagePromptRe
       }),
   }
 }
+
+// --- Text selections (`/text-selections`) ---
+
+/**
+ * The three built-in text-selection toolbar actions, each backed by a dedicated
+ * endpoint that returns a single {@link Schemas.TextSelectionResponse} (plain
+ * text or light markdown) — no conversation/streaming.
+ */
+export interface TextSelectionRepository {
+  /** Explain the selected text. */
+  explain(text: string): Promise<Schemas.TextSelectionResponse>
+  /** Summarize the selected text. */
+  summarize(text: string): Promise<Schemas.TextSelectionResponse>
+  /** Translate the selected text into `targetLanguage` (a name or BCP-47 tag). */
+  translate(text: string, targetLanguage: string): Promise<Schemas.TextSelectionResponse>
+}
+
+export function createTextSelectionRepository(client: AncherClient): TextSelectionRepository {
+  return {
+    explain: text => client.api.post('/api/v1/text-selections/explanations', { body: { text } }),
+    summarize: text => client.api.post('/api/v1/text-selections/summaries', { body: { text } }),
+    translate: (text, targetLanguage) =>
+      client.api.post('/api/v1/text-selections/translations', {
+        body: { text, target_language: targetLanguage },
+      }),
+  }
+}

@@ -773,6 +773,10 @@ export type Chunk = {
    * Reference to the note
    */
   note_id: (string | null);
+  /**
+   * Chunk role: 'content' (source-derived text), 'markdown' (split from the note's content file) or 'metadata' (title+tags row)
+   */
+  kind: ("content" | "markdown" | "metadata");
   file_ref: (FileReference | null);
 }
 export type ClarificationAnswer = { question_id: string, value: (string | Array<string>) }
@@ -1277,7 +1281,7 @@ export type Conversation = {
 /**
  * Feature flag configuration for conversation limits.
  */
-export type ConversationFeatureFlag = Partial<{ daily_messages: number, tokens_per_message: number, tokens_per_day: number, system_prompt_key: string, use_review_agent: boolean }>
+export type ConversationFeatureFlag = Partial<{ daily_messages: number, tokens_per_message: number, tokens_per_day: number, system_prompt_key: string, use_review_agent: boolean, enable_agent_skills: boolean }>
 /**
  * Receipt returned when an async conversation run has been accepted.
  */
@@ -1354,7 +1358,7 @@ export type Criteria_File_ = Partial<{ and: (Array<Criteria_File_> | null), or: 
 export type Criteria_KeyFrame_ = Partial<{ and: (Array<Criteria_KeyFrame_> | null), or: (Array<Criteria_KeyFrame_> | null), not: (Criteria_KeyFrame_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), milliseconds: (NumericCriteria_int_ | null), description: (TextCriteria_str_ | null), video_id: (NumericCriteria_UUID_ | null) }>
 export type ExactCriteria_Literal__user____assistant___ = Partial<{ eq: (("user" | "assistant") | null), is_null: (boolean | null), ne: (("user" | "assistant") | null), in: (Array<("user" | "assistant")> | null), not_in: (Array<("user" | "assistant")> | null) }>
 export type Criteria_Message_ = Partial<{ and: (Array<Criteria_Message_> | null), or: (Array<Criteria_Message_> | null), not: (Criteria_Message_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), conversation_id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), role: (ExactCriteria_Literal__user____assistant___ | null), content: (TextCriteria_str_ | null), enable_kb_search: (NumericCriteria_bool_ | null), enable_web_search: (NumericCriteria_bool_ | null), reaction: (ExactCriteria_Literal__like____dislike____neutral___ | null), agent_run_id: (NumericCriteria_UUID_ | null), clarification_request_id: (NumericCriteria_UUID_ | null) }>
-export type Criteria_Note_ = Partial<{ and: (Array<Criteria_Note_> | null), or: (Array<Criteria_Note_> | null), not: (Criteria_Note_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), status: (ExactCriteria_Literal__queued____processing____ready____error___ | null), error_message: (TextCriteria_str_ | null), last_accessed_at: (NumericCriteria_datetime_ | null), comment: (TextCriteria_str_ | null), title_override: (TextCriteria_str_ | null), description_override: (TextCriteria_str_ | null), is_public: (NumericCriteria_bool_ | null), slug: (TextCriteria_str_ | null), reaction: (ExactCriteria_Literal__like____dislike____neutral___ | null), user_id: (NumericCriteria_UUID_ | null), article_id: (NumericCriteria_UUID_ | null), source: (TextCriteria_str_ | null), title: (TextCriteria_str_ | null), description: (TextCriteria_str_ | null) }>
+export type Criteria_Note_ = Partial<{ and: (Array<Criteria_Note_> | null), or: (Array<Criteria_Note_> | null), not: (Criteria_Note_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), status: (ExactCriteria_Literal__queued____processing____ready____error___ | null), error_message: (TextCriteria_str_ | null), last_accessed_at: (NumericCriteria_datetime_ | null), reindex_requested_at: (NumericCriteria_datetime_ | null), comment: (TextCriteria_str_ | null), title_override: (TextCriteria_str_ | null), description_override: (TextCriteria_str_ | null), is_public: (NumericCriteria_bool_ | null), slug: (TextCriteria_str_ | null), reaction: (ExactCriteria_Literal__like____dislike____neutral___ | null), user_id: (NumericCriteria_UUID_ | null), article_id: (NumericCriteria_UUID_ | null), source: (TextCriteria_str_ | null), title: (TextCriteria_str_ | null), description: (TextCriteria_str_ | null) }>
 export type ExactCriteria_Literal__collection_suggestion____content_recommendation____daily_digest____system___ = Partial<{ eq: (("collection_suggestion" | "content_recommendation" | "daily_digest" | "system") | null), is_null: (boolean | null), ne: (("collection_suggestion" | "content_recommendation" | "daily_digest" | "system") | null), in: (Array<("collection_suggestion" | "content_recommendation" | "daily_digest" | "system")> | null), not_in: (Array<("collection_suggestion" | "content_recommendation" | "daily_digest" | "system")> | null) }>
 export type ExactCriteria_Literal__unread____read____dismissed___ = Partial<{ eq: (("unread" | "read" | "dismissed") | null), is_null: (boolean | null), ne: (("unread" | "read" | "dismissed") | null), in: (Array<("unread" | "read" | "dismissed")> | null), not_in: (Array<("unread" | "read" | "dismissed")> | null) }>
 export type Criteria_Notification_ = Partial<{ and: (Array<Criteria_Notification_> | null), or: (Array<Criteria_Notification_> | null), not: (Criteria_Notification_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), type: (ExactCriteria_Literal__collection_suggestion____content_recommendation____daily_digest____system___ | null), title: (TextCriteria_str_ | null), subtitle: (TextCriteria_str_ | null), body: (TextCriteria_str_ | null), status: (ExactCriteria_Literal__unread____read____dismissed___ | null), read_at: (NumericCriteria_datetime_ | null) }>
@@ -2232,7 +2236,7 @@ export type Message = {
  * previous like/dislike.
  */
 export type MessageUpdateRequest = Partial<{ reaction: (("like" | "dislike" | "neutral") | null) }>
-export type NestedCriteriaBranch_Note_ = Partial<{ and: (Array<Criteria_Note_> | null), or: (Array<Criteria_Note_> | null), not: (Criteria_Note_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), status: (ExactCriteria_Literal__queued____processing____ready____error___ | null), error_message: (TextCriteria_str_ | null), last_accessed_at: (NumericCriteria_datetime_ | null), comment: (TextCriteria_str_ | null), title_override: (TextCriteria_str_ | null), description_override: (TextCriteria_str_ | null), is_public: (NumericCriteria_bool_ | null), slug: (TextCriteria_str_ | null), reaction: (ExactCriteria_Literal__like____dislike____neutral___ | null), user_id: (NumericCriteria_UUID_ | null), article_id: (NumericCriteria_UUID_ | null), source: (TextCriteria_str_ | null), title: (TextCriteria_str_ | null), description: (TextCriteria_str_ | null), file_refs: (Criteria_FileReference_ | null), files: (Criteria_File_ | null), key_frames: (Criteria_KeyFrame_ | null), article: (Criteria_Article_ | null), tags: (Criteria_Tag_ | null), collections: (Criteria_Collection_ | null) }>
+export type NestedCriteriaBranch_Note_ = Partial<{ and: (Array<Criteria_Note_> | null), or: (Array<Criteria_Note_> | null), not: (Criteria_Note_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), status: (ExactCriteria_Literal__queued____processing____ready____error___ | null), error_message: (TextCriteria_str_ | null), last_accessed_at: (NumericCriteria_datetime_ | null), reindex_requested_at: (NumericCriteria_datetime_ | null), comment: (TextCriteria_str_ | null), title_override: (TextCriteria_str_ | null), description_override: (TextCriteria_str_ | null), is_public: (NumericCriteria_bool_ | null), slug: (TextCriteria_str_ | null), reaction: (ExactCriteria_Literal__like____dislike____neutral___ | null), user_id: (NumericCriteria_UUID_ | null), article_id: (NumericCriteria_UUID_ | null), source: (TextCriteria_str_ | null), title: (TextCriteria_str_ | null), description: (TextCriteria_str_ | null), file_refs: (Criteria_FileReference_ | null), files: (Criteria_File_ | null), key_frames: (Criteria_KeyFrame_ | null), article: (Criteria_Article_ | null), tags: (Criteria_Tag_ | null), collections: (Criteria_Collection_ | null) }>
 export type NestedCursor_Note_ = string
 /**
  * Schema for login response - tokens only, no user info for security.
@@ -2637,7 +2641,7 @@ export type Plan = {
    */
   kind: ("subscription" | "credit_pack");
   /**
-   * Credits granted on each successful purchase / renewal (1 credit ≈ 1 US cent of usage at markup 1.0)
+   * Credits granted on each successful purchase / renewal (1 credit ≈ 0.1 US cent / $0.001 of usage at markup 1.0)
    */
   credit_grant: string;
   /**
@@ -2683,9 +2687,9 @@ export type PlanChangeRequest = {
  */
 export type PlanChangeResponse = {
   /**
-   * 'same' (no change), 'checkout' (first purchase — redirect to hosted_url), 'upgraded' (applied now), or 'downgrade_scheduled' (takes effect next period).
+   * 'same' (no change), 'checkout' (first purchase — redirect to hosted_url), or 'upgraded' (applied now). Downgrades are rejected with 400 API-BIS017 (upgrade-only while subscribed).
    */
-  kind: ("same" | "checkout" | "upgraded" | "downgrade_scheduled");
+  kind: ("same" | "checkout" | "upgraded");
   /**
    * Hosted-checkout URL to redirect to (only when kind=checkout).
    */
@@ -3074,6 +3078,37 @@ export type TagCreate = {
  * Request schema for updating a tag.
  */
 export type TagUpdate = Partial<{ name: (string | null), color: (("neutral" | "slate" | "gray" | "zinc" | "stone" | "red" | "orange" | "amber" | "yellow" | "lime" | "green" | "emerald" | "teal" | "cyan" | "sky" | "blue" | "indigo" | "violet" | "purple" | "fuchsia" | "pink" | "rose") | null) }>
+/**
+ * Text the user highlighted on a page.
+ */
+export type TextSelectionRequest = {
+  /**
+   * The text the user selected on the page
+   */
+  text: string;
+}
+/**
+ * The model's answer for one toolbar action.
+ */
+export type TextSelectionResponse = {
+  /**
+   * The explanation, summary, or translation, as plain text or light markdown
+   */
+  content: string;
+}
+/**
+ * A selection plus the language to translate it into.
+ */
+export type TextTranslationRequest = {
+  /**
+   * The text the user selected on the page
+   */
+  text: string;
+  /**
+   * Target language as a name or BCP-47 tag, e.g. 'zh-TW', 'Traditional Chinese', 'Spanish'
+   */
+  target_language: string;
+}
 export type TwitterArticle = Partial<({ title: (string | null), plain_text: (string | null), preview_text: (string | null), cover_media: (string | null), media_entities: (Array<string> | null) } & Record<string, any>)>
 export type TwitterTweetAttachments = Partial<({ media_keys: (Array<string> | null), poll_ids: (Array<string> | null) } & Record<string, any>)>
 export type TwitterNoteTweet = Partial<({ text: (string | null) } & Record<string, any>)>
@@ -3899,7 +3934,7 @@ export type get_Get_my_subscription_api_v1_me_billing_subscription_get = {
       
     }
 /**
- * Creates a Stripe-hosted Checkout session for the requested plan. Trial days and any plan-discount promotion codes the user has redeemed are attached automatically. Mobile clients should drive StoreKit / Play Billing natively using the provider_product_id returned by GET /plans instead of calling this endpoint.
+ * Creates a Stripe-hosted Checkout session for the requested plan. Trial days and any plan-discount promotion codes the user has redeemed are attached automatically. Returns 409 (API-BIS016) for a subscription plan while the user already holds a live paid subscription (active, trialing, or in dunning) — one paid subscription per user. Mobile clients should drive StoreKit / Play Billing natively using the provider_product_id returned by GET /plans instead of calling this endpoint.
  */
 export type post_Create_checkout_session_api_v1_me_billing_checkout_session_post = {
       method: "POST",
@@ -3936,7 +3971,7 @@ export type get_Get_checkout_session_api_v1_me_billing_checkout_session__session
       
     }
 /**
- * Switches the current user to another plan. Routing is a strict price-and-credits comparison: an upgrade applies immediately (prorated, new allotment replaces the old); a downgrade is scheduled for the end of the current period (current credits untouched); a change where price and credits move opposite ways is rejected (API-BIS012). Switching off the Free tier returns a hosted checkout URL (kind=checkout) to redirect to.
+ * Switches the current user to another plan. Routing is a strict price-and-credits comparison: an upgrade applies immediately (prorated, new allotment replaces the old); a downgrade is rejected with 400 (API-BIS017) and the subscription is left unchanged — it continues to renew unless canceled separately (portal / store settings); a change where price and credits move opposite ways is rejected (API-BIS012). Switching off the Free tier returns a hosted checkout URL (kind=checkout) to redirect to.
  */
 export type post_Change_plan_api_v1_me_billing_plan_post = {
       method: "POST",
@@ -3972,7 +4007,7 @@ export type post_Create_portal_session_api_v1_me_billing_stripe_portal_session_p
       
     }
 /**
- * Verifies a client-presented purchase token (Google Play / Apple) against the provider server API and applies the resulting credit grant for the authenticated user. Idempotent — re-posting the same token is a no-op. Web (Stripe) clients use /checkout-session instead.
+ * Verifies a client-presented purchase token (Google Play / Apple) against the provider server API and applies the resulting credit grant for the authenticated user. Idempotent — re-posting the same token is a no-op. Returns 409 (API-BIS016) for a subscription purchase while the user already holds a live paid subscription (active, trialing, or in dunning) with another provider — one paid subscription per user. Web (Stripe) clients use /checkout-session instead.
  */
 export type post_Create_purchase_api_v1_me_billing_purchases_post = {
       method: "POST",
@@ -4215,7 +4250,7 @@ export type get_List_notes_api_v1_notes__get = {
       path: "/api/v1/notes/",
       requestFormat: "json",
       parameters: {
-            query:  Partial<{ and: (Array<Schemas.NestedCriteriaBranch_Note_> | null), or: (Array<Schemas.NestedCriteriaBranch_Note_> | null), not: (Schemas.NestedCriteriaBranch_Note_ | null), cursor: (Schemas.NestedCursor_Note_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+status" | "-status" | "+error_message" | "-error_message" | "+last_accessed_at" | "-last_accessed_at" | "+comment" | "-comment" | "+title_override" | "-title_override" | "+description_override" | "-description_override" | "+is_public" | "-is_public" | "+slug" | "-slug" | "+reaction" | "-reaction" | "+user_id" | "-user_id" | "+article_id" | "-article_id" | "+source" | "-source" | "+title" | "-title" | "+description" | "-description")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), status: (Schemas.ExactCriteria_Literal__queued____processing____ready____error___ | null), error_message: (Schemas.TextCriteria_str_ | null), last_accessed_at: (Schemas.NumericCriteria_datetime_ | null), comment: (Schemas.TextCriteria_str_ | null), title_override: (Schemas.TextCriteria_str_ | null), description_override: (Schemas.TextCriteria_str_ | null), is_public: (Schemas.NumericCriteria_bool_ | null), slug: (Schemas.TextCriteria_str_ | null), reaction: (Schemas.ExactCriteria_Literal__like____dislike____neutral___ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), article_id: (Schemas.NumericCriteria_UUID_ | null), source: (Schemas.TextCriteria_str_ | null), title: (Schemas.TextCriteria_str_ | null), description: (Schemas.TextCriteria_str_ | null), file_refs: (Schemas.Criteria_FileReference_ | null), files: (Schemas.Criteria_File_ | null), key_frames: (Schemas.Criteria_KeyFrame_ | null), article: (Schemas.Criteria_Article_ | null), tags: (Schemas.Criteria_Tag_ | null), collections: (Schemas.Criteria_Collection_ | null) }>,
+            query:  Partial<{ and: (Array<Schemas.NestedCriteriaBranch_Note_> | null), or: (Array<Schemas.NestedCriteriaBranch_Note_> | null), not: (Schemas.NestedCriteriaBranch_Note_ | null), cursor: (Schemas.NestedCursor_Note_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+status" | "-status" | "+error_message" | "-error_message" | "+last_accessed_at" | "-last_accessed_at" | "+reindex_requested_at" | "-reindex_requested_at" | "+comment" | "-comment" | "+title_override" | "-title_override" | "+description_override" | "-description_override" | "+is_public" | "-is_public" | "+slug" | "-slug" | "+reaction" | "-reaction" | "+user_id" | "-user_id" | "+article_id" | "-article_id" | "+source" | "-source" | "+title" | "-title" | "+description" | "-description")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), status: (Schemas.ExactCriteria_Literal__queued____processing____ready____error___ | null), error_message: (Schemas.TextCriteria_str_ | null), last_accessed_at: (Schemas.NumericCriteria_datetime_ | null), reindex_requested_at: (Schemas.NumericCriteria_datetime_ | null), comment: (Schemas.TextCriteria_str_ | null), title_override: (Schemas.TextCriteria_str_ | null), description_override: (Schemas.TextCriteria_str_ | null), is_public: (Schemas.NumericCriteria_bool_ | null), slug: (Schemas.TextCriteria_str_ | null), reaction: (Schemas.ExactCriteria_Literal__like____dislike____neutral___ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), article_id: (Schemas.NumericCriteria_UUID_ | null), source: (Schemas.TextCriteria_str_ | null), title: (Schemas.TextCriteria_str_ | null), description: (Schemas.TextCriteria_str_ | null), file_refs: (Schemas.Criteria_FileReference_ | null), files: (Schemas.Criteria_File_ | null), key_frames: (Schemas.Criteria_KeyFrame_ | null), article: (Schemas.Criteria_Article_ | null), tags: (Schemas.Criteria_Tag_ | null), collections: (Schemas.Criteria_Collection_ | null) }>,
         
         
         
@@ -4778,6 +4813,60 @@ export type post_Create_image_prompt_api_v1_image_prompts__post = {
         body:  Schemas.Body_create_image_prompt_api_v1_image_prompts__post,
           }
       responses: {200: Schemas.ImagePromptResponse,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
+/**
+ * Explain the selected text in plain language.
+ */
+export type post_Create_explanation_api_v1_text_selections_explanations_post = {
+      method: "POST",
+      path: "/api/v1/text-selections/explanations",
+      requestFormat: "json",
+      parameters: {
+            
+        
+        
+        body:  Schemas.TextSelectionRequest,
+          }
+      responses: {200: Schemas.TextSelectionResponse,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
+/**
+ * Summarize the selected text.
+ */
+export type post_Create_summary_api_v1_text_selections_summaries_post = {
+      method: "POST",
+      path: "/api/v1/text-selections/summaries",
+      requestFormat: "json",
+      parameters: {
+            
+        
+        
+        body:  Schemas.TextSelectionRequest,
+          }
+      responses: {200: Schemas.TextSelectionResponse,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
+/**
+ * Translate the selected text into ``target_language``.
+ */
+export type post_Create_translation_api_v1_text_selections_translations_post = {
+      method: "POST",
+      path: "/api/v1/text-selections/translations",
+      requestFormat: "json",
+      parameters: {
+            
+        
+        
+        body:  Schemas.TextTranslationRequest,
+          }
+      responses: {200: Schemas.TextSelectionResponse,
 422: Schemas.HTTPValidationError,
 },
       
@@ -5781,9 +5870,11 @@ export type patch_Update_notification_status_api_v1_notifications__notification_
       
     }
 /**
- * Perform a hybrid RAG retrieval across the user's notes, deduplicated by article.
+ * Perform a hybrid RAG retrieval across the user's notes and return the
+ * best-matching notes (duplicate saves of the same content collapse to one
+ * result).
  */
-export type post_Retrieve_articles_api_v1_retrievals_post = {
+export type post_Retrieve_notes_api_v1_retrievals_post = {
       method: "POST",
       path: "/api/v1/retrievals",
       requestFormat: "json",
@@ -5915,7 +6006,7 @@ export type get_List_collection_notes_api_v1_collections__collection_id__notes_g
       path: "/api/v1/collections/{collection_id}/notes",
       requestFormat: "json",
       parameters: {
-            query:  Partial<{ and: (Array<Schemas.Criteria_Note_> | null), or: (Array<Schemas.Criteria_Note_> | null), not: (Schemas.Criteria_Note_ | null), cursor: (Schemas.Cursor_Note_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+status" | "-status" | "+error_message" | "-error_message" | "+last_accessed_at" | "-last_accessed_at" | "+comment" | "-comment" | "+title_override" | "-title_override" | "+description_override" | "-description_override" | "+is_public" | "-is_public" | "+slug" | "-slug" | "+reaction" | "-reaction" | "+user_id" | "-user_id" | "+article_id" | "-article_id" | "+source" | "-source" | "+title" | "-title" | "+description" | "-description")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), status: (Schemas.ExactCriteria_Literal__queued____processing____ready____error___ | null), error_message: (Schemas.TextCriteria_str_ | null), last_accessed_at: (Schemas.NumericCriteria_datetime_ | null), comment: (Schemas.TextCriteria_str_ | null), title_override: (Schemas.TextCriteria_str_ | null), description_override: (Schemas.TextCriteria_str_ | null), is_public: (Schemas.NumericCriteria_bool_ | null), slug: (Schemas.TextCriteria_str_ | null), reaction: (Schemas.ExactCriteria_Literal__like____dislike____neutral___ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), article_id: (Schemas.NumericCriteria_UUID_ | null), source: (Schemas.TextCriteria_str_ | null), title: (Schemas.TextCriteria_str_ | null), description: (Schemas.TextCriteria_str_ | null) }>,
+            query:  Partial<{ and: (Array<Schemas.Criteria_Note_> | null), or: (Array<Schemas.Criteria_Note_> | null), not: (Schemas.Criteria_Note_ | null), cursor: (Schemas.Cursor_Note_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+status" | "-status" | "+error_message" | "-error_message" | "+last_accessed_at" | "-last_accessed_at" | "+reindex_requested_at" | "-reindex_requested_at" | "+comment" | "-comment" | "+title_override" | "-title_override" | "+description_override" | "-description_override" | "+is_public" | "-is_public" | "+slug" | "-slug" | "+reaction" | "-reaction" | "+user_id" | "-user_id" | "+article_id" | "-article_id" | "+source" | "-source" | "+title" | "-title" | "+description" | "-description")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), status: (Schemas.ExactCriteria_Literal__queued____processing____ready____error___ | null), error_message: (Schemas.TextCriteria_str_ | null), last_accessed_at: (Schemas.NumericCriteria_datetime_ | null), reindex_requested_at: (Schemas.NumericCriteria_datetime_ | null), comment: (Schemas.TextCriteria_str_ | null), title_override: (Schemas.TextCriteria_str_ | null), description_override: (Schemas.TextCriteria_str_ | null), is_public: (Schemas.NumericCriteria_bool_ | null), slug: (Schemas.TextCriteria_str_ | null), reaction: (Schemas.ExactCriteria_Literal__like____dislike____neutral___ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), article_id: (Schemas.NumericCriteria_UUID_ | null), source: (Schemas.TextCriteria_str_ | null), title: (Schemas.TextCriteria_str_ | null), description: (Schemas.TextCriteria_str_ | null) }>,
         path:  {collection_id: string,
 },
         
@@ -6431,6 +6522,9 @@ post: {
 "/api/v1/files/completions": Endpoints.post_Complete_upload_api_v1_files_completions_post,
 "/api/v1/files/{file_id}/verifications": Endpoints.post_Create_file_verification_api_v1_files__file_id__verifications_post,
 "/api/v1/image-prompts/": Endpoints.post_Create_image_prompt_api_v1_image_prompts__post,
+"/api/v1/text-selections/explanations": Endpoints.post_Create_explanation_api_v1_text_selections_explanations_post,
+"/api/v1/text-selections/summaries": Endpoints.post_Create_summary_api_v1_text_selections_summaries_post,
+"/api/v1/text-selections/translations": Endpoints.post_Create_translation_api_v1_text_selections_translations_post,
 "/api/v1/session": Endpoints.post_Create_session_api_v1_session_post,
 "/api/v1/session/{provider}": Endpoints.post_Login_with_oauth_api_v1_session__provider__post,
 "/api/v1/web-session": Endpoints.post_Create_web_session_api_v1_web_session_post,
@@ -6445,7 +6539,7 @@ post: {
 "/api/v1/conversations": Endpoints.post_Create_conversation_and_chat_api_v1_conversations_post,
 "/api/v1/conversations/{conversation_id}/interruption": Endpoints.post_Interrupt_conversation_run_api_v1_conversations__conversation_id__interruption_post,
 "/api/v1/conversations/{conversation_id}": Endpoints.post_Continue_conversation_api_v1_conversations__conversation_id__post,
-"/api/v1/retrievals": Endpoints.post_Retrieve_articles_api_v1_retrievals_post,
+"/api/v1/retrievals": Endpoints.post_Retrieve_notes_api_v1_retrievals_post,
 "/api/v1/retrievals/chunks": Endpoints.post_Retrieve_chunks_api_v1_retrievals_chunks_post,
 "/api/v1/collections/": Endpoints.post_Create_collection_api_v1_collections__post,
 "/api/v1/collections/{collection_id}/notes": Endpoints.post_Add_collection_note_api_v1_collections__collection_id__notes_post,

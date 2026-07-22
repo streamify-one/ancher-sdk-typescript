@@ -38,10 +38,12 @@ import {
   createDeviceRepository,
   createImagePromptRepository,
   createRetrievalRepository,
+  createTextSelectionRepository,
   createWebSessionRepository,
   type DeviceRepository,
   type ImagePromptRepository,
   type RetrievalRepository,
+  type TextSelectionRepository,
   type WebSessionRepository,
 } from './services'
 
@@ -114,6 +116,7 @@ export type {
   ImagePromptRepository,
   PlansProvider,
   RetrievalRepository,
+  TextSelectionRepository,
   WebSessionProvider,
   WebSessionRepository,
 } from './services'
@@ -161,6 +164,8 @@ export interface AncherSdk {
   Suggestion: SuggestionRepository
   /** Tags — `list`/`count`/`iterate`, `create`, `update(id)`/`delete(id)`. */
   Tag: TagRepository
+  /** Text selections — `explain`/`summarize`/`translate` for the selection toolbar. */
+  TextSelection: TextSelectionRepository
   /** Current user — `me`, `register`, account update/delete, preferences/flags. */
   User: UserRepository
   /** Browser cookie session — `current`, `login`/`loginWithProvider`, `refresh`, `logout`. */
@@ -204,6 +209,7 @@ export function createAncherSdk(input: AncherClient | AncherClientConfig = {}): 
     Device: createDeviceRepository(client),
     Retrieval: createRetrievalRepository(client),
     ImagePrompt: createImagePromptRepository(client),
+    TextSelection: createTextSelectionRepository(client),
     WebSession: createWebSessionRepository(client),
   }
 }

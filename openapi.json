@@ -1832,7 +1832,7 @@
           "Billing"
         ],
         "summary": "Open a Stripe Checkout session",
-        "description": "Creates a Stripe-hosted Checkout session for the requested plan. Trial days and any plan-discount promotion codes the user has redeemed are attached automatically. Mobile clients should drive StoreKit / Play Billing natively using the provider_product_id returned by GET /plans instead of calling this endpoint.",
+        "description": "Creates a Stripe-hosted Checkout session for the requested plan. Trial days and any plan-discount promotion codes the user has redeemed are attached automatically. Returns 409 (API-BIS016) for a subscription plan while the user already holds a live paid subscription (active, trialing, or in dunning) — one paid subscription per user. Mobile clients should drive StoreKit / Play Billing natively using the provider_product_id returned by GET /plans instead of calling this endpoint.",
         "operationId": "create_checkout_session_api_v1_me_billing_checkout_session_post",
         "security": [
           {
@@ -1992,8 +1992,8 @@
         "tags": [
           "Billing"
         ],
-        "summary": "Switch plan (upgrade now / downgrade next cycle)",
-        "description": "Switches the current user to another plan. Routing is a strict price-and-credits comparison: an upgrade applies immediately (prorated, new allotment replaces the old); a downgrade is scheduled for the end of the current period (current credits untouched); a change where price and credits move opposite ways is rejected (API-BIS012). Switching off the Free tier returns a hosted checkout URL (kind=checkout) to redirect to.",
+        "summary": "Switch plan (upgrade-only while subscribed)",
+        "description": "Switches the current user to another plan. Routing is a strict price-and-credits comparison: an upgrade applies immediately (prorated, new allotment replaces the old); a downgrade is rejected with 400 (API-BIS017) and the subscription is left unchanged — it continues to renew unless canceled separately (portal / store settings); a change where price and credits move opposite ways is rejected (API-BIS012). Switching off the Free tier returns a hosted checkout URL (kind=checkout) to redirect to.",
         "operationId": "change_plan_api_v1_me_billing_plan_post",
         "security": [
           {
@@ -2155,7 +2155,7 @@
           "Billing"
         ],
         "summary": "Verify a mobile in-app purchase",
-        "description": "Verifies a client-presented purchase token (Google Play / Apple) against the provider server API and applies the resulting credit grant for the authenticated user. Idempotent — re-posting the same token is a no-op. Web (Stripe) clients use /checkout-session instead.",
+        "description": "Verifies a client-presented purchase token (Google Play / Apple) against the provider server API and applies the resulting credit grant for the authenticated user. Idempotent — re-posting the same token is a no-op. Returns 409 (API-BIS016) for a subscription purchase while the user already holds a live paid subscription (active, trialing, or in dunning) with another provider — one paid subscription per user. Web (Stripe) clients use /checkout-session instead.",
         "operationId": "create_purchase_api_v1_me_billing_purchases_post",
         "security": [
           {
@@ -3233,6 +3233,8 @@
                       "-error_message",
                       "+last_accessed_at",
                       "-last_accessed_at",
+                      "+reindex_requested_at",
+                      "-reindex_requested_at",
                       "+comment",
                       "-comment",
                       "+title_override",
@@ -3392,6 +3394,22 @@
                 }
               ],
               "title": "Last Accessed At"
+            }
+          },
+          {
+            "name": "reindex_requested_at",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/NumericCriteria_datetime_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Reindex Requested At"
             }
           },
           {
@@ -7159,6 +7177,249 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ImagePromptResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/text-selections/explanations": {
+      "post": {
+        "tags": [
+          "Text Selections"
+        ],
+        "summary": "Create Explanation",
+        "description": "Explain the selected text in plain language.",
+        "operationId": "create_explanation_api_v1_text_selections_explanations_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextSelectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TextSelectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/text-selections/summaries": {
+      "post": {
+        "tags": [
+          "Text Selections"
+        ],
+        "summary": "Create Summary",
+        "description": "Summarize the selected text.",
+        "operationId": "create_summary_api_v1_text_selections_summaries_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextSelectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TextSelectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/text-selections/translations": {
+      "post": {
+        "tags": [
+          "Text Selections"
+        ],
+        "summary": "Create Translation",
+        "description": "Translate the selected text into ``target_language``.",
+        "operationId": "create_translation_api_v1_text_selections_translations_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextTranslationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TextSelectionResponse"
                 }
               }
             }
@@ -12942,9 +13203,9 @@
         "tags": [
           "Retrievals"
         ],
-        "summary": "Retrieve Articles",
-        "description": "Perform a hybrid RAG retrieval across the user's notes, deduplicated by article.",
-        "operationId": "retrieve_articles_api_v1_retrievals_post",
+        "summary": "Retrieve Notes",
+        "description": "Perform a hybrid RAG retrieval across the user's notes and return the\nbest-matching notes (duplicate saves of the same content collapse to one\nresult).",
+        "operationId": "retrieve_notes_api_v1_retrievals_post",
         "security": [
           {
             "HTTPBearer": []
@@ -13004,7 +13265,7 @@
                   "items": {
                     "$ref": "#/components/schemas/NoteRetrievalResult"
                   },
-                  "title": "Response Retrieve Articles Api V1 Retrievals Post"
+                  "title": "Response Retrieve Notes Api V1 Retrievals Post"
                 }
               }
             }
@@ -14262,6 +14523,8 @@
                       "-error_message",
                       "+last_accessed_at",
                       "-last_accessed_at",
+                      "+reindex_requested_at",
+                      "-reindex_requested_at",
                       "+comment",
                       "-comment",
                       "+title_override",
@@ -14421,6 +14684,22 @@
                 }
               ],
               "title": "Last Accessed At"
+            }
+          },
+          {
+            "name": "reindex_requested_at",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/NumericCriteria_datetime_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Reindex Requested At"
             }
           },
           {
@@ -18596,8 +18875,10 @@
           "200": {
             "description": "Successful Response",
             "content": {
-              "application/json": {
-                "schema": {}
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
               }
             }
           },
@@ -20195,6 +20476,17 @@
             "title": "Note Id",
             "description": "Reference to the note"
           },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "content",
+              "markdown",
+              "metadata"
+            ],
+            "title": "Kind",
+            "description": "Chunk role: 'content' (source-derived text), 'markdown' (split from the note's content file) or 'metadata' (title+tags row)",
+            "default": "content"
+          },
           "file_ref": {
             "anyOf": [
               {
@@ -20217,6 +20509,7 @@
           "embedded_text",
           "article_id",
           "note_id",
+          "kind",
           "file_ref"
         ],
         "title": "Chunk",
@@ -21464,6 +21757,11 @@
           "use_review_agent": {
             "type": "boolean",
             "title": "Use Review Agent",
+            "default": false
+          },
+          "enable_agent_skills": {
+            "type": "boolean",
+            "title": "Enable Agent Skills",
             "default": false
           }
         },
@@ -24474,6 +24772,16 @@
             ]
           },
           "last_accessed_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumericCriteria_datetime_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reindex_requested_at": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/NumericCriteria_datetime_"
@@ -29181,6 +29489,16 @@
               }
             ]
           },
+          "reindex_requested_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumericCriteria_datetime_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "comment": {
             "anyOf": [
               {
@@ -31270,7 +31588,7 @@
             "type": "string",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Credit Grant",
-            "description": "Credits granted on each successful purchase / renewal (1 credit ≈ 1 US cent of usage at markup 1.0)"
+            "description": "Credits granted on each successful purchase / renewal (1 credit ≈ 0.1 US cent / $0.001 of usage at markup 1.0)"
           },
           "billing_interval": {
             "anyOf": [
@@ -31397,11 +31715,10 @@
             "enum": [
               "same",
               "checkout",
-              "upgraded",
-              "downgrade_scheduled"
+              "upgraded"
             ],
             "title": "Kind",
-            "description": "'same' (no change), 'checkout' (first purchase — redirect to hosted_url), 'upgraded' (applied now), or 'downgrade_scheduled' (takes effect next period)."
+            "description": "'same' (no change), 'checkout' (first purchase — redirect to hosted_url), or 'upgraded' (applied now). Downgrades are rejected with 400 API-BIS017 (upgrade-only while subscribed)."
           },
           "hosted_url": {
             "anyOf": [
@@ -32933,6 +33250,63 @@
         "additionalProperties": false,
         "type": "object",
         "title": "TextCriteria[str]"
+      },
+      "TextSelectionRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 2500,
+            "minLength": 1,
+            "title": "Text",
+            "description": "The text the user selected on the page"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "TextSelectionRequest",
+        "description": "Text the user highlighted on a page."
+      },
+      "TextSelectionResponse": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "The explanation, summary, or translation, as plain text or light markdown"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "TextSelectionResponse",
+        "description": "The model's answer for one toolbar action."
+      },
+      "TextTranslationRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 2500,
+            "minLength": 1,
+            "title": "Text",
+            "description": "The text the user selected on the page"
+          },
+          "target_language": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 2,
+            "title": "Target Language",
+            "description": "Target language as a name or BCP-47 tag, e.g. 'zh-TW', 'Traditional Chinese', 'Spanish'"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "target_language"
+        ],
+        "title": "TextTranslationRequest",
+        "description": "A selection plus the language to translate it into."
       },
       "TwitterArticle": {
         "properties": {

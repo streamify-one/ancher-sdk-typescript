@@ -87,14 +87,13 @@ export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus]
 
 /**
  * Outcome of `POST /me/billing/plan`: 'same' (no change), 'checkout' (first
- * purchase — redirect to hosted_url), 'upgraded' (applied now), or
- * 'downgrade_scheduled' (takes effect next period).
+ * purchase — redirect to hosted_url), or 'upgraded' (applied now). Plan changes
+ * are upgrade-only while subscribed, so there is no scheduled-downgrade outcome.
  */
 export const PlanChangeKind = {
   Same: 'same',
   Checkout: 'checkout',
   Upgraded: 'upgraded',
-  DowngradeScheduled: 'downgrade_scheduled',
 } as const satisfies Record<string, Schemas.PlanChangeResponse['kind']>
 export type PlanChangeKind = (typeof PlanChangeKind)[keyof typeof PlanChangeKind]
 /** @internal */

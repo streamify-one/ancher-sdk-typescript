@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { AncherClient } from './api/client'
-import { createImagePromptRepository, createWebSessionRepository } from './services'
+import {
+  createImagePromptRepository,
+  createTextSelectionRepository,
+  createWebSessionRepository,
+} from './services'
 
 function makeRepository() {
   const get = vi.fn()
@@ -59,6 +63,46 @@ describe('WebSessionRepository', () => {
 
     expect(put).toHaveBeenCalledWith('/api/v1/web-session', { header: {} })
     expect(del).toHaveBeenCalledWith('/api/v1/web-session')
+  })
+})
+
+describe('TextSelectionRepository', () => {
+  function makeTextSelection() {
+    const post = vi.fn()
+    const client = { api: { post } } as unknown as AncherClient
+    return { TextSelection: createTextSelectionRepository(client), post }
+  }
+
+  it('explains the selected text', async () => {
+    const { TextSelection, post } = makeTextSelection()
+    post.mockResolvedValueOnce({ content: 'explanation' })
+
+    await expect(TextSelection.explain('some text')).resolves.toEqual({ content: 'explanation' })
+    expect(post).toHaveBeenCalledWith('/api/v1/text-selections/explanations', {
+      body: { text: 'some text' },
+    })
+  })
+
+  it('summarizes the selected text', async () => {
+    const { TextSelection, post } = makeTextSelection()
+    post.mockResolvedValueOnce({ content: 'summary' })
+
+    await expect(TextSelection.summarize('long text')).resolves.toEqual({ content: 'summary' })
+    expect(post).toHaveBeenCalledWith('/api/v1/text-selections/summaries', {
+      body: { text: 'long text' },
+    })
+  })
+
+  it('translates into an explicit target language', async () => {
+    const { TextSelection, post } = makeTextSelection()
+    post.mockResolvedValueOnce({ content: '你好' })
+
+    await expect(TextSelection.translate('hello', 'Simplified Chinese')).resolves.toEqual({
+      content: '你好',
+    })
+    expect(post).toHaveBeenCalledWith('/api/v1/text-selections/translations', {
+      body: { text: 'hello', target_language: 'Simplified Chinese' },
+    })
   })
 })
 

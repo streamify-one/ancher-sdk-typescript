@@ -646,7 +646,7 @@
           "Artifacts"
         ],
         "summary": "Get Artifact By Slug",
-        "description": "Get artifact by share slug.\n\nSlug-based lookup is the share-safe alternative to ``/artifacts/{artifact_id}``:\nno internal id appears in the URL recipients receive. Auth is lenient so\nrecipients open the share page without (or with a stale) session — a valid\ntoken still lets owners see their own artifact, while a missing or invalid\ntoken degrades to anonymous (public-only) instead of a 401.",
+        "description": "Get artifact by share slug.\n\nSlug-based lookup is the share-safe alternative to ``/artifacts/{artifact_id}``:\nno internal id appears in the URL recipients receive. Auth is lenient so\nrecipients open the share page without (or with a stale) session \u2014 a valid\ntoken still lets owners see their own artifact, while a missing or invalid\ntoken degrades to anonymous (public-only) instead of a 401.",
         "operationId": "get_artifact_by_slug_api_v1_artifacts_by_slug__slug__get",
         "security": [
           {
@@ -1055,7 +1055,7 @@
           "Artifacts"
         ],
         "summary": "Get Artifact Content",
-        "description": "Return the artifact's content with embedded references resolved.\n\nFor markdown and HTML bodies, ``streamify-file://{UUID}`` references are\nrewritten to presigned URLs so embedded images/media render inline —\nmirroring the note content endpoint. Only files linked to this artifact\nare resolved; unauthorized references keep the raw marker. Other MIME\ntypes are served verbatim.\n\nAuth is lenient so the public share viewer (``/s/a/{slug}``) can fetch a\npublic markdown/HTML artifact's resolved body without a session — the\n``files.content.presigned_url`` is deliberately null for resolvable text, so\nthis endpoint is the only way an anonymous viewer reads it. A valid token\nstill lets owners read their own private artifacts; a missing or invalid\ntoken degrades to anonymous (public-only), and a private artifact then\nreturns 404 rather than 401.",
+        "description": "Return the artifact's content with embedded references resolved.\n\nFor markdown and HTML bodies, ``streamify-file://{UUID}`` references are\nrewritten to presigned URLs so embedded images/media render inline \u2014\nmirroring the note content endpoint. Only files linked to this artifact\nare resolved; unauthorized references keep the raw marker. Other MIME\ntypes are served verbatim.\n\nAuth is lenient so the public share viewer (``/s/a/{slug}``) can fetch a\npublic markdown/HTML artifact's resolved body without a session \u2014 the\n``files.content.presigned_url`` is deliberately null for resolvable text, so\nthis endpoint is the only way an anonymous viewer reads it. A valid token\nstill lets owners read their own private artifacts; a missing or invalid\ntoken degrades to anonymous (public-only), and a private artifact then\nreturns 404 rather than 401.",
         "operationId": "get_artifact_content_api_v1_artifacts__artifact_id__content_get",
         "security": [
           {
@@ -1153,7 +1153,7 @@
           "Artifacts"
         ],
         "summary": "Create Artifact Content Presigned Download Url",
-        "description": "Mint a presigned URL for the artifact's content file.\n\nA direct link to the raw content file, used to *display* image/binary\nartifacts and for downloads — distinct from ``GET …/content``, which\nserves resolved markdown/HTML text. References inside the body are NOT\nresolved here; the bytes are served as stored.\n\nAccessible to the artifact owner or any authenticated caller when the\nartifact is marked public. ``w`` / ``h`` are baked into the signed URL\nso the CloudFront image behavior's Lambda@Edge resizer serves a cached\nvariant; ignored for non-image MIMEs.",
+        "description": "Mint a presigned URL for the artifact's content file.\n\nA direct link to the raw content file, used to *display* image/binary\nartifacts and for downloads \u2014 distinct from ``GET \u2026/content``, which\nserves resolved markdown/HTML text. References inside the body are NOT\nresolved here; the bytes are served as stored.\n\nAccessible to the artifact owner or any authenticated caller when the\nartifact is marked public. ``w`` / ``h`` are baked into the signed URL\nso the CloudFront image behavior's Lambda@Edge resizer serves a cached\nvariant; ignored for non-image MIMEs.",
         "operationId": "create_artifact_content_presigned_download_url_api_v1_artifacts__artifact_id__content_presigned_urls_post",
         "security": [
           {
@@ -1609,7 +1609,7 @@
           "Billing"
         ],
         "summary": "Get current credit balance",
-        "description": "Returns the user's non-expired credit gauges — granted / used / remaining per bucket. Totals only; ledger history is not included.",
+        "description": "Returns the user's non-expired credit gauges \u2014 granted / used / remaining per bucket. Totals only; ledger history is not included.",
         "operationId": "get_credits_api_v1_me_billing_credits_get",
         "security": [
           {
@@ -1832,7 +1832,7 @@
           "Billing"
         ],
         "summary": "Open a Stripe Checkout session",
-        "description": "Creates a Stripe-hosted Checkout session for the requested plan. Trial days and any plan-discount promotion codes the user has redeemed are attached automatically. Returns 409 (API-BIS016) for a subscription plan while the user already holds a live paid subscription (active, trialing, or in dunning) — one paid subscription per user. Mobile clients should drive StoreKit / Play Billing natively using the provider_product_id returned by GET /plans instead of calling this endpoint.",
+        "description": "Creates a Stripe-hosted Checkout session for the requested plan. Trial days and any plan-discount promotion codes the user has redeemed are attached automatically. Returns 409 (API-BIS016) for a subscription plan while the user already holds a live paid subscription (active, trialing, or in dunning) \u2014 one paid subscription per user. Mobile clients should drive StoreKit / Play Billing natively using the provider_product_id returned by GET /plans instead of calling this endpoint.",
         "operationId": "create_checkout_session_api_v1_me_billing_checkout_session_post",
         "security": [
           {
@@ -1993,7 +1993,7 @@
           "Billing"
         ],
         "summary": "Switch plan (upgrade-only while subscribed)",
-        "description": "Switches the current user to another plan. Routing is a strict price-and-credits comparison: an upgrade applies immediately (prorated, new allotment replaces the old); a downgrade is rejected with 400 (API-BIS017) and the subscription is left unchanged — it continues to renew unless canceled separately (portal / store settings); a change where price and credits move opposite ways is rejected (API-BIS012). Switching off the Free tier returns a hosted checkout URL (kind=checkout) to redirect to.",
+        "description": "Switches the current user to another plan. Routing is a strict price-and-credits comparison: an upgrade applies immediately (prorated, new allotment replaces the old); a downgrade is rejected with 400 (API-BIS017) and the subscription is left unchanged \u2014 it continues to renew unless canceled separately (portal / store settings); a change where price and credits move opposite ways is rejected (API-BIS012). Switching off the Free tier returns a hosted checkout URL (kind=checkout) to redirect to.",
         "operationId": "change_plan_api_v1_me_billing_plan_post",
         "security": [
           {
@@ -2074,7 +2074,7 @@
           "Billing"
         ],
         "summary": "Open the Stripe Customer Portal",
-        "description": "Creates a Stripe-hosted Customer Portal session for the current customer — where they update their payment method, download invoices, and cancel or resume their subscription — and returns the URL to redirect to. 404 (API-BIS010) when the user has no billing account yet (never checked out). The route is provider-namespaced: Apple / Google subscriptions are managed natively in the stores and will get their own provider-specific routes.",
+        "description": "Creates a Stripe-hosted Customer Portal session for the current customer \u2014 where they update their payment method, download invoices, and cancel or resume their subscription \u2014 and returns the URL to redirect to. 404 (API-BIS010) when the user has no billing account yet (never checked out). The route is provider-namespaced: Apple / Google subscriptions are managed natively in the stores and will get their own provider-specific routes.",
         "operationId": "create_portal_session_api_v1_me_billing_stripe_portal_session_post",
         "security": [
           {
@@ -2155,7 +2155,7 @@
           "Billing"
         ],
         "summary": "Verify a mobile in-app purchase",
-        "description": "Verifies a client-presented purchase token (Google Play / Apple) against the provider server API and applies the resulting credit grant for the authenticated user. Idempotent — re-posting the same token is a no-op. Returns 409 (API-BIS016) for a subscription purchase while the user already holds a live paid subscription (active, trialing, or in dunning) with another provider — one paid subscription per user. Web (Stripe) clients use /checkout-session instead.",
+        "description": "Verifies a client-presented purchase token (Google Play / Apple) against the provider server API and applies the resulting credit grant for the authenticated user. Idempotent \u2014 re-posting the same token is a no-op. Returns 409 (API-BIS016) for a subscription purchase while the user already holds a live paid subscription (active, trialing, or in dunning) with another provider \u2014 one paid subscription per user. Web (Stripe) clients use /checkout-session instead.",
         "operationId": "create_purchase_api_v1_me_billing_purchases_post",
         "security": [
           {
@@ -2690,7 +2690,7 @@
           "Notes"
         ],
         "summary": "Create Note From Url",
-        "description": "Alias of POST /notes/text — same auto-detecting handler.",
+        "description": "Alias of POST /notes/text \u2014 same auto-detecting handler.",
         "operationId": "create_note_from_url_api_v1_notes_url_post",
         "security": [
           {
@@ -2771,7 +2771,7 @@
           "Notes"
         ],
         "summary": "Get Note By Slug",
-        "description": "Get note by share slug.\n\nSlug-based lookup is the share-safe alternative to ``/notes/{note_id}``:\nno internal id appears in the URL recipients receive. Auth is lenient so\nrecipients open the share page without (or with a stale) session — a valid\ntoken still lets owners see their own note, while a missing or invalid\ntoken degrades to anonymous (public-only) instead of a 401.",
+        "description": "Get note by share slug.\n\nSlug-based lookup is the share-safe alternative to ``/notes/{note_id}``:\nno internal id appears in the URL recipients receive. Auth is lenient so\nrecipients open the share page without (or with a stale) session \u2014 a valid\ntoken still lets owners see their own note, while a missing or invalid\ntoken degrades to anonymous (public-only) instead of a 401.",
         "operationId": "get_note_by_slug_api_v1_notes_by_slug__slug__get",
         "security": [
           {
@@ -4118,7 +4118,7 @@
           "Notes"
         ],
         "summary": "Create Note Display Presigned Download Url",
-        "description": "Mint a presigned URL for the note's display file (e.g. PDF preview).\n\nAccessible to the note owner or any caller when the note is marked\npublic. Returns 404 when the note has no display file — callers can\nfall back to ``GET /notes/{note_id}/content`` for the markdown body.\n``w`` / ``h`` are baked into the signed URL for the image-resize\nLambda@Edge; ignored for non-image MIMEs.\n\nUses lenient auth: a valid token resolves the owner (so private notes they\nown are reachable), while a missing or stale token degrades to anonymous\n(public-only) instead of a 401, and CSRF is not enforced.",
+        "description": "Mint a presigned URL for the note's display file (e.g. PDF preview).\n\nAccessible to the note owner or any caller when the note is marked\npublic. Returns 404 when the note has no display file \u2014 callers can\nfall back to ``GET /notes/{note_id}/content`` for the markdown body.\n``w`` / ``h`` are baked into the signed URL for the image-resize\nLambda@Edge; ignored for non-image MIMEs.\n\nUses lenient auth: a valid token resolves the owner (so private notes they\nown are reachable), while a missing or stale token degrades to anonymous\n(public-only) instead of a 401, and CSRF is not enforced.",
         "operationId": "create_note_display_presigned_download_url_api_v1_notes__note_id__display_presigned_urls_post",
         "security": [
           {
@@ -4270,7 +4270,7 @@
           "Notes"
         ],
         "summary": "Create Note File Content Presigned Download Url",
-        "description": "Create a presigned download URL for a file linked to a note.\n\nNote ownership/public access gates URL minting — a caller who can read\nthe note can read its referenced files. Mirrors the access check the\nlegacy ``GET /notes/{id}/files/{id}/content`` redirect enforced.\n``w`` / ``h`` are baked into the signed URL for the image-resize\nLambda@Edge; ignored for non-image MIMEs.\n\nUses lenient auth: a valid token resolves the owner (so private notes they\nown are reachable), while a missing or stale token degrades to anonymous\n(public-only) instead of a 401, and CSRF is not enforced.",
+        "description": "Create a presigned download URL for a file linked to a note.\n\nNote ownership/public access gates URL minting \u2014 a caller who can read\nthe note can read its referenced files. Mirrors the access check the\nlegacy ``GET /notes/{id}/files/{id}/content`` redirect enforced.\n``w`` / ``h`` are baked into the signed URL for the image-resize\nLambda@Edge; ignored for non-image MIMEs.\n\nUses lenient auth: a valid token resolves the owner (so private notes they\nown are reachable), while a missing or stale token degrades to anonymous\n(public-only) instead of a 401, and CSRF is not enforced.",
         "operationId": "create_note_file_content_presigned_download_url_api_v1_notes__note_id__files__file_id__content_presigned_urls_post",
         "security": [
           {
@@ -11304,7 +11304,7 @@
           "Conversations"
         ],
         "summary": "Interrupt the active conversation run",
-        "description": "Request interruption of the in-flight AI run for a conversation. The run is stopped asynchronously — the server aborts the LLM connection — and the interruption surfaces on the SSE stream as a `done` event with `finish_reason=cancelled`. Returns 409 when no run is active for the conversation.",
+        "description": "Request interruption of the in-flight AI run for a conversation. The run is stopped asynchronously \u2014 the server aborts the LLM connection \u2014 and the interruption surfaces on the SSE stream as a `done` event with `finish_reason=cancelled`. Returns 409 when no run is active for the conversation.",
         "operationId": "interrupt_conversation_run_api_v1_conversations__conversation_id__interruption_post",
         "security": [
           {
@@ -12388,7 +12388,7 @@
           "Conversations"
         ],
         "summary": "Update a message",
-        "description": "Update a message. Currently only the `reaction` field is supported — send `null` to clear the reaction.",
+        "description": "Update a message. Currently only the `reaction` field is supported \u2014 send `null` to clear the reaction.",
         "operationId": "update_message_api_v1_conversations__conversation_id__messages__message_id__patch",
         "security": [
           {
@@ -12567,7 +12567,7 @@
           "Notifications"
         ],
         "summary": "List Notifications",
-        "description": "List the current user's notifications, newest first.\n\nFilter (``?status={\"eq\":\"unread\"}``, ``?type={\"eq\":\"system\"}``), order\n(``?order_by=-id``), and paginate (``?limit=&offset=`` or an opaque\n``?cursor=``) via the shared ``PagedCriteria``. The unread badge is\n``?status={\"eq\":\"unread\"}`` → ``total``.",
+        "description": "List the current user's notifications, newest first.\n\nFilter (``?status={\"eq\":\"unread\"}``, ``?type={\"eq\":\"system\"}``), order\n(``?order_by=-id``), and paginate (``?limit=&offset=`` or an opaque\n``?cursor=``) via the shared ``PagedCriteria``. The unread badge is\n``?status={\"eq\":\"unread\"}`` \u2192 ``total``.",
         "operationId": "list_notifications_api_v1_notifications__get",
         "security": [
           {
@@ -13090,7 +13090,7 @@
           "Notifications"
         ],
         "summary": "Update Notification Status",
-        "description": "Mark a notification as read or dismissed.\n\nThis moves only the inbox row's lifecycle (unread/read/dismissed). It does\nNOT touch the carried content's domain status — accepting a suggestion or\nsaving/opening a recommendation is a separate action against that\nresource's own API (``PATCH /suggestions/{id}``, ``PUT\n/recommendations/{id}``). The notification service never writes across that\nborder; the two status axes are independent by design.",
+        "description": "Mark a notification as read or dismissed.\n\nThis moves only the inbox row's lifecycle (unread/read/dismissed). It does\nNOT touch the carried content's domain status \u2014 accepting a suggestion or\nsaving/opening a recommendation is a separate action against that\nresource's own API (``PATCH /suggestions/{id}``, ``PUT\n/recommendations/{id}``). The notification service never writes across that\nborder; the two status axes are independent by design.",
         "operationId": "update_notification_status_api_v1_notifications__notification_id__patch",
         "security": [
           {
@@ -17826,7 +17826,7 @@
           "Suggestions"
         ],
         "summary": "Update Suggestion",
-        "description": "Update a suggestion's status to ``accepted`` or ``dismissed``.\n\nThis resource owns the suggestion's domain status. When a suggestion reaches\nthe user through the notification center, accepting/dismissing it from the\ninbox calls this endpoint directly — the notification service only owns the\ninbox row's read state, never this status.\n\nIdempotent — calling on an already-accepted/dismissed suggestion returns\nthe current row without raising.  When transitioning to ``accepted``, the\nnote is also linked to the collection (ON CONFLICT DO NOTHING).",
+        "description": "Update a suggestion's status to ``accepted`` or ``dismissed``.\n\nThis resource owns the suggestion's domain status. When a suggestion reaches\nthe user through the notification center, accepting/dismissing it from the\ninbox calls this endpoint directly \u2014 the notification service only owns the\ninbox row's read state, never this status.\n\nIdempotent \u2014 calling on an already-accepted/dismissed suggestion returns\nthe current row without raising.  When transitioning to ``accepted``, the\nnote is also linked to the collection (ON CONFLICT DO NOTHING).",
         "operationId": "update_suggestion_api_v1_suggestions__suggestion_id__patch",
         "security": [
           {
@@ -18475,7 +18475,7 @@
           "Recommendations"
         ],
         "summary": "Update Recommendation",
-        "description": "Apply a user action (save / dismiss / not_interested) to a recommendation.\n\nThis resource owns the recommendation's domain status. When a recommendation\nreaches the user through the notification center, acting on it from the\ninbox calls this endpoint directly — the notification service only owns the\ninbox row's read state, never this status.",
+        "description": "Apply a user action (save / dismiss / not_interested) to a recommendation.\n\nThis resource owns the recommendation's domain status. When a recommendation\nreaches the user through the notification center, acting on it from the\ninbox calls this endpoint directly \u2014 the notification service only owns the\ninbox row's read state, never this status.",
         "operationId": "update_recommendation_api_v1_recommendations__recommendation_id__put",
         "security": [
           {
@@ -18722,6 +18722,85 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "External Connections"
+        ],
+        "summary": "Claim Connection",
+        "description": "Redeem the callback's completion token into a durable connection.\n\nThe second half of the connect handshake. The callback is unauthenticated by\nnecessity, so it only stages credentials; this endpoint is where the caller\nproves who they are, and the token is only honoured for the user who started\nthe flow. See ``ExternalConnectionService.complete_connect``.",
+        "operationId": "claim_connection_api_v1_external_connections_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimConnectionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectionSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/external-connections/{connection_id}": {
@@ -18803,7 +18882,7 @@
           "External Connections"
         ],
         "summary": "Oauth Callback",
-        "description": "Provider redirect target. Exchanges the code, persists the connection.\n\nRe-binds the ``state`` to the calling user: the state row's ``user_id`` must\nmatch the session, so an attacker who tricks a victim into authorizing with\nthe attacker's ``state`` cannot link the victim's provider account onto the\nattacker's account (OAuth account-linking CSRF). The path ``{provider}`` is\nalso cross-checked against the provider bound to the state row *before* the\nstate is consumed or the code exchanged — defence-in-depth against a client\ninvoking ``/callbacks/foo?state=<bar-state>`` without burning the state.",
+        "description": "Provider redirect target. Exchanges the code and stages the credentials.\n\nGrants nothing. Success here means a ``pending_external_connections`` row\nexists and its one-time ``completion_token`` has been handed to the browser;\nthe connection itself is created only when the authenticated owner redeems\nthat token at ``POST /external-connections``. Callers must not treat a 302\nor a bridge page as a completed connect.\n\nPublic \u2014 the redirected browser has no app session to present, least of all\non mobile. The staged row is owned by the user named on the ``state`` row,\nwhich is unguessable, single-use, and short-lived, but that ownership alone\nis not what authorises the connection; see the module docstring for why the\nsecond, authenticated step is the security boundary.\n\nThe path ``{provider}`` is cross-checked against the provider bound to the\nstate row *before* the state is consumed or the code exchanged \u2014 so a client\ninvoking ``/callbacks/foo?state=<bar-state>`` cannot burn the state.\n\nFailures navigate home the same way successes do, when the state names a\ndestination. The HTML bridge only helps a popup, which a native app does not\nhave: ``ASWebAuthenticationSession`` and Custom Tabs give the page no\n``window.opener``, so a denied consent would otherwise leave the auth browser\nparked on this endpoint with the app still waiting.",
         "operationId": "oauth_callback_api_v1_callbacks__provider__get",
         "security": [
           {
@@ -18832,10 +18911,33 @@
           {
             "name": "code",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
-              "type": "string",
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
               "title": "Code"
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Error"
             }
           },
           {
@@ -19159,7 +19261,7 @@
           "api_key"
         ],
         "title": "ApiKeyCreateResponse",
-        "description": "Creation response — carries the plaintext key, returned exactly once."
+        "description": "Creation response \u2014 carries the plaintext key, returned exactly once."
       },
       "ApiKeyResponse": {
         "properties": {
@@ -19237,7 +19339,7 @@
           "created_at"
         ],
         "title": "ApiKeyResponse",
-        "description": "API key metadata — never includes the secret."
+        "description": "API key metadata \u2014 never includes the secret."
       },
       "Article": {
         "properties": {
@@ -19866,7 +19968,7 @@
           "topup"
         ],
         "title": "BalanceResponse",
-        "description": "Response for ``GET /me/billing/credits``.\n\nTotals only — ledger history is deliberately NOT included (it grows\nunbounded); a dedicated paginated endpoint can serve it if a client\never needs the history."
+        "description": "Response for ``GET /me/billing/credits``.\n\nTotals only \u2014 ledger history is deliberately NOT included (it grows\nunbounded); a dedicated paginated endpoint can serve it if a client\never needs the history."
       },
       "BatchFileUploadResult": {
         "properties": {
@@ -20000,7 +20102,7 @@
               }
             ],
             "title": "Redirect After Uri",
-            "description": "App-internal path to send the browser to after callback completion. Must be a relative path beginning with a single \"/\" (e.g. \"/connections/done\") — absolute URLs are rejected to prevent the callback being used as an open redirect. If unset, the callback returns the persisted connection inline."
+            "description": "Where to send the browser after callback completion. Either an absolute URL under a configured allowlist prefix \u2014 an app origin (e.g. \"https://app.ancher.ai/oauth/callback\") for a web client, or a deep link (e.g. \"streamify://oauth/twitter\") for a native one \u2014 or a relative path beginning with a single \"/\". NOTE a relative path resolves against THIS API's origin, not your app's, so it is only useful when the two are the same host. A web app served elsewhere must send its absolute origin, or the browser lands on the API where the app is not served. Any other absolute URL is rejected to prevent the callback being used as an open redirect. If unset, the callback renders an HTML popup-completion page that postMessages the token to the opener instead of redirecting. This only changes how the one-time completion_token reaches you \u2014 NEITHER form connects anything. The callback stages credentials and you must redeem the token at POST /external-connections."
           },
           "extra_scopes": {
             "anyOf": [
@@ -20188,7 +20290,7 @@
           "remaining"
         ],
         "title": "BucketUsage",
-        "description": "Granted / used / remaining for one credit bucket — a complete gauge."
+        "description": "Granted / used / remaining for one credit bucket \u2014 a complete gauge."
       },
       "ChangePassword": {
         "properties": {
@@ -20359,7 +20461,7 @@
               }
             ],
             "title": "Session Token",
-            "description": "Provider-side session identifier — useful for client-side analytics."
+            "description": "Provider-side session identifier \u2014 useful for client-side analytics."
           }
         },
         "type": "object",
@@ -21551,7 +21653,7 @@
           "last_used_at"
         ],
         "title": "ConnectionSummary",
-        "description": "Public view of a connection row — never carries decrypted credentials."
+        "description": "Public view of a connection row \u2014 never carries decrypted credentials."
       },
       "ContentRecommendationEnvelope": {
         "properties": {
@@ -29022,7 +29124,7 @@
           "file_ref"
         ],
         "title": "MessageFileReference",
-        "description": "Transmuter for MessageFileReference — an Inventory subclass that owns a FileReference."
+        "description": "Transmuter for MessageFileReference \u2014 an Inventory subclass that owns a FileReference."
       },
       "MessageNote": {
         "properties": {
@@ -29258,7 +29360,7 @@
         },
         "type": "object",
         "title": "MessageUpdateRequest",
-        "description": "Schema for updating a message (request).\n\nConvention: ``reaction=null`` (or absent) is a no-op — it leaves the\nexisting value untouched. Send ``reaction='neutral'`` to clear a\nprevious like/dislike."
+        "description": "Schema for updating a message (request).\n\nConvention: ``reaction=null`` (or absent) is a no-op \u2014 it leaves the\nexisting value untouched. Send ``reaction='neutral'`` to clear a\nprevious like/dislike."
       },
       "NestedCriteriaBranch_Note_": {
         "properties": {
@@ -31588,7 +31690,7 @@
             "type": "string",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Credit Grant",
-            "description": "Credits granted on each successful purchase / renewal (1 credit ≈ 0.1 US cent / $0.001 of usage at markup 1.0)"
+            "description": "Credits granted on each successful purchase / renewal (1 credit \u2248 0.1 US cent / $0.001 of usage at markup 1.0)"
           },
           "billing_interval": {
             "anyOf": [
@@ -31604,7 +31706,7 @@
               }
             ],
             "title": "Billing Interval",
-            "description": "Charge cadence — month / year for subscriptions; null for credit packs"
+            "description": "Charge cadence \u2014 month / year for subscriptions; null for credit packs"
           },
           "credit_interval": {
             "anyOf": [
@@ -31718,7 +31820,7 @@
               "upgraded"
             ],
             "title": "Kind",
-            "description": "'same' (no change), 'checkout' (first purchase — redirect to hosted_url), or 'upgraded' (applied now). Downgrades are rejected with 400 API-BIS017 (upgrade-only while subscribed)."
+            "description": "'same' (no change), 'checkout' (first purchase \u2014 redirect to hosted_url), or 'upgraded' (applied now). Downgrades are rejected with 400 API-BIS017 (upgrade-only while subscribed)."
           },
           "hosted_url": {
             "anyOf": [
@@ -32475,7 +32577,7 @@
             "type": "string",
             "minLength": 1,
             "title": "Content",
-            "description": "The selected content — plain text or base64-encoded image"
+            "description": "The selected content \u2014 plain text or base64-encoded image"
           }
         },
         "type": "object",
@@ -32504,7 +32606,7 @@
         },
         "type": "object",
         "title": "StripePortalSessionRequest",
-        "description": "Request body for ``POST /me/billing/stripe/portal-session``.\n\nStripe-specific by design: Apple / Google IAP have no portal-session\nconcept — their subscriptions are managed natively in the stores."
+        "description": "Request body for ``POST /me/billing/stripe/portal-session``.\n\nStripe-specific by design: Apple / Google IAP have no portal-session\nconcept \u2014 their subscriptions are managed natively in the stores."
       },
       "StripePortalSessionResponse": {
         "properties": {
@@ -32747,7 +32849,7 @@
           "error"
         ],
         "title": "SuggestionBatchResult",
-        "description": "Per-suggestion outcome of a bulk transition, keyed by suggestion id.\n\nExactly one of ``suggestion`` (success) or ``error`` (failure) is\npopulated — a failing item never aborts the rest of the batch."
+        "description": "Per-suggestion outcome of a bulk transition, keyed by suggestion id.\n\nExactly one of ``suggestion`` (success) or ``error`` (failure) is\npopulated \u2014 a failing item never aborts the rest of the batch."
       },
       "SuggestionUpdate": {
         "properties": {
@@ -32766,7 +32868,7 @@
           "status"
         ],
         "title": "SuggestionUpdate",
-        "description": "Request schema for updating a suggestion's status.\n\nOnly forward transitions from ``pending`` are meaningful — pending →\naccepted (links the note to the collection) or pending → dismissed (soft\ndelete).  Status updates from non-pending states are no-ops (idempotent)."
+        "description": "Request schema for updating a suggestion's status.\n\nOnly forward transitions from ``pending`` are meaningful \u2014 pending \u2192\naccepted (links the note to the collection) or pending \u2192 dismissed (soft\ndelete).  Status updates from non-pending states are no-ops (idempotent)."
       },
       "SystemEnvelope": {
         "properties": {
@@ -36122,6 +36224,22 @@
         ],
         "title": "WebVerification",
         "description": "Schema for web email verification with auto-login."
+      },
+      "ClaimConnectionRequest": {
+        "properties": {
+          "completion_token": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Completion Token",
+            "description": "One-time token issued by the provider callback"
+          }
+        },
+        "type": "object",
+        "required": [
+          "completion_token"
+        ],
+        "title": "ClaimConnectionRequest",
+        "description": "Body for POST /external-connections \u2014 redeem a staged connection.\n\nThe completion token reaches the client out-of-band from the callback:\nvia ``postMessage`` on the web popup, or on the deep link a native app\nintercepts. Redeeming it requires the caller's own credentials, which is\nwhat stops a phished callback from granting anyone a connection."
       }
     },
     "securitySchemes": {

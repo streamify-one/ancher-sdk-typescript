@@ -3574,6 +3574,20 @@ export type WebVerification = {
    */
   code: string;
 }
+/**
+ * Body for POST /external-connections — redeem a staged connection.
+ * 
+ * The completion token reaches the client out-of-band from the callback:
+ * via ``postMessage`` on the web popup, or on the deep link a native app
+ * intercepts. Redeeming it requires the caller's own credentials, which is
+ * what stops a phished callback from granting anyone a connection.
+ */
+export type ClaimConnectionRequest = {
+  /**
+   * One-time token issued by the provider callback
+   */
+  completion_token: string;
+}
 
     // </Schemas>
     }
@@ -6369,6 +6383,29 @@ export type get_List_connections_api_v1_external_connections_get = {
 },
       
     }
+/**
+ * Redeem the callback's completion token into a durable connection.
+ * 
+ * The second half of the connect handshake. The callback is unauthenticated by
+ * necessity, so it only stages credentials; this endpoint is where the caller
+ * proves who they are, and the token is only honoured for the user who started
+ * the flow. See ``ExternalConnectionService.complete_connect``.
+ */
+export type post_Claim_connection_api_v1_external_connections_post = {
+      method: "POST",
+      path: "/api/v1/external-connections",
+      requestFormat: "json",
+      parameters: {
+            
+        
+        
+        body:  Schemas.ClaimConnectionRequest,
+          }
+      responses: {201: Schemas.ConnectionSummary,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
 export type delete_Disconnect_api_v1_external_connections__connection_id__delete = {
       method: "DELETE",
       path: "/api/v1/external-connections/{connection_id}",
@@ -6386,15 +6423,29 @@ export type delete_Disconnect_api_v1_external_connections__connection_id__delete
       
     }
 /**
- * Provider redirect target. Exchanges the code, persists the connection.
+ * Provider redirect target. Exchanges the code and stages the credentials.
  * 
- * Re-binds the ``state`` to the calling user: the state row's ``user_id`` must
- * match the session, so an attacker who tricks a victim into authorizing with
- * the attacker's ``state`` cannot link the victim's provider account onto the
- * attacker's account (OAuth account-linking CSRF). The path ``{provider}`` is
- * also cross-checked against the provider bound to the state row *before* the
- * state is consumed or the code exchanged — defence-in-depth against a client
- * invoking ``/callbacks/foo?state=<bar-state>`` without burning the state.
+ * Grants nothing. Success here means a ``pending_external_connections`` row
+ * exists and its one-time ``completion_token`` has been handed to the browser;
+ * the connection itself is created only when the authenticated owner redeems
+ * that token at ``POST /external-connections``. Callers must not treat a 302
+ * or a bridge page as a completed connect.
+ * 
+ * Public — the redirected browser has no app session to present, least of all
+ * on mobile. The staged row is owned by the user named on the ``state`` row,
+ * which is unguessable, single-use, and short-lived, but that ownership alone
+ * is not what authorises the connection; see the module docstring for why the
+ * second, authenticated step is the security boundary.
+ * 
+ * The path ``{provider}`` is cross-checked against the provider bound to the
+ * state row *before* the state is consumed or the code exchanged — so a client
+ * invoking ``/callbacks/foo?state=<bar-state>`` cannot burn the state.
+ * 
+ * Failures navigate home the same way successes do, when the state names a
+ * destination. The HTML bridge only helps a popup, which a native app does not
+ * have: ``ASWebAuthenticationSession`` and Custom Tabs give the page no
+ * ``window.opener``, so a denied consent would otherwise leave the auth browser
+ * parked on this endpoint with the app still waiting.
  */
 export type get_Oauth_callback_api_v1_callbacks__provider__get = {
       method: "GET",
@@ -6402,7 +6453,8 @@ export type get_Oauth_callback_api_v1_callbacks__provider__get = {
       requestFormat: "json",
       parameters: {
             query:  {state: string,
-code: string,
+code?: (string | null) | undefined,
+error?: (string | null) | undefined,
 },
         path:  {provider: string,
 },
@@ -6547,7 +6599,8 @@ post: {
 "/api/v1/pinned/": Endpoints.post_Pin_item_api_v1_pinned__post,
 "/api/v1/suggestions/acceptances": Endpoints.post_Accept_suggestions_api_v1_suggestions_acceptances_post,
 "/api/v1/suggestions/dismissals": Endpoints.post_Dismiss_suggestions_api_v1_suggestions_dismissals_post,
-"/api/v1/external-connections/{provider}/authorization": Endpoints.post_Begin_authorization_api_v1_external_connections__provider__authorization_post
+"/api/v1/external-connections/{provider}/authorization": Endpoints.post_Begin_authorization_api_v1_external_connections__provider__authorization_post,
+"/api/v1/external-connections": Endpoints.post_Claim_connection_api_v1_external_connections_post
          },
 patch: {
            "/api/v1/artifacts/{artifact_id}": Endpoints.patch_Update_artifact_api_v1_artifacts__artifact_id__patch,

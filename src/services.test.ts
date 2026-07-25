@@ -40,17 +40,18 @@ describe('WebSessionRepository', () => {
     })
   })
 
-  it('logs in with an OAuth ID token', async () => {
+  it('logs in with an OAuth ID token and returns is_new_user', async () => {
     const { WebSession, post } = makeRepository()
-    post.mockResolvedValueOnce(undefined)
+    post.mockResolvedValueOnce({ is_new_user: true })
 
-    await WebSession.loginWithProvider('google', { id_token: 'token' })
+    const result = await WebSession.loginWithProvider('google', { id_token: 'token' })
 
     expect(post).toHaveBeenCalledWith('/api/v1/web-session/{provider}', {
       path: { provider: 'google' },
       header: {},
       body: { id_token: 'token' },
     })
+    expect(result).toEqual({ is_new_user: true })
   })
 
   it('refreshes and logs out', async () => {

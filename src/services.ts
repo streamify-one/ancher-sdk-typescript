@@ -105,19 +105,37 @@ export type WebSessionProvider =
   EndpointByMethod['post']['/api/v1/web-session/{provider}']['parameters']['path']['provider']
 
 /**
+ * Body of the web OAuth login response. The endpoint sets the session cookies
+ * and returns only `is_new_user`, which the client reads to fire its
+ * client-side sign_up analytics event.
+ *
+ * NOTE: hand-typed bridge until the next `openapi.json` regen surfaces
+ * `Schemas.OAuthWebLoginResponse`; swap this alias for it then.
+ */
+export interface OAuthWebLoginResult {
+  is_new_user: boolean
+}
+
+/**
  * Cookie-session lifecycle for browser apps. The browser preset
  * (`@ancher-ai/sdk/browser`) already refreshes silently via `PUT /web-session`
  * internally — this surface is for the explicit auth flows a login UI drives.
- * The API sets/clears `HttpOnly` cookies on these calls (`204`s); tokens are
- * never exposed to JS.
+ * The API sets/clears `HttpOnly` cookies on these calls; tokens are never
+ * exposed to JS. OAuth login additionally returns `is_new_user` in the body.
  */
 export interface WebSessionRepository {
   /** Info about the current cookie session (`GET /web-session`). */
   current(): Promise<Schemas.UserSessionResponse>
   /** Log in with email/password; the API sets the session cookies. */
   login(body: Schemas.WebLogin): Promise<void>
-  /** Log in with an OAuth ID token; the API sets the session cookies. */
-  loginWithProvider(provider: WebSessionProvider, body: Schemas.OAuthLoginRequest): Promise<void>
+  /**
+   * Log in with an OAuth ID token; the API sets the session cookies and returns
+   * `is_new_user` so the client can fire its sign_up analytics event.
+   */
+  loginWithProvider(
+    provider: WebSessionProvider,
+    body: Schemas.OAuthLoginRequest
+  ): Promise<OAuthWebLoginResult>
   /** Refresh the cookie session using the refresh-token cookie. */
   refresh(): Promise<void>
   /** Delete the session and clear the auth cookies (logout). */
@@ -133,11 +151,17 @@ export function createWebSessionRepository(client: AncherClient): WebSessionRepo
       await client.api.post('/api/v1/web-session', { header: {}, body })
     },
     async loginWithProvider(provider, body) {
-      await client.api.post('/api/v1/web-session/{provider}', {
+      // The generated client still types this response as void (stale
+      // `openapi.json`); the endpoint returns `{ is_new_user }` at runtime.
+      // During rollout an old server may still 204 (empty body) — default to
+      // is_new_user:false so login fails closed (no sign_up) instead of
+      // throwing on the caller's `{ is_new_user }` destructure.
+      const res = (await client.api.post('/api/v1/web-session/{provider}', {
         path: { provider },
         header: {},
         body,
-      })
+      })) as unknown as OAuthWebLoginResult | null | undefined
+      return res ?? { is_new_user: false }
     },
     async refresh() {
       await client.api.put('/api/v1/web-session', { header: {} })

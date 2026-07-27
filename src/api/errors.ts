@@ -54,6 +54,8 @@ export interface ApiError {
   details?: Array<{ loc: string[]; msg: string; type: string }>
   message: string
   status: number
+  /** W3C trace id for the failed request — the key into Tempo/Loki. */
+  traceId?: string
 }
 
 /** A normalized API error thrown by the SDK transport for non-2xx responses. */
@@ -66,6 +68,12 @@ export class AncherApiError extends Error {
   readonly details?: Array<{ loc: string[]; msg: string; type: string }>
   /** The raw parsed response body, for callers that need more than the above. */
   readonly body?: unknown
+  /**
+   * W3C trace id for the failed request — the key support uses to find the
+   * exact request in Tempo (and its log lines in Loki). Read from the error
+   * envelope's `trace_id`, falling back to the `X-Trace-Id` response header.
+   */
+  readonly traceId?: string
 
   constructor(init: {
     message: string
@@ -73,6 +81,7 @@ export class AncherApiError extends Error {
     code?: string
     details?: AncherApiError['details']
     body?: unknown
+    traceId?: string
   }) {
     super(init.message)
     this.name = 'AncherApiError'
@@ -80,6 +89,7 @@ export class AncherApiError extends Error {
     this.code = init.code
     this.details = init.details
     this.body = init.body
+    this.traceId = init.traceId
   }
 
   /**
@@ -157,8 +167,11 @@ export function hasErrorCode(error: unknown, code: MaybeApiErrorCode): boolean {
 
 /**
  * Parse a non-OK `Response` into an {@link AncherApiError}, reading the JSON
- * error envelope for the machine-readable `code`, `message`, and validation
- * `details` when present. Never throws — falls back to status text.
+ * error envelope for the machine-readable `code`, `message`, `trace_id`, and
+ * validation `details` when present. Never throws — falls back to status text.
+ *
+ * The trace id falls back to the `X-Trace-Id` response header, so it survives
+ * responses that aren't our envelope at all (a gateway 502, an HTML error page).
  */
 export async function buildApiError(
   response: Response,
@@ -169,14 +182,16 @@ export async function buildApiError(
   let details: AncherApiError['details']
   let code: string | undefined
   let body: unknown
+  let traceId: string | undefined
 
   try {
     body = await response.clone().json()
     const errorBody = body as {
-      error?: { code?: unknown; message?: unknown }
+      error?: { code?: unknown; message?: unknown; trace_id?: unknown }
       detail?: unknown
       message?: unknown
     }
+    traceId = typeof errorBody.error?.trace_id === 'string' ? errorBody.error.trace_id : undefined
     details = Array.isArray(errorBody.detail)
       ? (errorBody.detail as AncherApiError['details'])
       : undefined
@@ -194,5 +209,8 @@ export async function buildApiError(
     // Body was not JSON / already consumed — keep the fallback message.
   }
 
-  return new AncherApiError({ message, status: response.status, code, details, body })
+  // `||=` (not `??=`) so an empty header normalizes to undefined rather than ''.
+  traceId ||= response.headers.get('x-trace-id') || undefined
+
+  return new AncherApiError({ message, status: response.status, code, details, body, traceId })
 }

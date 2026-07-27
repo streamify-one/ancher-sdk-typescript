@@ -8,6 +8,7 @@
 import { buildContextHeaders, sendWithAuthRetry } from './auth'
 import { ANCHER_BASE_URL, type AncherClientConfig } from './config'
 import { type ApiClient, createApiClient } from './generated/api.client'
+import { newTraceId } from './trace'
 import { createFetcher } from './transport'
 import { createUploader, type Uploader } from './upload'
 
@@ -42,8 +43,11 @@ export interface AncherClient {
 }
 
 /** Resolve the per-request auth/context headers shared by the raw `request` helper. */
-async function requestHeaders(config: AncherClientConfig): Promise<Record<string, string>> {
-  return { ...config.defaultHeaders, ...(await buildContextHeaders(config)) }
+async function requestHeaders(
+  config: AncherClientConfig,
+  traceId: string
+): Promise<Record<string, string>> {
+  return { ...config.defaultHeaders, ...(await buildContextHeaders(config, traceId)) }
 }
 
 /**
@@ -66,13 +70,15 @@ export function createAncherClient(config: AncherClientConfig = {}): AncherClien
 
   const request = (path: string, init: RequestInit = {}): Promise<Response> => {
     const url = /^https?:\/\//.test(path) ? path : `${baseUrl}${path}`
+    // Held outside `send` so a 401 replay stays in the same trace.
+    const traceId = newTraceId()
     return sendWithAuthRetry(
       resolved,
       async () =>
         doFetch(url, {
           ...init,
           headers: {
-            ...(await requestHeaders(resolved)),
+            ...(await requestHeaders(resolved, traceId)),
             ...(init.headers as Record<string, string> | undefined),
           },
           credentials: init.credentials ?? credentials,

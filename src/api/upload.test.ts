@@ -19,6 +19,16 @@ function sentInit(fetchMock: ReturnType<typeof vi.fn<typeof fetch>>): RequestIni
   return init
 }
 
+function sentTraceparent(
+  fetchMock: ReturnType<typeof vi.fn<typeof fetch>>,
+  call: number
+): string {
+  const headers = fetchMock.mock.calls[call]?.[1]?.headers
+  const traceparent = new Headers(headers).get('traceparent')
+  if (!traceparent) throw new Error(`fetch call ${call} had no traceparent`)
+  return traceparent
+}
+
 describe('createUploader', () => {
   it('POSTs a single file under the default field name', async () => {
     const { upload, fetchMock } = makeUploader()
@@ -69,6 +79,22 @@ describe('createUploader', () => {
     expect(parts).toHaveLength(2)
     expect((parts[0] as File).name).toBe('a.md')
     expect((parts[1] as File).name).toBe('b.md')
+  })
+
+  it('replays a 401 in the same trace with a new span id', async () => {
+    const refreshSession = vi.fn().mockResolvedValue(true)
+    const { upload, fetchMock } = makeUploader({ refreshSession })
+    fetchMock
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'file-1' })))
+
+    await upload('/api/v1/files/', new Blob(['x']))
+
+    const first = sentTraceparent(fetchMock, 0).split('-')
+    const replay = sentTraceparent(fetchMock, 1).split('-')
+    expect(refreshSession).toHaveBeenCalledOnce()
+    expect(replay[1]).toBe(first[1])
+    expect(replay[2]).not.toBe(first[2])
   })
 
   describe('XMLHttpRequest branch (onProgress set)', () => {

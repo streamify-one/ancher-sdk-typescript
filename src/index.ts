@@ -30,6 +30,8 @@ export {
   isInsufficientCreditsError,
   parseErrorCode,
 } from './api/errors'
+// W3C Trace Context helpers — for hand-built requests that bypass the transport.
+export { formatTraceparent, newSpanId, newTraceId, newTraceparent } from './api/trace'
 // Generated client — types only (`Schemas` is a type-only namespace of every
 // request/response shape, e.g. `Schemas.Note`).
 export type {

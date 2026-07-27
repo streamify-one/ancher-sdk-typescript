@@ -11,6 +11,7 @@
  */
 
 import type { AncherClientConfig } from '../api/config'
+import { newTraceparent } from '../api/trace'
 
 const DEVICE_ID_KEY = 'ancher-device-id'
 const CSRF_COOKIE_NAME = 'streamify_csrf_token'
@@ -55,6 +56,8 @@ export function makeRefreshSession(origin: string): () => Promise<boolean> {
           headers: {
             'Content-Type': 'application/json',
             'x-device-id': getDeviceId(),
+            // Hand-built headers, so `buildContextHeaders` never runs here.
+            traceparent: newTraceparent(),
             ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
           },
           credentials: 'include',

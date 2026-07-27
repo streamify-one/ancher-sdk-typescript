@@ -12,6 +12,7 @@
 
 import type { AncherClientConfig } from './config'
 import { buildApiError, isActivationRequiredError } from './errors'
+import { formatTraceparent, newTraceId } from './trace'
 
 /**
  * Resolve the bearer-token auth header and write it into `headers`.
@@ -34,14 +35,24 @@ export async function applyAuthHeader(
 
 /**
  * Assemble the per-request context headers shared by every caller — host headers
- * ({@link AncherClientConfig.getHeaders}), CSRF, device id, timezone, and the
- * bearer/api-key auth header (via {@link applyAuthHeader}). Callers layer their
- * own `defaultHeaders` / `Content-Type` / `Accept` on top. Re-derived per attempt
- * so retries pick up refreshed auth. (Formerly duplicated across
- * transport/upload/chat/client.)
+ * ({@link AncherClientConfig.getHeaders}), CSRF, device id, timezone, the W3C
+ * `traceparent`, and the bearer/api-key auth header (via {@link applyAuthHeader}).
+ * Callers layer their own `defaultHeaders` / `Content-Type` / `Accept` on top.
+ * Re-derived per attempt so retries pick up refreshed auth. (Formerly duplicated
+ * across transport/upload/chat/client.)
+ *
+ * Pass `traceId` to keep a retry inside the same trace: the span id is minted
+ * fresh on every call, so the 401 → refresh → replay becomes a sibling span
+ * instead of an unrelated trace. Omitting it starts a new trace, which is the
+ * right default for a one-shot request.
+ *
+ * `traceparent` is set here rather than left to {@link AncherClientConfig.getHeaders}
+ * because that hook is the lowest-precedence layer and a host could clobber it;
+ * explicit per-request headers still win, as documented on the config.
  */
 export async function buildContextHeaders(
-  config: AncherClientConfig
+  config: AncherClientConfig,
+  traceId: string = newTraceId()
 ): Promise<Record<string, string>> {
   const headers: Record<string, string> = { ...(await config.getHeaders?.()) }
   const csrf = await config.getCsrfToken?.()
@@ -50,6 +61,7 @@ export async function buildContextHeaders(
   if (deviceId) headers['x-device-id'] = deviceId
   const timezone = await config.getTimezone?.()
   if (timezone) headers['x-timezone'] = timezone
+  headers.traceparent = formatTraceparent(traceId)
   await applyAuthHeader(config, headers)
   return headers
 }

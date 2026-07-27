@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
+import { createAncherClient } from './api/client'
 import type { ChatEvent } from './chat'
-import { consumeChat, parseChatStream } from './chat'
+import {
+  consumeChat,
+  openConversationStream,
+  parseChatStream,
+  streamConversation,
+} from './chat'
 
 // ---------------------------------------------------------------------------
 // Helpers — build SSE `Response` bodies from newline-delimited JSON envelopes.
@@ -35,6 +41,20 @@ async function collect(stream: AsyncGenerator<ChatEvent>): Promise<ChatEvent[]> 
   const events: ChatEvent[] = []
   for await (const event of stream) events.push(event)
   return events
+}
+
+function traceparentAt(fetchMock: ReturnType<typeof vi.fn<typeof fetch>>, call: number): string {
+  const headers = fetchMock.mock.calls[call]?.[1]?.headers
+  const traceparent = new Headers(headers).get('traceparent')
+  if (!traceparent) throw new Error(`fetch call ${call} had no traceparent`)
+  return traceparent
+}
+
+function expectSameTraceWithNewSpan(first: string, replay: string): void {
+  const firstParts = first.split('-')
+  const replayParts = replay.split('-')
+  expect(replayParts[1]).toBe(firstParts[1])
+  expect(replayParts[2]).not.toBe(firstParts[2])
 }
 
 // A minimal `trace` envelope carrying a pydantic-ai run event.
@@ -390,5 +410,43 @@ describe('consumeChat', () => {
     const result = await consumeChat(stream)
     expect(result.text).toBe('main ')
     expect(result.finishReason).toBe('stop')
+  })
+})
+
+describe('conversation stream retries', () => {
+  it('keeps the trace and changes the span when the raw stream retries a 401', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(sseResponse([]))
+    const refreshSession = vi.fn().mockResolvedValue(true)
+    const client = createAncherClient({
+      baseUrl: 'https://api.test',
+      fetch: fetchMock,
+      refreshSession,
+    })
+
+    await openConversationStream(client, '/conversations/c-1/stream')
+
+    expect(refreshSession).toHaveBeenCalledOnce()
+    expectSameTraceWithNewSpan(traceparentAt(fetchMock, 0), traceparentAt(fetchMock, 1))
+  })
+
+  it('keeps the trace and changes the span when the typed stream retries a 401', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(null, { status: 401 }))
+      .mockResolvedValueOnce(envelopeResponse([{ type: 'done', finish_reason: 'stop' }]))
+    const refreshSession = vi.fn().mockResolvedValue(true)
+    const client = createAncherClient({
+      baseUrl: 'https://api.test',
+      fetch: fetchMock,
+      refreshSession,
+    })
+
+    await collect(streamConversation(client, 'c-1'))
+
+    expect(refreshSession).toHaveBeenCalledOnce()
+    expectSameTraceWithNewSpan(traceparentAt(fetchMock, 0), traceparentAt(fetchMock, 1))
   })
 })

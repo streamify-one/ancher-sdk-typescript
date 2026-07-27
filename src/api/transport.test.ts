@@ -44,6 +44,82 @@ describe('createFetcher', () => {
   })
 })
 
+/** The `traceparent` sent on the nth `fetch` call, split into its four fields. */
+function traceparentOf(fetchMock: ReturnType<typeof vi.fn<typeof fetch>>, call: number) {
+  const headers = fetchMock.mock.calls[call]?.[1]?.headers as Record<string, string> | undefined
+  return (headers?.traceparent ?? '').split('-')
+}
+
+function jsonResponse(status: number): Response {
+  return new Response(JSON.stringify({}), { status })
+}
+
+/** A minimal generated-client `FetchInput`. */
+const NOTES_INPUT = {
+  method: 'get' as const,
+  path: '/api/v1/notes/',
+  url: new URL('https://api.test/api/v1/notes/'),
+}
+
+describe('traceparent propagation', () => {
+  it('sends a well-formed traceparent on every request', async () => {
+    const { fetcher, fetchMock } = makeFetcher()
+    fetchMock.mockResolvedValue(jsonResponse(200))
+
+    await fetcher.fetch(NOTES_INPUT)
+
+    const headers = fetchMock.mock.calls[0]?.[1]?.headers as Record<string, string>
+    expect(headers.traceparent).toMatch(/^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/)
+  })
+
+  it('starts a distinct trace for each logical request', async () => {
+    const { fetcher, fetchMock } = makeFetcher()
+    fetchMock.mockResolvedValue(jsonResponse(200))
+
+    await fetcher.fetch(NOTES_INPUT)
+    await fetcher.fetch(NOTES_INPUT)
+
+    expect(traceparentOf(fetchMock, 0)[1]).not.toBe(traceparentOf(fetchMock, 1)[1])
+  })
+
+  it('replays a 401 into the SAME trace with a NEW span id', async () => {
+    // The retry is a sibling span of the original attempt, not a separate
+    // trace — otherwise a refreshed-and-succeeded request is unfindable from
+    // the trace id the first attempt reported.
+    const refreshSession = vi.fn().mockResolvedValue(true)
+    const { fetcher, fetchMock } = makeFetcher({ refreshSession })
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse(401))
+      .mockResolvedValueOnce(jsonResponse(200))
+
+    await fetcher.fetch(NOTES_INPUT)
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(refreshSession).toHaveBeenCalledOnce()
+
+    const [, firstTrace, firstSpan, firstFlags] = traceparentOf(fetchMock, 0)
+    const [, replayTrace, replaySpan, replayFlags] = traceparentOf(fetchMock, 1)
+
+    expect(replayTrace).toBe(firstTrace)
+    expect(replaySpan).not.toBe(firstSpan)
+    expect(replaySpan).toMatch(/^[0-9a-f]{16}$/)
+    expect(firstFlags).toBe('01')
+    expect(replayFlags).toBe('01')
+  })
+
+  it('lets an explicit per-request header override the generated traceparent', async () => {
+    const { fetcher, fetchMock } = makeFetcher()
+    fetchMock.mockResolvedValue(jsonResponse(200))
+
+    await fetcher.fetch({
+      ...NOTES_INPUT,
+      overrides: { headers: { traceparent: `00-${'d'.repeat(32)}-${'e'.repeat(16)}-01` } },
+    })
+
+    expect(traceparentOf(fetchMock, 0)[1]).toBe('d'.repeat(32))
+  })
+})
+
 describe('encodeSearchParams', () => {
   it('returns an empty URLSearchParams for undefined input', () => {
     const { encodeSearchParams } = makeFetcher()

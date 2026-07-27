@@ -18,6 +18,69 @@ const jsonResponse = (body: unknown, init?: ResponseInit): Response =>
     headers: { 'content-type': 'application/json', ...(init?.headers ?? {}) },
   })
 
+describe('buildApiError trace id', () => {
+  const TRACE_ID = '4bf92f3577b34da6a3ce929d0e0e4736'
+  const HEADER_TRACE_ID = '0af7651916cd43dd8448eb211c80319c'
+
+  it('reads trace_id from the error envelope', async () => {
+    const response = jsonResponse(
+      { error: { code: 'API-INT001', message: 'Boom', trace_id: TRACE_ID } },
+      { status: 500 }
+    )
+
+    expect((await buildApiError(response)).traceId).toBe(TRACE_ID)
+  })
+
+  it('falls back to the X-Trace-Id header when the body is not our envelope', async () => {
+    // A gateway 502 returns HTML, not JSON — the header is the only source left.
+    const response = new Response('<html>502 Bad Gateway</html>', {
+      status: 502,
+      headers: { 'content-type': 'text/html', 'x-trace-id': HEADER_TRACE_ID },
+    })
+
+    const error = await buildApiError(response)
+
+    expect(error.traceId).toBe(HEADER_TRACE_ID)
+    expect(error.code).toBeUndefined()
+  })
+
+  it('falls back to the header when the JSON body carries no trace_id', async () => {
+    const response = jsonResponse(
+      { error: { code: 'API-INT001', message: 'Boom' } },
+      { status: 500, headers: { 'x-trace-id': HEADER_TRACE_ID } }
+    )
+
+    expect((await buildApiError(response)).traceId).toBe(HEADER_TRACE_ID)
+  })
+
+  it('prefers the body trace_id over the header', async () => {
+    const response = jsonResponse(
+      { error: { code: 'API-INT001', message: 'Boom', trace_id: TRACE_ID } },
+      { status: 500, headers: { 'x-trace-id': HEADER_TRACE_ID } }
+    )
+
+    expect((await buildApiError(response)).traceId).toBe(TRACE_ID)
+  })
+
+  it('is undefined when neither the body nor the headers carry one', async () => {
+    const response = jsonResponse({ error: { code: 'API-INT001', message: 'Boom' } }, { status: 500 })
+
+    expect((await buildApiError(response)).traceId).toBeUndefined()
+  })
+
+  it('normalizes an empty X-Trace-Id header to undefined', async () => {
+    const response = jsonResponse({}, { status: 500, headers: { 'x-trace-id': '' } })
+
+    expect((await buildApiError(response)).traceId).toBeUndefined()
+  })
+
+  it('ignores a non-string trace_id', async () => {
+    const response = jsonResponse({ error: { code: 'X', message: 'm', trace_id: 42 } }, { status: 500 })
+
+    expect((await buildApiError(response)).traceId).toBeUndefined()
+  })
+})
+
 describe('buildApiError', () => {
   it('parses the { error: { code, message, details? } } envelope', async () => {
     const response = jsonResponse(

@@ -18,6 +18,12 @@ function makeConfig(overrides: Partial<AncherClientConfig> = {}): AncherClientCo
   return { ...overrides }
 }
 
+/** The wire grammar the API's `traceparent` parser accepts. */
+const TRACEPARENT = /^00-[0-9a-f]{32}-[0-9a-f]{16}-01$/
+
+const traceOf = (headers: Record<string, string>) => headers.traceparent?.split('-')[1]
+const spanOf = (headers: Record<string, string>) => headers.traceparent?.split('-')[2]
+
 describe('sendWithAuthRetry', () => {
   it('401 → refreshSession() true → retries once and returns the fresh 200', async () => {
     const send = vi
@@ -221,7 +227,7 @@ describe('buildContextHeaders', () => {
       getAccessToken: () => 'tok',
     })
 
-    const headers = await buildContextHeaders(config)
+    const headers = await buildContextHeaders(config, 'a'.repeat(32))
 
     expect(headers).toEqual({
       'x-app-version': '1.2.3',
@@ -229,10 +235,11 @@ describe('buildContextHeaders', () => {
       'x-device-id': 'device-42',
       'x-timezone': 'America/New_York',
       Authorization: 'Bearer tok',
+      traceparent: expect.stringMatching(/^00-a{32}-[0-9a-f]{16}-01$/),
     })
   })
 
-  it('omits headers whose hooks are absent or return nothing', async () => {
+  it('omits headers whose hooks are absent or return nothing (but always traces)', async () => {
     const config = makeConfig({
       getCsrfToken: () => null,
       getDeviceId: () => undefined,
@@ -240,7 +247,33 @@ describe('buildContextHeaders', () => {
 
     const headers = await buildContextHeaders(config)
 
-    expect(headers).toEqual({})
+    expect(headers).toEqual({ traceparent: expect.stringMatching(TRACEPARENT) })
+  })
+
+  it('reuses the supplied trace id but mints a fresh span id per call', async () => {
+    const traceId = 'b'.repeat(32)
+
+    const first = await buildContextHeaders(makeConfig(), traceId)
+    const second = await buildContextHeaders(makeConfig(), traceId)
+
+    expect(traceOf(first)).toBe(traceId)
+    expect(traceOf(second)).toBe(traceId)
+    expect(spanOf(first)).not.toBe(spanOf(second))
+  })
+
+  it('starts a new trace when no trace id is supplied', async () => {
+    const first = await buildContextHeaders(makeConfig())
+    const second = await buildContextHeaders(makeConfig())
+
+    expect(traceOf(first)).not.toBe(traceOf(second))
+  })
+
+  it('wins over a traceparent returned by getHeaders (the lowest-precedence layer)', async () => {
+    const config = makeConfig({ getHeaders: () => ({ traceparent: 'bogus' }) })
+
+    const headers = await buildContextHeaders(config, 'c'.repeat(32))
+
+    expect(headers.traceparent).toMatch(/^00-c{32}-[0-9a-f]{16}-01$/)
   })
 })
 

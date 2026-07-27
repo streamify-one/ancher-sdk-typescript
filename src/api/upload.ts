@@ -8,6 +8,7 @@
 
 import { buildContextHeaders, requestSignal, sendWithAuthRetry } from './auth'
 import { ANCHER_BASE_URL, type AncherClientConfig } from './config'
+import { newTraceId } from './trace'
 
 export interface UploadOptions {
   /** Form field name for the file. Defaults to `'file'`. */
@@ -39,8 +40,8 @@ export function createUploader(config: AncherClientConfig): Uploader {
   const credentials = config.credentials ?? 'include'
   const baseUrl = config.baseUrl ?? ANCHER_BASE_URL
 
-  async function authHeaders(): Promise<Record<string, string>> {
-    return { ...config.defaultHeaders, ...(await buildContextHeaders(config)) }
+  async function authHeaders(traceId: string): Promise<Record<string, string>> {
+    return { ...config.defaultHeaders, ...(await buildContextHeaders(config, traceId)) }
   }
 
   return async function upload<T>(
@@ -51,6 +52,8 @@ export function createUploader(config: AncherClientConfig): Uploader {
     const url = `${baseUrl}${endpoint}`
     const fieldName = options.fieldName ?? 'file'
     const method = options.method ?? 'POST'
+    // Held outside `send` so a 401 replay stays in the same trace.
+    const traceId = newTraceId()
 
     const send = async (): Promise<Response> => {
       const formData = new FormData()
@@ -66,7 +69,7 @@ export function createUploader(config: AncherClientConfig): Uploader {
       for (const [key, value] of Object.entries(options.fields ?? {})) {
         formData.append(key, value)
       }
-      const headers = await authHeaders()
+      const headers = await authHeaders(traceId)
       // Do not set Content-Type; the runtime sets the multipart boundary.
       if (options.onProgress && typeof XMLHttpRequest !== 'undefined') {
         return uploadWithProgress(

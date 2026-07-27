@@ -11,6 +11,7 @@
 
 import { buildContextHeaders, requestSignal, sendWithAuthRetry } from './auth'
 import type { AncherClientConfig } from './config'
+import { newTraceId } from './trace'
 import type { EndpointParameters, Fetcher, Method } from './generated/api.client'
 
 interface FetchInput {
@@ -30,18 +31,18 @@ export function createFetcher(config: AncherClientConfig): Fetcher {
   }
   const credentials = config.credentials ?? 'include'
 
-  /** Resolve the per-request auth/context headers (CSRF, device, timezone, key). */
-  function authHeaders(): Promise<Record<string, string>> {
-    return buildContextHeaders(config)
+  /** Resolve the per-request auth/context headers (CSRF, device, timezone, trace, key). */
+  function authHeaders(traceId: string): Promise<Record<string, string>> {
+    return buildContextHeaders(config, traceId)
   }
 
   /** Build the final RequestInit for a call (re-derives auth headers each attempt). */
-  async function buildInit(input: FetchInput): Promise<RequestInit> {
+  async function buildInit(input: FetchInput, traceId: string): Promise<RequestInit> {
     const hasBody = input.parameters?.body !== undefined
     const headers: Record<string, string> = {
       ...config.defaultHeaders,
       ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
-      ...(await authHeaders()),
+      ...(await authHeaders(traceId)),
       ...(input.parameters?.header as Record<string, string> | undefined),
       ...(input.overrides?.headers as Record<string, string> | undefined),
     }
@@ -91,6 +92,9 @@ export function createFetcher(config: AncherClientConfig): Fetcher {
 
     async fetch(input: FetchInput): Promise<Response> {
       const url = buildUrl(input)
+      // One trace id per logical call, held outside `send` so the retry below
+      // replays into the same trace (with a fresh span id per attempt).
+      const traceId = newTraceId()
 
       // The shared lifecycle (auth, 401→refresh→retry, 403 activation gate,
       // error normalization) lives in `./auth`; `send` rebuilds the request each
@@ -98,7 +102,7 @@ export function createFetcher(config: AncherClientConfig): Fetcher {
       // into status-error throwing (the default for direct `.get()/.post()`),
       // the rich `AncherApiError` is thrown; with `throwOnStatusError: false`
       // (e.g. `withResponse: true`) the error response is returned instead.
-      return sendWithAuthRetry(config, async () => doFetch(url, await buildInit(input)), {
+      return sendWithAuthRetry(config, async () => doFetch(url, await buildInit(input, traceId)), {
         throwOnStatusError: input.throwOnStatusError,
       })
     },

@@ -20,6 +20,7 @@ import type { AncherClient } from './api/client'
 import type { AncherClientConfig } from './api/config'
 import { buildApiError } from './api/errors'
 import type { Schemas } from './api/generated/api.client'
+import { newTraceId } from './api/trace'
 
 // ---------------------------------------------------------------------------
 // Structured event surface
@@ -337,11 +338,14 @@ export async function* parseChatStream(response: Response): AsyncGenerator<ChatE
   }
 }
 
-async function streamHeaders(config: AncherClientConfig): Promise<Record<string, string>> {
+async function streamHeaders(
+  config: AncherClientConfig,
+  traceId: string
+): Promise<Record<string, string>> {
   return {
     Accept: 'text/event-stream',
     ...config.defaultHeaders,
-    ...(await buildContextHeaders(config)),
+    ...(await buildContextHeaders(config, traceId)),
   }
 }
 
@@ -354,10 +358,12 @@ async function openStreamUrl(
   const config = client.config
   const doFetch = config.fetch ?? globalThis.fetch
   const credentials = config.credentials ?? 'include'
+  // Held outside `send` so the 401 replay stays in the same trace.
+  const traceId = newTraceId()
   const send = async () =>
     doFetch(url, {
       method: 'GET',
-      headers: await streamHeaders(config),
+      headers: await streamHeaders(config, traceId),
       credentials,
       signal: opts.signal,
     })
@@ -411,8 +417,15 @@ export async function openConversationStream(
   const doFetch = config.fetch ?? globalThis.fetch
   const credentials = config.credentials ?? 'include'
   const url = resolveStreamUrl(config, streamUrl)
+  // Held outside `send` so the 401 replay stays in the same trace.
+  const traceId = newTraceId()
   const send = async () =>
-    doFetch(url, { method: 'GET', headers: await streamHeaders(config), credentials, signal: opts.signal })
+    doFetch(url, {
+      method: 'GET',
+      headers: await streamHeaders(config, traceId),
+      credentials,
+      signal: opts.signal,
+    })
   let response = await send()
   if (response.status === 401 && config.refreshSession) {
     if (await config.refreshSession()) response = await send()

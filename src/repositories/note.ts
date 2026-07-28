@@ -10,6 +10,7 @@ import type { AncherClient } from '../api/client'
 import type { EndpointByMethod, Schemas } from '../api/generated/api.client'
 import type { UploadOptions } from '../api/upload'
 import type {
+  CreateNoteFromFileRequest,
   Note,
   NoteOrderBy,
   NoteSuggestedCollectionsOptions,
@@ -41,8 +42,11 @@ export interface NoteRepository extends ListSurface<Note, NoteWhere, NoteOrderBy
   createFromArtifact(body: Schemas.NoteCreateFromArtifact): Promise<Note>
   /** Create a note from a conversation. */
   createFromConversation(body: Schemas.NoteCreateFromConversation): Promise<Note>
-  /** Create a note from an already-uploaded file. */
-  createFromFile(body: Schemas.ArticleCreateFromFile): Promise<Note>
+  /**
+   * Create one note from one or more already-uploaded files. Pass `file_id`
+   * for a single file, or `file_ids` to combine several into one note.
+   */
+  createFromFile(body: CreateNoteFromFileRequest): Promise<Note>
   /** Create a note from a message. */
   createFromMessage(body: Schemas.NoteCreateFromMessage): Promise<Note>
   /** Create a note from plain text. */

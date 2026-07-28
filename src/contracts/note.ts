@@ -181,13 +181,41 @@ export type CreateNoteFromMessageRequest = Schemas.NoteCreateFromMessage
 /** Create note from an artifact */
 export type CreateNoteFromArtifactRequest = Schemas.NoteCreateFromArtifact
 
-/** Create note from file request */
-export interface CreateNoteFromFileRequest {
-  /** Optional user comment (triggers fresh parsing) */
-  comment?: string | null
-  /** ID of the uploaded file */
-  file_id: string
-}
+/**
+ * Maximum number of uploaded files the API will combine into a single note
+ * (`MAX_FILES_PER_NOTE` in the API's `app/schemas/note.py`).
+ */
+export const MAX_FILES_PER_NOTE = 10
+
+/**
+ * Create note from one or more already-uploaded files.
+ *
+ * The API accepts **exactly one** of `file_id` (one note from one file) or
+ * `file_ids` (one note owning every listed file, up to
+ * {@link MAX_FILES_PER_NOTE}); supplying both or neither is rejected. The
+ * `?: never` arms make that a compile error rather than a runtime 422.
+ *
+ * Deliberately **not** an alias of `Schemas.ArticleCreateFromFiles`: the
+ * endpoint declares its XOR through a `json_schema_extra.oneOf` override, and
+ * typed-openapi emits only those arms — so the generated type drops `comment`
+ * entirely and degrades `file_ids` to `Array<any>`. Re-aliasing it on a future
+ * codegen refresh would silently lose both.
+ */
+export type CreateNoteFromFileRequest =
+  | {
+      /** Optional user comment (triggers fresh parsing) */
+      comment?: string | null
+      /** ID of the uploaded file */
+      file_id: string
+      file_ids?: never
+    }
+  | {
+      /** Optional user comment (triggers fresh parsing) */
+      comment?: string | null
+      file_id?: never
+      /** IDs of the uploaded files to combine into one note */
+      file_ids: string[]
+    }
 
 /** Copy note request */
 export type CopyNoteRequest = Schemas.NoteCopy

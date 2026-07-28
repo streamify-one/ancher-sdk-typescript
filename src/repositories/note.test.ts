@@ -19,6 +19,25 @@ function makeRepository() {
 }
 
 describe('NoteRepository', () => {
+  it('forwards multiple file ids when creating a combined note', async () => {
+    const { Note, post } = makeRepository()
+    const createdNote = { id: 'note-1' }
+    post.mockResolvedValueOnce(createdNote)
+
+    const result = await Note.createFromFile({
+      file_ids: ['file-1', 'file-2'],
+      comment: 'Quarterly reports',
+    })
+
+    expect(post).toHaveBeenCalledWith('/api/v1/notes/files', {
+      body: {
+        file_ids: ['file-1', 'file-2'],
+        comment: 'Quarterly reports',
+      },
+    })
+    expect(result).toBe(createdNote)
+  })
+
   it('mints a note display presigned URL', async () => {
     const { Note, post } = makeRepository()
     post.mockResolvedValueOnce({ download_url: 'https://cdn.test/display' })

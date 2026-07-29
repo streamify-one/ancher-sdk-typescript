@@ -3,6 +3,7 @@
  * that fronts a criteria list endpoint.
  */
 
+import { AncherApiError } from '../api/errors'
 import type { ListFilterOptions, ListOptions, SortKey } from '../contracts/query'
 import { buildListQuery, type WireListQuery } from './query'
 
@@ -49,8 +50,23 @@ export interface ListSurface<TEntity, TWhere extends object, TOrderBy extends So
 export function createListSurface<TEntity, TWhere extends object, TOrderBy extends SortKey>(
   fetchPage: (query: WireListQuery) => Promise<Page<TEntity>>
 ): ListSurface<TEntity, TWhere, TOrderBy> {
-  const list = (options?: ListOptions<TWhere, TOrderBy>): Promise<Page<TEntity>> =>
-    fetchPage(buildListQuery(options))
+  const list = async (options?: ListOptions<TWhere, TOrderBy>): Promise<Page<TEntity>> => {
+    const page = await fetchPage(buildListQuery(options))
+    // The generated client resolves `undefined` for a 2xx body it can't parse —
+    // a stripped content type, a bodyless response — while typing this as a
+    // non-nullable `Page`. Left to propagate, that `undefined` threw wherever a
+    // caller first touched it, which for an infinite query is `has_more` during
+    // a React render, far from the request at fault (VITA-1216). Fail here, at
+    // the single point every criteria list endpoint passes through, so it
+    // surfaces as an ordinary rejected request instead.
+    if (!page) {
+      throw new AncherApiError({
+        message: 'The API returned an empty list response.',
+        status: 200,
+      })
+    }
+    return page
+  }
 
   return {
     list,

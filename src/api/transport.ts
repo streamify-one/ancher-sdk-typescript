@@ -11,8 +11,59 @@
 
 import { buildContextHeaders, requestSignal, sendWithAuthRetry } from './auth'
 import type { AncherClientConfig } from './config'
+import { AncherApiError } from './errors'
 import { newTraceId } from './trace'
 import type { EndpointParameters, Fetcher, Method } from './generated/api.client'
+
+/** The content types the generated client treats as JSON. */
+function isJsonContentType(contentType: string): boolean {
+  return (
+    contentType.includes('application/json') ||
+    (contentType.includes('application/') && contentType.includes('json')) ||
+    contentType === '*/*'
+  )
+}
+
+/**
+ * Parse a response body, refusing to turn an unparseable one into `undefined`.
+ *
+ * Mirrors the generated client's `defaultParseResponseData` content-type
+ * routing with one deliberate difference: where the default swallows a JSON
+ * parse failure into `undefined` — while the generated types promise a
+ * non-nullable payload — this throws. A body truncated mid-flight on a 200 (a
+ * dropped connection, a proxy cutting a chunked response, a suspended tab) used
+ * to reach callers as `undefined` and blow up far from the request that caused
+ * it, e.g. as an uncaught `has_more` of `undefined` during a React render
+ * (VITA-1216).
+ *
+ * Bodies that are legitimately absent — a 204/205, or any empty body under a
+ * JSON content type — still resolve to `undefined`.
+ */
+async function parseResponseData(response: Response): Promise<unknown> {
+  const contentType = response.headers.get('content-type') ?? ''
+  if (contentType.startsWith('text/')) return response.text()
+  if (contentType === 'application/octet-stream') return response.arrayBuffer()
+  // Unknown/absent content type: the generated default yields `undefined` here
+  // and callers depend on that for bodyless endpoints. Don't guess at binary.
+  if (!isJsonContentType(contentType)) return undefined
+
+  const raw = await response.text()
+  if (raw.trim() === '') return undefined
+
+  try {
+    return JSON.parse(raw)
+  } catch {
+    // With `throwOnStatusError: false` (what `withResponse: true` sets) the
+    // caller inspects `.status`/`.data` rather than catching, so an unparseable
+    // *error* body has to stay data. Only a success response is a real defect.
+    if (!response.ok) return undefined
+    throw new AncherApiError({
+      message: `Malformed JSON in the API response (HTTP ${response.status})`,
+      status: response.status,
+      traceId: response.headers.get('x-trace-id') || undefined,
+    })
+  }
+}
 
 interface FetchInput {
   method: Method
@@ -89,6 +140,10 @@ export function createFetcher(config: AncherClientConfig): Fetcher {
     // repeated primitive. The generated default would `String(obj)` these into
     // `[object Object]`, so we encode here.
     encodeSearchParams,
+
+    // The generated default turns any unparseable success body into `undefined`
+    // while still typing the call as returning its schema — see above.
+    parseResponseData,
 
     async fetch(input: FetchInput): Promise<Response> {
       const url = buildUrl(input)

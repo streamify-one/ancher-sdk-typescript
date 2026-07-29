@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { AncherApiError } from '../api/errors'
 import { isEnumValue } from '../contracts/assert'
 import { NoteStatus, type NoteListOptions, type NoteWhere } from '../contracts/note'
 import { likePattern } from '../contracts/query'
@@ -267,6 +268,36 @@ describe('createListSurface', () => {
       if (item.id === 1) break
     }
     expect(calls).toHaveLength(1)
+  })
+
+  /**
+   * Reproduce the `undefined` the generated client resolves for a 2xx body it
+   * can't parse — it types the call as returning a non-nullable `Page`, so the
+   * cast is exactly the lie the guard exists to catch.
+   */
+  function absentPageSurface() {
+    return createListSurface<Item, { id?: number }, '-id' | '+id'>(() =>
+      Promise.resolve(undefined as unknown as Page<Item>)
+    )
+  }
+
+  it('list rejects rather than passing an absent page to the caller', async () => {
+    // Left to propagate, this only threw where a caller first read a field —
+    // for an infinite query, `has_more` during a React render (VITA-1216).
+    await expect(absentPageSurface().list()).rejects.toBeInstanceOf(AncherApiError)
+  })
+
+  it('count rejects on an absent page instead of reporting 0', async () => {
+    await expect(absentPageSurface().count()).rejects.toBeInstanceOf(AncherApiError)
+  })
+
+  it('iterate rejects on an absent page instead of yielding nothing', async () => {
+    const drain = async () => {
+      const seen: number[] = []
+      for await (const item of absentPageSurface().iterate()) seen.push(item.id)
+      return seen
+    }
+    await expect(drain()).rejects.toBeInstanceOf(AncherApiError)
   })
 })
 

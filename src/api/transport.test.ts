@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { AncherClientConfig } from './config'
+import { AncherApiError } from './errors'
 import { createFetcher } from './transport'
 
 /**
@@ -226,5 +227,97 @@ describe('encodeSearchParams', () => {
     })
     const roundTripped = new URLSearchParams(search.toString())
     expect(roundTripped.get('status')).toBe(JSON.stringify({ eq: 'active' }))
+  })
+})
+
+/**
+ * `parseResponseData` is optional on the `Fetcher` interface but always
+ * supplied by `createFetcher` — assert + narrow so tests can invoke it.
+ */
+function makeParser() {
+  const { fetcher } = makeFetcher()
+  if (!fetcher.parseResponseData) {
+    throw new Error('createFetcher should always provide parseResponseData')
+  }
+  return fetcher.parseResponseData
+}
+
+function response(body: BodyInit | null, contentType: string, status = 200): Response {
+  return new Response(body, { status, headers: { 'content-type': contentType } })
+}
+
+describe('parseResponseData', () => {
+  it('parses a JSON body', async () => {
+    const parse = makeParser()
+    await expect(parse(response('{"has_more":false}', 'application/json'))).resolves.toEqual({
+      has_more: false,
+    })
+  })
+
+  it('honours a JSON content type carrying a charset', async () => {
+    const parse = makeParser()
+    await expect(
+      parse(response('{"ok":true}', 'application/json; charset=utf-8'))
+    ).resolves.toEqual({ ok: true })
+  })
+
+  /**
+   * The regression: the generated `defaultParseResponseData` swallows this into
+   * `undefined` while typing the call as returning its schema, so a body cut
+   * short mid-flight surfaced wherever the caller first read a field — for an
+   * infinite query, `has_more` during a React render (VITA-1216).
+   */
+  it('throws for a truncated JSON body on a success response', async () => {
+    const parse = makeParser()
+    await expect(parse(response('{"items":[{"id"', 'application/json'))).rejects.toThrow(
+      AncherApiError
+    )
+  })
+
+  it('carries the response trace id on the malformed-body error', async () => {
+    const parse = makeParser()
+    const malformed = new Response('{"items"', {
+      status: 200,
+      headers: { 'content-type': 'application/json', 'x-trace-id': 'abc123' },
+    })
+    await expect(parse(malformed)).rejects.toMatchObject({ status: 200, traceId: 'abc123' })
+  })
+
+  it('resolves undefined for a bodyless response', async () => {
+    const parse = makeParser()
+    await expect(parse(response(null, 'application/json', 204))).resolves.toBeUndefined()
+    await expect(parse(response('', 'application/json'))).resolves.toBeUndefined()
+    await expect(parse(response('   ', 'application/json'))).resolves.toBeUndefined()
+  })
+
+  it('keeps an unparseable error body as data rather than throwing', async () => {
+    // `withResponse: true` sets `throwOnStatusError: false`, so the caller reads
+    // `.status`/`.data` instead of catching — a throw here would break that.
+    const parse = makeParser()
+    await expect(parse(response('<html>502</html>', 'application/json', 502))).resolves.toBeUndefined()
+  })
+
+  it('returns text bodies verbatim', async () => {
+    const parse = makeParser()
+    await expect(parse(response('plain', 'text/plain'))).resolves.toBe('plain')
+    await expect(parse(response('<html>', 'text/html'))).resolves.toBe('<html>')
+  })
+
+  it('returns binary bodies as an ArrayBuffer', async () => {
+    const parse = makeParser()
+    const parsed = await parse(response('abc', 'application/octet-stream'))
+    expect(parsed).toBeInstanceOf(ArrayBuffer)
+  })
+
+  it('resolves undefined for an unrecognized or absent content type', async () => {
+    const parse = makeParser()
+    await expect(parse(response('abc', 'image/png'))).resolves.toBeUndefined()
+
+    // A proxy or CDN stripping the header is one of the ways a list endpoint
+    // produced `undefined` — the list-surface guard in repositories/base.ts is
+    // what catches this one, since there's no body type to parse against.
+    const headerless = new Response('abc', { status: 200 })
+    headerless.headers.delete('content-type')
+    await expect(parse(headerless)).resolves.toBeUndefined()
   })
 })

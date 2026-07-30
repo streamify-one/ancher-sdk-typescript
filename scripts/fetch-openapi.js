@@ -47,10 +47,17 @@ async function main() {
   }
 
   // Strip transport-injected header parameters from every operation. The SDK
-  // transport sets these automatically (CSRF double-submit, device id, timezone),
-  // so leaving them in the spec would force callers to pass a required `header`
+  // transport sets these automatically (CSRF double-submit, device id, timezone,
+  // and the analytics session context a host supplies through `getHeaders`), so
+  // leaving them in the spec would force callers to pass a required `header`
   // argument on every typed request.
-  const STRIPPED_HEADERS = new Set(['x-csrf-token', 'x-device-id', 'x-timezone'])
+  const STRIPPED_HEADERS = new Set([
+    'x-csrf-token',
+    'x-device-id',
+    'x-timezone',
+    'x-ga-client-id',
+    'x-ga-session-id',
+  ])
   for (const methods of Object.values(spec.paths)) {
     for (const operation of Object.values(methods)) {
       if (!operation || typeof operation !== 'object' || !Array.isArray(operation.parameters)) {

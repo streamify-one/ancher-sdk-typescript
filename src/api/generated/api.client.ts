@@ -621,6 +621,36 @@ export type ResourceAttachment = {
   type: ("file" | "note" | "tag" | "collection" | "artifact");
 }
 /**
+ * Selection provenance: the note the content was selected from.
+ */
+export type NoteSelectionSource = {
+  /**
+   * Selection provenance: the note the content was selected from.
+   */
+  type?: string | undefined;
+  /**
+   * ID of the source note
+   */
+  id: string;
+}
+/**
+ * Selection provenance: the web page the content was selected from.
+ */
+export type WebSelectionSource = {
+  /**
+   * Selection provenance: the web page the content was selected from.
+   */
+  type?: string | undefined;
+  /**
+   * URL of the source page
+   */
+  url: string;
+  /**
+   * Selection provenance: the web page the content was selected from.
+   */
+  title?: (string | null) | undefined;
+}
+/**
  * Inline content the user selected for the conversation context.
  */
 export type SelectedContentAttachment = {
@@ -636,13 +666,38 @@ export type SelectedContentAttachment = {
    * The selected content — plain text or base64-encoded image
    */
   content: string;
+  /**
+   * Inline content the user selected for the conversation context.
+   */
+  source?: ((NoteSelectionSource | WebSelectionSource) | null) | undefined;
+}
+/**
+ * The web page the user is currently viewing, independent of a selection.
+ */
+export type WebPageAttachment = {
+  /**
+   * The web page the user is currently viewing, independent of a selection.
+   */
+  type?: string | undefined;
+  /**
+   * URL of the page
+   */
+  url: string;
+  /**
+   * The web page the user is currently viewing, independent of a selection.
+   */
+  title?: (string | null) | undefined;
+  /**
+   * The web page the user is currently viewing, independent of a selection.
+   */
+  content?: (string | null) | undefined;
 }
 export type ClarificationSubmitItem = { question_id: string, value: (string | Array<string>) }
 export type ClarificationSubmitPayload = { request_id: string, action: ("answer" | "skip" | "cancel"), answers?: Array<ClarificationSubmitItem> | undefined, note?: (string | null) | undefined }
 /**
  * Unified schema for chat requests (both new and continuing conversations).
  */
-export type ChatRequestSchema = Partial<{ content: (string | null), voice_file_id: (string | null), attachments: Array<(ResourceAttachment | SelectedContentAttachment)>, enable_kb_search: boolean, enable_web_search: boolean, clarification: (ClarificationSubmitPayload | null) }>
+export type ChatRequestSchema = Partial<{ content: (string | null), voice_file_id: (string | null), attachments: Array<(ResourceAttachment | SelectedContentAttachment | WebPageAttachment)>, enable_kb_search: boolean, enable_web_search: boolean, clarification: (ClarificationSubmitPayload | null) }>
 /**
  * Request body for ``POST /me/billing/checkout-session``.
  */
@@ -2073,6 +2128,63 @@ export type MessageSelectedContent = {
    * The selected content
    */
   content: string;
+  /**
+   * Note the content was selected from, when selected inside a note
+   */
+  source_note_id: (string | null);
+  /**
+   * URL of the web page the content was selected from
+   */
+  source_url: (string | null);
+  /**
+   * Title of the web page the content was selected from
+   */
+  source_title: (string | null);
+}
+/**
+ * Transmuter for MessageWebPage table.
+ */
+export type MessageWebPage = {
+  /**
+   * Creation timestamp in Unix seconds
+   */
+  created_at: number;
+  /**
+   * Creator of the record
+   */
+  created_by: string;
+  /**
+   * Last update timestamp in Unix seconds
+   */
+  updated_at: number;
+  /**
+   * Last updater of the record
+   */
+  updated_by: string;
+  /**
+   * Reference to the message
+   */
+  message_id: string;
+  /**
+   * Denormalized conversation id for per-conversation content dedup
+   */
+  conversation_id: string;
+  /**
+   * Position among all attachments
+   */
+  index: number;
+  /**
+   * URL of the web page
+   */
+  url: string;
+  /**
+   * Title of the web page
+   */
+  title: (string | null);
+  /**
+   * SHA-256 of the page content sent with this message; the content itself is never stored
+   */
+  content_hash: (string | null);
 }
 /**
  * Transmuter for MessageFileReference — an Inventory subclass that owns a FileReference.
@@ -2228,6 +2340,10 @@ export type Message = {
    * Selected content attached to this message
    */
   message_selected_contents: Array<MessageSelectedContent>;
+  /**
+   * Web page context attached to this message
+   */
+  message_web_pages: Array<MessageWebPage>;
   /**
    * Ordered file attachments for this message
    */

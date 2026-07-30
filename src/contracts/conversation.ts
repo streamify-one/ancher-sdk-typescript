@@ -106,6 +106,25 @@ export type _ResourceAttachmentTypeExhaustive = Expect<
   Eq<ResourceAttachmentType, Schemas.ResourceAttachment['type']>
 >
 
+/**
+ * Discriminator value identifying the page-context attachment inside
+ * {@link ChatRequestAttachment}.
+ *
+ * Not guarded with `satisfies`: the OpenAPI spec pins these discriminators as
+ * single-value `const`s, but `typed-openapi` widens a one-value `const` to
+ * `string`, so a `satisfies Record<string, Schemas.WebPageAttachment['type']>`
+ * check would be vacuous. The union-membership guards below are what actually
+ * fail on a codegen drift.
+ */
+export const WEB_PAGE_ATTACHMENT_TYPE = 'web_page'
+
+/** Discriminator values for {@link SelectionSource}. See the note above re: `satisfies`. */
+export const SelectionSourceType = {
+  Note: 'note',
+  Web: 'web',
+} as const
+export type SelectionSourceType = (typeof SelectionSourceType)[keyof typeof SelectionSourceType]
+
 /* ---------------------------------------------------------------------------
  * Entities + clarification payloads.
  * ------------------------------------------------------------------------- */
@@ -179,6 +198,52 @@ export interface ConversationWithPreview extends Schemas.ConversationSchema {
 export type ChatRequest = Schemas.ChatRequestSchema & {
   pro_mode?: boolean
 }
+
+/** A single `ChatRequest.attachments` entry — resource ref, selection, or page. */
+export type ChatRequestAttachment = NonNullable<Schemas.ChatRequestSchema['attachments']>[number]
+
+/**
+ * The web page the user is currently viewing, attached independently of any
+ * selection. `content` is markdown extracted **client-side** — the server
+ * inlines it into the model prompt at most once per content hash per
+ * conversation and never persists it (only a SHA-256 `content_hash`, echoed on
+ * {@link MessageWebPage}).
+ */
+export type WebPageAttachment = Schemas.WebPageAttachment
+
+/** Provenance of a {@link Schemas.SelectedContentAttachment} — a note or a web page. */
+export type SelectionSource = NonNullable<Schemas.SelectedContentAttachment['source']>
+
+/** Selection provenance: the note the content was selected from. */
+export type NoteSelectionSource = Schemas.NoteSelectionSource
+
+/** Selection provenance: the web page the content was selected from. */
+export type WebSelectionSource = Schemas.WebSelectionSource
+
+/** Persisted page context echoed back on a message, for history re-render. */
+export type MessageWebPage = Schemas.MessageWebPage
+
+/** Persisted selected-content record echoed back on a message. */
+export type MessageSelectedContent = Schemas.MessageSelectedContent
+
+/**
+ * Drift guards for the page-context contract (VITA-1057). These carry the
+ * weight a `satisfies` check can't here: if a codegen refresh drops
+ * `WebPageAttachment` from the attachments union, or either variant from the
+ * selection-source union, these stop compiling.
+ */
+/** @internal */
+export type _WebPageAttachmentInChatRequest = Expect<
+  Schemas.WebPageAttachment extends ChatRequestAttachment ? true : false
+>
+/** @internal */
+export type _NoteSelectionSourceInUnion = Expect<
+  Schemas.NoteSelectionSource extends SelectionSource ? true : false
+>
+/** @internal */
+export type _WebSelectionSourceInUnion = Expect<
+  Schemas.WebSelectionSource extends SelectionSource ? true : false
+>
 
 /** Receipt returned after a chat run is accepted and moved to the backend stream. */
 export interface ConversationRunReceipt {

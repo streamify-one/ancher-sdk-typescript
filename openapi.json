@@ -9264,15 +9264,16 @@
         "summary": "Create new user",
         "description": "Register a new user with email, password/OAuth, and required preferences",
         "operationId": "create_user_api_v1_users_post",
+        "parameters": [],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/UserRegistration"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "201": {
@@ -20422,6 +20423,9 @@
                 },
                 {
                   "$ref": "#/components/schemas/SelectedContentAttachment"
+                },
+                {
+                  "$ref": "#/components/schemas/WebPageAttachment"
                 }
               ],
               "discriminator": {
@@ -20432,11 +20436,13 @@
                   "file": "#/components/schemas/ResourceAttachment",
                   "note": "#/components/schemas/ResourceAttachment",
                   "selected_content": "#/components/schemas/SelectedContentAttachment",
-                  "tag": "#/components/schemas/ResourceAttachment"
+                  "tag": "#/components/schemas/ResourceAttachment",
+                  "web_page": "#/components/schemas/WebPageAttachment"
                 }
               }
             },
             "type": "array",
+            "maxItems": 50,
             "title": "Attachments",
             "description": "List of attachments to include with the message"
           },
@@ -28946,6 +28952,14 @@
             "title": "Message Selected Contents",
             "description": "Selected content attached to this message"
           },
+          "message_web_pages": {
+            "items": {
+              "$ref": "#/components/schemas/MessageWebPage"
+            },
+            "type": "array",
+            "title": "Message Web Pages",
+            "description": "Web page context attached to this message"
+          },
           "message_file_references": {
             "items": {
               "$ref": "#/components/schemas/MessageFileReference"
@@ -28996,6 +29010,7 @@
           "message_tags",
           "message_collections",
           "message_selected_contents",
+          "message_web_pages",
           "message_file_references",
           "voice_file_reference",
           "message_artifacts"
@@ -29343,6 +29358,43 @@
             "type": "string",
             "title": "Content",
             "description": "The selected content"
+          },
+          "source_note_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note Id",
+            "description": "Note the content was selected from, when selected inside a note"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url",
+            "description": "URL of the web page the content was selected from"
+          },
+          "source_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Title",
+            "description": "Title of the web page the content was selected from"
           }
         },
         "type": "object",
@@ -29354,7 +29406,10 @@
           "message_id",
           "index",
           "content_type",
-          "content"
+          "content",
+          "source_note_id",
+          "source_url",
+          "source_title"
         ],
         "title": "MessageSelectedContent",
         "description": "Transmuter for MessageSelectedContent table."
@@ -29454,6 +29509,97 @@
         "type": "object",
         "title": "MessageUpdateRequest",
         "description": "Schema for updating a message (request).\n\nConvention: ``reaction=null`` (or absent) is a no-op — it leaves the\nexisting value untouched. Send ``reaction='neutral'`` to clear a\nprevious like/dislike."
+      },
+      "MessageWebPage": {
+        "properties": {
+          "created_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Created At",
+            "description": "Creation timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Creator of the record",
+            "default": "unknown"
+          },
+          "updated_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Updated At",
+            "description": "Last update timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "updated_by": {
+            "type": "string",
+            "title": "Updated By",
+            "description": "Last updater of the record",
+            "default": "unknown"
+          },
+          "message_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Message Id",
+            "description": "Reference to the message"
+          },
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Conversation Id",
+            "description": "Denormalized conversation id for per-conversation content dedup"
+          },
+          "index": {
+            "type": "integer",
+            "title": "Index",
+            "description": "Position among all attachments"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url",
+            "description": "URL of the web page"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title",
+            "description": "Title of the web page"
+          },
+          "content_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Hash",
+            "description": "SHA-256 of the page content sent with this message; the content itself is never stored"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_at",
+          "created_by",
+          "updated_at",
+          "updated_by",
+          "message_id",
+          "conversation_id",
+          "index",
+          "url",
+          "title",
+          "content_hash"
+        ],
+        "title": "MessageWebPage",
+        "description": "Transmuter for MessageWebPage table."
       },
       "NestedCriteriaBranch_Note_": {
         "properties": {
@@ -30292,6 +30438,29 @@
           "score"
         ],
         "title": "NoteRetrievalResult"
+      },
+      "NoteSelectionSource": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "note",
+            "title": "Type",
+            "description": "Source type",
+            "default": "note"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id",
+            "description": "ID of the source note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "NoteSelectionSource",
+        "description": "Selection provenance: the note the content was selected from."
       },
       "NoteTagsUpdate": {
         "properties": {
@@ -32691,9 +32860,36 @@
           },
           "content": {
             "type": "string",
+            "maxLength": 5000000,
             "minLength": 1,
             "title": "Content",
             "description": "The selected content — plain text or base64-encoded image"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/NoteSelectionSource"
+                  },
+                  {
+                    "$ref": "#/components/schemas/WebSelectionSource"
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "type",
+                  "mapping": {
+                    "note": "#/components/schemas/NoteSelectionSource",
+                    "web": "#/components/schemas/WebSelectionSource"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "Where the content was selected from (note or web page)"
           }
         },
         "type": "object",
@@ -36328,6 +36524,92 @@
         ],
         "title": "WebLogin",
         "description": "Schema for web client login with remember_me support."
+      },
+      "WebPageAttachment": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "web_page",
+            "title": "Type",
+            "description": "Type of the attachment",
+            "default": "web_page"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2048,
+            "title": "Url",
+            "description": "URL of the page"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title",
+            "description": "Title of the page"
+          },
+          "content": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content",
+            "description": "Page content as markdown, extracted client-side. Inlined into the model prompt once per content version per conversation; never persisted server-side."
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "WebPageAttachment",
+        "description": "The web page the user is currently viewing, independent of a selection."
+      },
+      "WebSelectionSource": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "web",
+            "title": "Type",
+            "description": "Source type",
+            "default": "web"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2048,
+            "title": "Url",
+            "description": "URL of the source page"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 512
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title",
+            "description": "Title of the source page"
+          }
+        },
+        "type": "object",
+        "required": [
+          "url"
+        ],
+        "title": "WebSelectionSource",
+        "description": "Selection provenance: the web page the content was selected from."
       },
       "WebVerification": {
         "properties": {

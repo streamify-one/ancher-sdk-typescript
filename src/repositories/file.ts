@@ -94,6 +94,18 @@ export interface FileRepository {
   revertRevision(noteId: string, fileId: string, revisionId: string): Promise<File>
 }
 
+/**
+ * The value the server signed into the presigned PUT — S3 metadata is
+ * ASCII-only, so it stores `sanitize_for_s3_metadata(filename)`: NFKD
+ * normalize, drop what is left non-ASCII, `'unnamed'` if nothing survives.
+ * This must mirror `app/services/storage.py` exactly; echoing the raw name
+ * back is a 403 for every non-ASCII filename. The record keeps the real name —
+ * only this header copy is folded.
+ */
+function asciiMetadata(filename: string): string {
+  return filename.normalize('NFKD').replace(/[^\x00-\x7F]/g, '') || 'unnamed'
+}
+
 export function createFileRepository(client: AncherClient): FileRepository {
   const doFetch = client.config.fetch ?? globalThis.fetch
   const presignedUrl: FileRepository['presignedUrl'] = async (fileId, options = {}) => {
@@ -122,9 +134,15 @@ export function createFileRepository(client: AncherClient): FileRepository {
         ...abortable,
       })
 
+      // The presign signs the filename metadata alongside the content type
+      // (`X-Amz-SignedHeaders=content-type;host;x-amz-meta-original_filename`),
+      // so the PUT must carry it or S3 answers 403 SignatureDoesNotMatch.
       const stored = await doFetch(upload_url, {
         method: 'PUT',
-        headers: { 'Content-Type': mimetype },
+        headers: {
+          'Content-Type': mimetype,
+          'x-amz-meta-original_filename': asciiMetadata(filename),
+        },
         body: file,
         signal: options.signal,
       })

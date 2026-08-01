@@ -96,6 +96,76 @@ describe('FileRepository', () => {
     })
   })
 
+  describe('presigned S3 PUT headers', () => {
+    // The presign is signed over a header set the URL names in
+    // `X-Amz-SignedHeaders`. Sending fewer headers than were signed is a
+    // `403 SignatureDoesNotMatch` — which is exactly what shipped: the PUT
+    // carried only `Content-Type` while the server signs the filename metadata
+    // too (`get_upload_url` in the API passes
+    // `metadata={'original_filename': …}`).
+    const SIGNED_URL =
+      'https://s3.test/put?X-Amz-Algorithm=AWS4-HMAC-SHA256' +
+      '&X-Amz-SignedHeaders=content-type%3Bhost%3Bx-amz-meta-original_filename'
+
+    const putHeaders = (fetchMock: ReturnType<typeof vi.fn>): Record<string, string> => {
+      const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+      return Object.fromEntries(
+        Object.entries(init.headers as Record<string, string>).map(([key, value]) => [
+          key.toLowerCase(),
+          value,
+        ])
+      )
+    }
+
+    it('sends every header the presigned URL declares as signed', async () => {
+      const { File, fetchMock, post } = makeRepository()
+      post.mockResolvedValueOnce({ upload_url: SIGNED_URL, s3_key: 'key-1' })
+      fetchMock.mockResolvedValueOnce(new Response(null, { status: 200 }))
+      post.mockResolvedValueOnce({ id: 'file-1' })
+
+      await File.upload(new globalThis.File(['a'], 'report.pdf', { type: 'application/pdf' }))
+
+      const declared = new URL(SIGNED_URL).searchParams
+        .get('X-Amz-SignedHeaders')
+        ?.split(';')
+        .filter(name => name !== 'host')
+      expect(declared).toEqual(['content-type', 'x-amz-meta-original_filename'])
+      const sent = putHeaders(fetchMock)
+      expect(Object.keys(sent).sort()).toEqual(declared)
+      expect(sent['content-type']).toBe('application/pdf')
+      expect(sent['x-amz-meta-original_filename']).toBe('report.pdf')
+    })
+
+    it('sends the ASCII-sanitized filename the server signed, not the raw one', async () => {
+      // S3 metadata is ASCII-only, so the server signs
+      // `sanitize_for_s3_metadata(filename)`. Echoing the raw name back is a
+      // 403 for every non-ASCII filename — verified against live S3.
+      const { File, fetchMock, post } = makeRepository()
+      post.mockResolvedValueOnce({ upload_url: SIGNED_URL, s3_key: 'key-1' })
+      fetchMock.mockResolvedValueOnce(new Response(null, { status: 200 }))
+      post.mockResolvedValueOnce({ id: 'file-1' })
+
+      await File.upload(new globalThis.File(['a'], '测试-café.md', { type: 'text/markdown' }))
+
+      expect(putHeaders(fetchMock)['x-amz-meta-original_filename']).toBe('-cafe.md')
+      // The record itself keeps the real name.
+      expect(post).toHaveBeenNthCalledWith(2, '/api/v1/files/completions', {
+        body: { s3_key: 'key-1', filename: '测试-café.md' },
+      })
+    })
+
+    it('falls back to the server-side placeholder when a name has no ASCII at all', async () => {
+      const { File, fetchMock, post } = makeRepository()
+      post.mockResolvedValueOnce({ upload_url: SIGNED_URL, s3_key: 'key-1' })
+      fetchMock.mockResolvedValueOnce(new Response(null, { status: 200 }))
+      post.mockResolvedValueOnce({ id: 'file-1' })
+
+      await File.upload(new Blob(['a']), { filename: '测试', mimetype: 'text/markdown' })
+
+      expect(putHeaders(fetchMock)['x-amz-meta-original_filename']).toBe('unnamed')
+    })
+  })
+
   describe('uploadBatch', () => {
     it('uploads named files under the repeated `files` field', async () => {
       const { File, upload } = makeRepository()

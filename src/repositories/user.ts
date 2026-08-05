@@ -49,6 +49,17 @@ export interface UserRepository {
   verifyEmail(body: Schemas.Body_confirm_verification_api_v1_users_verification_put): Promise<void>
   /** Resend the verification code to an unverified email (`POST /users/verification-requests`). */
   resendVerification(body: Schemas.ResendVerificationRequest): Promise<void>
+  /**
+   * Verify an email and land authenticated in one call (`POST /web-verification`).
+   *
+   * Takes no password: redeeming a code that was mailed to the address proves
+   * control of the inbox, which is what the session is being granted on. Use
+   * this wherever the password is not to hand — a verification reached from a
+   * sign-in that reported the address unverified — so the user is not asked to
+   * sign in a second time immediately after proving who they are. Sets
+   * HTTP-only cookies, so web only.
+   */
+  verifyEmailAndCreateSession(body: Schemas.WebVerification): Promise<void>
   /** Step 1: request a password reset (sends a 6-digit code via email) (`POST /users/password-reset-requests`). */
   requestPasswordReset(body: Schemas.ResetPasswordRequest): Promise<void>
   /** Step 2: exchange the 6-digit code for a reset token (`POST /users/password-reset-tokens`). */
@@ -103,6 +114,12 @@ export function createUserRepository(client: AncherClient): UserRepository {
     },
     async resendVerification(body) {
       await client.api.post('/api/v1/users/verification-requests', { body })
+    },
+    async verifyEmailAndCreateSession(body) {
+      // header: {} matches the web-session calls — the x-device-* headers are
+      // optional on the wire but structurally required by the generated types,
+      // and the client supplies the real ones via its getHeaders hook.
+      await client.api.post('/api/v1/web-verification', { header: {}, body })
     },
     async requestPasswordReset(body) {
       await client.api.post('/api/v1/users/password-reset-requests', { body })

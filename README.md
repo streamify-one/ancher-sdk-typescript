@@ -491,6 +491,7 @@ request-body unions: `SuggestionResolution` (`SuggestionStatus` minus
 | --- | --- |
 | `Billing` | `credits`, `subscription`, `redeemDiscountCode`, `createCheckoutSession`, `getCheckoutSession`, `changePlan`, `createPortalSession`, `verifyPurchase`, `plans` |
 | `Device` | `setNotificationToken` |
+| `Onboarding` | `status`, `claimReward(task)` (onboarding checklist + its credit rewards) |
 | `Retrieval` | `notes`, `chunks` (RAG) |
 | `ImagePrompt` | `generate` (multipart) |
 | `WebSession` | `current`, `login`, `loginWithProvider`, `refresh`, `logout` (browser cookie session; the browser preset refreshes silently on its own) |

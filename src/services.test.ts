@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { AncherClient } from './api/client'
 import {
   createImagePromptRepository,
+  createOnboardingRepository,
   createTextSelectionRepository,
   createWebSessionRepository,
 } from './services'
@@ -15,7 +16,14 @@ function makeRepository() {
     api: { get, post, put, delete: del },
   } as unknown as AncherClient
 
-  return { WebSession: createWebSessionRepository(client), get, post, put, del }
+  return {
+    Onboarding: createOnboardingRepository(client),
+    WebSession: createWebSessionRepository(client),
+    get,
+    post,
+    put,
+    del,
+  }
 }
 
 describe('WebSessionRepository', () => {
@@ -103,6 +111,32 @@ describe('TextSelectionRepository', () => {
     })
     expect(post).toHaveBeenCalledWith('/api/v1/text-selections/translations', {
       body: { text: 'hello', target_language: 'Simplified Chinese' },
+    })
+  })
+})
+
+describe('OnboardingRepository', () => {
+  it('reads the checklist', async () => {
+    const { Onboarding, get } = makeRepository()
+    const status = { tasks: [], claimable_credits: '0' }
+    get.mockResolvedValueOnce(status)
+
+    await expect(Onboarding.status()).resolves.toBe(status)
+    expect(get).toHaveBeenCalledWith('/api/v1/onboarding')
+  })
+
+  it('claims a reward by task key', async () => {
+    const { Onboarding, post } = makeRepository()
+    const reward = {
+      task: 'first_note',
+      credits_granted: '500',
+      claimed_at: '2026-08-05T12:00:00Z',
+    }
+    post.mockResolvedValueOnce(reward)
+
+    await expect(Onboarding.claimReward('first_note')).resolves.toBe(reward)
+    expect(post).toHaveBeenCalledWith('/api/v1/onboarding/{task}/reward', {
+      path: { task: 'first_note' },
     })
   })
 })

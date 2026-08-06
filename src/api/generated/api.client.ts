@@ -2581,6 +2581,65 @@ export type OAuthWebLoginResponse = {
    */
   is_new_user: boolean;
 }
+/**
+ * Response body for ``POST /onboarding/{task}/reward``.
+ */
+export type OnboardingReward = {
+  /**
+   * Claimed checklist item
+   */
+  task: ("ai_recall" | "product_tour" | "first_note" | "first_collection");
+  /**
+   * Non-expiring top-up credits added to the balance
+   */
+  credits_granted: string;
+  /**
+   * When the grant was written
+   */
+  claimed_at: string;
+}
+/**
+ * One checklist row as the client renders it.
+ */
+export type OnboardingTaskState = {
+  /**
+   * Checklist item key
+   */
+  task: ("ai_recall" | "product_tour" | "first_note" | "first_collection");
+  /**
+   * Credits awarded for this task
+   */
+  credits: string;
+  /**
+   * Whether the user performed the action
+   */
+  completed: boolean;
+  /**
+   * When the checklist first observed this complete
+   */
+  completion_detected_at: (string | null);
+  /**
+   * Whether the reward has been granted
+   */
+  claimed: boolean;
+  /**
+   * When the reward was granted
+   */
+  claimed_at: (string | null);
+}
+/**
+ * Response body for ``GET /onboarding``.
+ */
+export type OnboardingStatus = {
+  /**
+   * Every checklist item, in catalog order
+   */
+  tasks: Array<OnboardingTaskState>;
+  /**
+   * Total credits sitting in completed-but-unclaimed tasks
+   */
+  claimable_credits: string;
+}
 export type SystemEnvelope = {
   /**
    * Unique identifier
@@ -3264,6 +3323,7 @@ export type TwitterMediaVariant = Partial<({ content_type: (string | null), url:
 export type TwitterMedia = ({ media_key: string, type: string, url?: (string | null) | undefined, preview_image_url?: (string | null) | undefined, variants?: (Array<TwitterMediaVariant> | null) | undefined, width?: (number | null) | undefined, height?: (number | null) | undefined, duration_ms?: (number | null) | undefined, alt_text?: (string | null) | undefined } & Record<string, any>)
 export type TwitterTweet = ({ id: string, text: string, edit_history_tweet_ids?: (Array<string> | null) | undefined, article?: (TwitterArticle | null) | undefined, attachments?: (TwitterTweetAttachments | null) | undefined, author_id?: (string | null) | undefined, created_at?: (string | null) | undefined, lang?: (string | null) | undefined, note_tweet?: (TwitterNoteTweet | null) | undefined, possibly_sensitive?: (boolean | null) | undefined, public_metrics?: (TwitterTweetPublicMetrics | null) | undefined, author?: (TwitterUser | null) | undefined, media?: Array<TwitterMedia> | undefined, url: string } & Record<string, any>)
 export type TwitterBookmarkPage = Partial<({ tweets: Array<TwitterTweet>, next_cursor: (string | null), result_count: number } & Record<string, any>)>
+export type TwitterSync = ({ last_synced_at: string, new_posts_added: number } & Record<string, any>)
 /**
  * Transmuter for UserDemographic model.
  */
@@ -3654,6 +3714,10 @@ export type VerificationCode = {
    * Reference to user
    */
   user_id: (string | null);
+  /**
+   * Already-hashed password to apply if this specific code is redeemed
+   */
+  pending_password_hash: (string | null);
   /**
    * Number of verification attempts
    */
@@ -6358,6 +6422,43 @@ export type delete_Unpin_item_api_v1_pinned__entity_id__delete = {
       
     }
 /**
+ * Return every checklist item with its completion and claim state.
+ */
+export type get_Get_onboarding_status_api_v1_onboarding_get = {
+      method: "GET",
+      path: "/api/v1/onboarding",
+      requestFormat: "json",
+      parameters: {
+            
+        
+        
+        
+          }
+      responses: {200: Schemas.OnboardingStatus,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
+/**
+ * Grant the non-expiring credits attached to a completed task. Returns 409 if the task has not been completed or was already claimed.
+ */
+export type post_Claim_onboarding_reward_api_v1_onboarding__task__reward_post = {
+      method: "POST",
+      path: "/api/v1/onboarding/{task}/reward",
+      requestFormat: "json",
+      parameters: {
+            
+        path:  {task: ("ai_recall" | "product_tour" | "first_note" | "first_collection"),
+},
+        
+        
+          }
+      responses: {201: Schemas.OnboardingReward,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
+/**
  * List the user's collection suggestions across all notes.
  */
 export type get_List_suggestions_api_v1_suggestions__get = {
@@ -6620,6 +6721,21 @@ export type get_List_twitter_bookmarks_api_v1_twitter_bookmarks_get = {
 },
       
     }
+export type post_Sync_bookmark_tweets_api_v1_twitter_syncs_post = {
+      method: "POST",
+      path: "/api/v1/twitter/syncs",
+      requestFormat: "json",
+      parameters: {
+            query:  Partial<{ connection_id: (string | null) }>,
+        
+        
+        
+          }
+      responses: {200: Schemas.TwitterSync,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
 export type get_Health_health_get = {
       method: "GET",
       path: "/health",
@@ -6677,6 +6793,7 @@ export type get_Health_health_get = {
 "/api/v1/collections/{collection_id}/artifacts": Endpoints.get_List_collection_artifacts_api_v1_collections__collection_id__artifacts_get,
 "/api/v1/collections/{collection_id}/suggested-notes": Endpoints.get_List_suggested_notes_for_collection_api_v1_collections__collection_id__suggested_notes_get,
 "/api/v1/pinned/": Endpoints.get_List_pinned_items_api_v1_pinned__get,
+"/api/v1/onboarding": Endpoints.get_Get_onboarding_status_api_v1_onboarding_get,
 "/api/v1/suggestions/": Endpoints.get_List_suggestions_api_v1_suggestions__get,
 "/api/v1/recommendations/": Endpoints.get_List_recommendations_api_v1_recommendations__get,
 "/api/v1/external-connections": Endpoints.get_List_connections_api_v1_external_connections_get,
@@ -6736,10 +6853,12 @@ post: {
 "/api/v1/collections/{collection_id}/notes": Endpoints.post_Add_collection_note_api_v1_collections__collection_id__notes_post,
 "/api/v1/collections/{collection_id}/artifacts": Endpoints.post_Add_collection_artifact_api_v1_collections__collection_id__artifacts_post,
 "/api/v1/pinned/": Endpoints.post_Pin_item_api_v1_pinned__post,
+"/api/v1/onboarding/{task}/reward": Endpoints.post_Claim_onboarding_reward_api_v1_onboarding__task__reward_post,
 "/api/v1/suggestions/acceptances": Endpoints.post_Accept_suggestions_api_v1_suggestions_acceptances_post,
 "/api/v1/suggestions/dismissals": Endpoints.post_Dismiss_suggestions_api_v1_suggestions_dismissals_post,
 "/api/v1/external-connections/{provider}/authorization": Endpoints.post_Begin_authorization_api_v1_external_connections__provider__authorization_post,
-"/api/v1/external-connections": Endpoints.post_Claim_connection_api_v1_external_connections_post
+"/api/v1/external-connections": Endpoints.post_Claim_connection_api_v1_external_connections_post,
+"/api/v1/twitter/syncs": Endpoints.post_Sync_bookmark_tweets_api_v1_twitter_syncs_post
          },
 patch: {
            "/api/v1/artifacts/{artifact_id}": Endpoints.patch_Update_artifact_api_v1_artifacts__artifact_id__patch,

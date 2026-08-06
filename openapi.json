@@ -17137,6 +17137,163 @@
         }
       }
     },
+    "/api/v1/onboarding": {
+      "get": {
+        "tags": [
+          "Onboarding"
+        ],
+        "summary": "Get onboarding checklist status",
+        "description": "Return every checklist item with its completion and claim state.",
+        "operationId": "get_onboarding_status_api_v1_onboarding_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingStatus"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/onboarding/{task}/reward": {
+      "post": {
+        "tags": [
+          "Onboarding"
+        ],
+        "summary": "Claim the reward for a completed checklist item",
+        "description": "Grant the non-expiring credits attached to a completed task. Returns 409 if the task has not been completed or was already claimed.",
+        "operationId": "claim_onboarding_reward_api_v1_onboarding__task__reward_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "ai_recall",
+                "product_tour",
+                "first_note",
+                "first_collection"
+              ],
+              "type": "string",
+              "title": "Task"
+            }
+          },
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OnboardingReward"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/suggestions/": {
       "get": {
         "tags": [
@@ -19103,6 +19260,93 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/TwitterBookmarkPage"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/twitter/syncs": {
+      "post": {
+        "tags": [
+          "Twitter"
+        ],
+        "summary": "Sync Bookmark Tweets",
+        "operationId": "sync_bookmark_tweets_api_v1_twitter_syncs_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "connection_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Connection Id"
+            }
+          },
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TwitterSync"
                 }
               }
             }
@@ -31281,6 +31525,134 @@
         "title": "OAuthWebLoginResponse",
         "description": "Body of the web OAuth login response.\n\nWeb sessions carry tokens in HttpOnly cookies, so the body exposes only the\n``is_new_user`` flag the client needs to fire its sign_up analytics event."
       },
+      "OnboardingReward": {
+        "properties": {
+          "task": {
+            "type": "string",
+            "enum": [
+              "ai_recall",
+              "product_tour",
+              "first_note",
+              "first_collection"
+            ],
+            "title": "Task",
+            "description": "Claimed checklist item"
+          },
+          "credits_granted": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Credits Granted",
+            "description": "Non-expiring top-up credits added to the balance"
+          },
+          "claimed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Claimed At",
+            "description": "When the grant was written"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task",
+          "credits_granted",
+          "claimed_at"
+        ],
+        "title": "OnboardingReward",
+        "description": "Response body for ``POST /onboarding/{task}/reward``."
+      },
+      "OnboardingStatus": {
+        "properties": {
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/OnboardingTaskState"
+            },
+            "type": "array",
+            "title": "Tasks",
+            "description": "Every checklist item, in catalog order"
+          },
+          "claimable_credits": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Claimable Credits",
+            "description": "Total credits sitting in completed-but-unclaimed tasks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tasks",
+          "claimable_credits"
+        ],
+        "title": "OnboardingStatus",
+        "description": "Response body for ``GET /onboarding``."
+      },
+      "OnboardingTaskState": {
+        "properties": {
+          "task": {
+            "type": "string",
+            "enum": [
+              "ai_recall",
+              "product_tour",
+              "first_note",
+              "first_collection"
+            ],
+            "title": "Task",
+            "description": "Checklist item key"
+          },
+          "credits": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Credits",
+            "description": "Credits awarded for this task"
+          },
+          "completed": {
+            "type": "boolean",
+            "title": "Completed",
+            "description": "Whether the user performed the action"
+          },
+          "completion_detected_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion Detected At",
+            "description": "When the checklist first observed this complete"
+          },
+          "claimed": {
+            "type": "boolean",
+            "title": "Claimed",
+            "description": "Whether the reward has been granted"
+          },
+          "claimed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claimed At",
+            "description": "When the reward was granted"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task",
+          "credits",
+          "completed",
+          "completion_detected_at",
+          "claimed",
+          "claimed_at"
+        ],
+        "title": "OnboardingTaskState",
+        "description": "One checklist row as the client renders it."
+      },
       "Page_Annotated_Union_CollectionSuggestionEnvelope__ContentRecommendationEnvelope__DailyDigestEnvelope__SystemEnvelope___FieldInfo_annotation_NoneType__required_True__discriminator__type____": {
         "properties": {
           "items": {
@@ -33974,6 +34346,26 @@
         "type": "object",
         "title": "TwitterNoteTweet"
       },
+      "TwitterSync": {
+        "properties": {
+          "last_synced_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Synced At"
+          },
+          "new_posts_added": {
+            "type": "integer",
+            "title": "New Posts Added"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "last_synced_at",
+          "new_posts_added"
+        ],
+        "title": "TwitterSync"
+      },
       "TwitterTweet": {
         "properties": {
           "id": {
@@ -36288,6 +36680,18 @@
             "title": "User Id",
             "description": "Reference to user"
           },
+          "pending_password_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Password Hash",
+            "description": "Already-hashed password to apply if this specific code is redeemed"
+          },
           "attempts": {
             "type": "integer",
             "title": "Attempts",
@@ -36337,6 +36741,7 @@
           "code_hash",
           "type",
           "user_id",
+          "pending_password_hash",
           "attempts",
           "max_attempts",
           "is_used",

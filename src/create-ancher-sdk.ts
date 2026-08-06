@@ -37,11 +37,13 @@ import {
   createBillingRepository,
   createDeviceRepository,
   createImagePromptRepository,
+  createOnboardingRepository,
   createRetrievalRepository,
   createTextSelectionRepository,
   createWebSessionRepository,
   type DeviceRepository,
   type ImagePromptRepository,
+  type OnboardingRepository,
   type RetrievalRepository,
   type TextSelectionRepository,
   type WebSessionRepository,
@@ -114,6 +116,7 @@ export type {
   BillingRepository,
   DeviceRepository,
   ImagePromptRepository,
+  OnboardingRepository,
   PlansProvider,
   RetrievalRepository,
   TextSelectionRepository,
@@ -152,6 +155,8 @@ export interface AncherSdk {
   Note: NoteRepository
   /** Notifications — `list`/`count`/`iterate`, `markRead(id)`/`markDismissed(id)`. */
   Notification: NotificationRepository
+  /** Onboarding checklist — `status`, `claimReward(task)`. */
+  Onboarding: OnboardingRepository
   /** Pinned items — `list`/`count`/`iterate`, `pin`/`reorder`/`unpin`. */
   Pinned: PinnedRepository
   /** Content recommendations — `list`/`count`/`iterate`, `save(id)`/`dismiss(id)`/`notInterested(id)`. */
@@ -207,6 +212,7 @@ export function createAncherSdk(input: AncherClient | AncherClientConfig = {}): 
     Connection: createConnectionRepository(client),
     Billing: createBillingRepository(client),
     Device: createDeviceRepository(client),
+    Onboarding: createOnboardingRepository(client),
     Retrieval: createRetrievalRepository(client),
     ImagePrompt: createImagePromptRepository(client),
     TextSelection: createTextSelectionRepository(client),

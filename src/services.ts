@@ -76,6 +76,27 @@ export function createDeviceRepository(client: AncherClient): DeviceRepository {
   }
 }
 
+// --- Onboarding (`/onboarding`) ---
+
+export interface OnboardingRepository {
+  /**
+   * Claim the credits attached to a completed checklist item. Rejects with
+   * `API-ONS001` when the task isn't completed yet and `API-ONS002` when it was
+   * already claimed — both 409s, so treat them as state, not failure.
+   */
+  claimReward(task: Schemas.OnboardingTaskState['task']): Promise<Schemas.OnboardingReward>
+  /** The checklist: every item with its completion and claim state. */
+  status(): Promise<Schemas.OnboardingStatus>
+}
+
+export function createOnboardingRepository(client: AncherClient): OnboardingRepository {
+  return {
+    status: () => client.api.get('/api/v1/onboarding'),
+    claimReward: task =>
+      client.api.post('/api/v1/onboarding/{task}/reward', { path: { task } }),
+  }
+}
+
 // --- Retrieval (`/retrievals`, RAG) ---
 
 export interface RetrievalRepository {

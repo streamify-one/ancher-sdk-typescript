@@ -5,7 +5,7 @@
  * hatch for raw / non-JSON responses.
  */
 
-import { buildContextHeaders, sendWithAuthRetry } from './auth'
+import { buildContextHeaders, ensureFreshSession, sendWithAuthRetry } from './auth'
 import { ANCHER_BASE_URL, type AncherClientConfig } from './config'
 import { type ApiClient, createApiClient } from './generated/api.client'
 import { newTraceId } from './trace'
@@ -26,6 +26,17 @@ export interface AncherClient {
 
   /** The resolved configuration, for advanced/derived use. */
   config: AncherClientConfig
+
+  /**
+   * Run the same guarded proactive-refresh check the transport runs before
+   * every request — staleness with leeway, de-duplication, failure cooldown.
+   * A no-op unless both {@link AncherClientConfig.refreshSession} and
+   * {@link AncherClientConfig.getSessionExpiresAt} are configured. For
+   * hand-built requests that bypass the transport (raw `fetch` to the API).
+   * Pass the request's `signal` so an aborted caller isn't held waiting on a
+   * stalled check.
+   */
+  ensureFreshSession(signal?: AbortSignal | null): Promise<void>
 
   /**
    * Make a raw authenticated request to an API path and get the **`Response`**
@@ -53,10 +64,9 @@ async function requestHeaders(
 /**
  * Create an Ancher API client.
  *
- * @example Browser (cookie session + CSRF + silent refresh)
+ * @example API-key auth (server-to-server)
  * ```ts
- * import { browserAuthConfig } from '@ancher-ai/sdk/browser'
- * const client = createAncherClient(browserAuthConfig('https://api.ancher.ai'))
+ * const client = createAncherClient({ apiKey: process.env.ANCHER_API_TOKEN })
  * ```
  */
 export function createAncherClient(config: AncherClientConfig = {}): AncherClient {
@@ -83,9 +93,15 @@ export function createAncherClient(config: AncherClientConfig = {}): AncherClien
           },
           credentials: init.credentials ?? credentials,
         }),
-      { throwOnStatusError: false }
+      { throwOnStatusError: false, signal: init.signal }
     )
   }
 
-  return { api, config: resolved, request, upload }
+  return {
+    api,
+    config: resolved,
+    ensureFreshSession: signal => ensureFreshSession(resolved, signal),
+    request,
+    upload,
+  }
 }

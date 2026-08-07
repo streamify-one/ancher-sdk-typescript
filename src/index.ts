@@ -51,7 +51,7 @@ export {
   successStatusCodes,
   TypedStatusError,
 } from './api/generated/api.client'
-// Token lifecycle primitive — shared core behind the OAuth2 and session presets.
+// Token lifecycle primitive — shared core behind the OAuth2 preset.
 export {
   createTokenManager,
   type ManagedTokens,

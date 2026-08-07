@@ -47,7 +47,9 @@ export interface OAuth2Options {
   clientSecret?: string
   /**
    * Treat the access token as stale this many seconds *before* its actual
-   * expiry, so a refresh happens proactively instead of mid-request. Default 60.
+   * expiry, so a refresh happens proactively instead of mid-request. Defaults
+   * to the SDK-wide `DEFAULT_REFRESH_LEEWAY_SECONDS` (120) — the same clock
+   * the transport's proactive scheduler runs on.
    */
   expiryLeewaySeconds?: number
   /** `fetch` implementation. Defaults to the global `fetch`. */
@@ -96,7 +98,14 @@ export interface OAuth2Auth {
    * Spread into {@link createAncherClient}'s config — provides `getAccessToken`,
    * `refreshSession`, and `credentials: 'omit'` (token auth, no cookies).
    */
-  authConfig: Pick<AncherClientConfig, 'getAccessToken' | 'refreshSession' | 'credentials'>
+  authConfig: Pick<
+    AncherClientConfig,
+    | 'getAccessToken'
+    | 'refreshSession'
+    | 'getSessionExpiresAt'
+    | 'refreshLeewaySeconds'
+    | 'credentials'
+  >
   /** Exchange an authorization code (+ PKCE verifier) for tokens, then store them. */
   exchangeCode(options: ExchangeCodeOptions): Promise<OAuth2Tokens>
   /** The current access token, refreshing first if it's stale. `null` if unauthenticated. */
@@ -185,8 +194,8 @@ export function createOAuth2Auth(options: OAuth2Options): OAuth2Auth {
   }
 
   // The token lifecycle (proactive + reactive refresh, de-dup, storage) is
-  // shared with the session preset via `createTokenManager`; OAuth2 only injects
-  // *how* a refresh happens (the refresh_token grant against the token endpoint).
+  // delegated to `createTokenManager`; OAuth2 only injects *how* a refresh
+  // happens (the refresh_token grant against the token endpoint).
   const manager = createTokenManager({
     store: options.store,
     expiryLeewaySeconds: options.expiryLeewaySeconds,

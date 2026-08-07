@@ -4,7 +4,6 @@ import {
   createImagePromptRepository,
   createOnboardingRepository,
   createTextSelectionRepository,
-  createWebSessionRepository,
 } from './services'
 
 function makeRepository() {
@@ -18,62 +17,12 @@ function makeRepository() {
 
   return {
     Onboarding: createOnboardingRepository(client),
-    WebSession: createWebSessionRepository(client),
     get,
     post,
     put,
     del,
   }
 }
-
-describe('WebSessionRepository', () => {
-  it('reads the current cookie session', async () => {
-    const { WebSession, get } = makeRepository()
-    const session = { id: 'session-1' }
-    get.mockResolvedValueOnce(session)
-
-    await expect(WebSession.current()).resolves.toBe(session)
-    expect(get).toHaveBeenCalledWith('/api/v1/web-session')
-  })
-
-  it('logs in with credentials (headers sent empty)', async () => {
-    const { WebSession, post } = makeRepository()
-    post.mockResolvedValueOnce(undefined)
-
-    await WebSession.login({ email: 'a@b.c', password: 'pw' })
-
-    expect(post).toHaveBeenCalledWith('/api/v1/web-session', {
-      header: {},
-      body: { email: 'a@b.c', password: 'pw' },
-    })
-  })
-
-  it('logs in with an OAuth ID token and returns is_new_user', async () => {
-    const { WebSession, post } = makeRepository()
-    post.mockResolvedValueOnce({ is_new_user: true })
-
-    const result = await WebSession.loginWithProvider('google', { id_token: 'token' })
-
-    expect(post).toHaveBeenCalledWith('/api/v1/web-session/{provider}', {
-      path: { provider: 'google' },
-      header: {},
-      body: { id_token: 'token' },
-    })
-    expect(result).toEqual({ is_new_user: true })
-  })
-
-  it('refreshes and logs out', async () => {
-    const { WebSession, put, del } = makeRepository()
-    put.mockResolvedValueOnce(undefined)
-    del.mockResolvedValueOnce(undefined)
-
-    await WebSession.refresh()
-    await WebSession.logout()
-
-    expect(put).toHaveBeenCalledWith('/api/v1/web-session', { header: {} })
-    expect(del).toHaveBeenCalledWith('/api/v1/web-session')
-  })
-})
 
 describe('TextSelectionRepository', () => {
   function makeTextSelection() {

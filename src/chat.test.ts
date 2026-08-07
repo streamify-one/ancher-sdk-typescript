@@ -449,4 +449,38 @@ describe('conversation stream retries', () => {
     expect(refreshSession).toHaveBeenCalledOnce()
     expectSameTraceWithNewSpan(traceparentAt(fetchMock, 0), traceparentAt(fetchMock, 1))
   })
+
+  it('refreshes proactively before opening the raw stream when the session is near expiry', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(sseResponse([]))
+    const refreshSession = vi.fn().mockResolvedValue(true)
+    const client = createAncherClient({
+      baseUrl: 'https://api.test',
+      fetch: fetchMock,
+      refreshSession,
+      getSessionExpiresAt: () => Date.now() + 60_000, // inside the 120s leeway
+    })
+
+    await openConversationStream(client, '/conversations/c-1/stream')
+
+    expect(refreshSession).toHaveBeenCalledOnce()
+    expect(fetchMock).toHaveBeenCalledTimes(1) // no 401 round trip
+  })
+
+  it('refreshes proactively before opening the typed stream when the session is near expiry', async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(envelopeResponse([{ type: 'done', finish_reason: 'stop' }]))
+    const refreshSession = vi.fn().mockResolvedValue(true)
+    const client = createAncherClient({
+      baseUrl: 'https://api.test',
+      fetch: fetchMock,
+      refreshSession,
+      getSessionExpiresAt: () => Date.now() + 60_000,
+    })
+
+    await collect(streamConversation(client, 'c-1'))
+
+    expect(refreshSession).toHaveBeenCalledOnce()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
 })

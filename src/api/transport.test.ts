@@ -108,6 +108,20 @@ describe('traceparent propagation', () => {
     expect(replayFlags).toBe('01')
   })
 
+  it('refreshes proactively before the request when the session is near expiry', async () => {
+    const refreshSession = vi.fn().mockResolvedValue(true)
+    const { fetcher, fetchMock } = makeFetcher({
+      refreshSession,
+      getSessionExpiresAt: () => Date.now() + 60_000, // inside the 120s leeway
+    })
+    fetchMock.mockResolvedValue(jsonResponse(200))
+
+    await fetcher.fetch(NOTES_INPUT)
+
+    expect(refreshSession).toHaveBeenCalledOnce()
+    expect(fetchMock).toHaveBeenCalledTimes(1) // single request, no 401 round trip
+  })
+
   it('lets an explicit per-request header override the generated traceparent', async () => {
     const { fetcher, fetchMock } = makeFetcher()
     fetchMock.mockResolvedValue(jsonResponse(200))

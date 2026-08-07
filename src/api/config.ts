@@ -83,8 +83,8 @@ export interface AncherClientConfig {
 
   /**
    * Returns the CSRF token for the double-submit pattern. Sent as `X-CSRF-Token`
-   * when non-null. In the browser this reads the `streamify_csrf_token` cookie
-   * (see {@link ./presets/browser.ts}); omit for token-only auth.
+   * when non-null. A cookie-session browser host reads its CSRF cookie here
+   * (e.g. `streamify_csrf_token`); omit for token-only auth.
    */
   getCsrfToken?: () => MaybePromise<string | null | undefined>
 
@@ -102,6 +102,20 @@ export interface AncherClientConfig {
    * over all of them.
    */
   getHeaders?: () => MaybePromise<Record<string, string> | null | undefined>
+
+  /**
+   * Returns the epoch-ms instant the current session credential (access token
+   * or session cookie) expires, or `null`/`undefined` when unknown. When set
+   * together with {@link refreshSession}, the transport refreshes
+   * **proactively**: any request issued within {@link refreshLeewaySeconds} of
+   * this instant awaits a (de-duplicated) refresh first, instead of paying a
+   * 401 round trip. Unknown expiry means the transport never refreshes
+   * proactively — the reactive 401 path still applies.
+   *
+   * Do not set this by hand for `createTokenManager` / OAuth2-preset clients —
+   * their `authConfig` already supplies it from the token store.
+   */
+  getSessionExpiresAt?: () => MaybePromise<number | null | undefined>
 
   /** Returns an IANA timezone, sent as `x-timezone`. */
   getTimezone?: () => MaybePromise<string | null | undefined>
@@ -121,9 +135,18 @@ export interface AncherClientConfig {
   onError?: (error: AncherApiError) => void
 
   /**
-   * Called on a 401. Attempt to refresh the session (e.g. `PUT /web-session`
-   * using the refresh-token cookie). Resolve `true` to retry the original
-   * request once, `false` to surface the 401.
+   * Treat the session as stale this many seconds *before*
+   * {@link getSessionExpiresAt}, so the proactive refresh fires while the
+   * credential is still valid. Defaults to 120.
+   */
+  refreshLeewaySeconds?: number
+
+  /**
+   * Refresh the session (e.g. `PUT /web-session` using the refresh-token
+   * cookie). Resolve `true` on success, `false` to give up. Called reactively
+   * on a 401 (success retries the original request once) and proactively
+   * before requests issued near {@link getSessionExpiresAt}. Concurrent calls
+   * are de-duplicated by the transport.
    */
   refreshSession?: () => MaybePromise<boolean>
 }

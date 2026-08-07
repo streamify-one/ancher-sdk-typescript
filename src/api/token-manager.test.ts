@@ -190,8 +190,10 @@ describe('createTokenManager', () => {
     })
 
     it('proactively refreshes when the token is within the default leeway window', async () => {
-      // Default leeway is 60s; a token expiring in 30s is considered stale.
-      const store = fakeStore({ accessToken: 'nearly', expiresAt: Date.now() + 30 * 1000 })
+      // The shared SDK default leeway is 120s; a token expiring in 90s is
+      // stale under it (and would NOT be under the old 60s default — this
+      // offset pins the unified constant).
+      const store = fakeStore({ accessToken: 'nearly', expiresAt: Date.now() + 90 * 1000 })
       const refresh = vi.fn(async () => ({ accessToken: 'renewed' }))
 
       const manager = createTokenManager({ store, refresh })
@@ -249,6 +251,48 @@ describe('createTokenManager', () => {
       expect(await manager.authConfig.getAccessToken?.()).toBe('tok')
       // refreshSession is the same de-duplicating refresh used reactively on 401.
       expect(manager.authConfig.refreshSession).toBe(manager.refresh)
+    })
+
+    it('supplies getSessionExpiresAt from the store for the transport scheduler', async () => {
+      const expiresAt = Date.now() + 10 * 60 * 1000
+      const store = fakeStore({ accessToken: 'tok', expiresAt })
+      const manager = createTokenManager({ store, refresh: vi.fn() })
+
+      expect(await manager.authConfig.getSessionExpiresAt?.()).toBe(expiresAt)
+
+      await manager.setTokens(null)
+      expect(await manager.authConfig.getSessionExpiresAt?.()).toBeNull()
+    })
+
+    it('forwards its leeway to the transport scheduler', async () => {
+      // A custom expiryLeewaySeconds must govern request-time (transport)
+      // refresh too, not just the manager's internal backstop — including 0
+      // ("only refresh once actually expired").
+      const custom = createTokenManager({ store: fakeStore(null), refresh: vi.fn(), expiryLeewaySeconds: 300 })
+      expect(custom.authConfig.refreshLeewaySeconds).toBe(300)
+
+      const zero = createTokenManager({ store: fakeStore(null), refresh: vi.fn(), expiryLeewaySeconds: 0 })
+      expect(zero.authConfig.refreshLeewaySeconds).toBe(0)
+
+      const defaulted = createTokenManager({ store: fakeStore(null), refresh: vi.fn() })
+      expect(defaulted.authConfig.refreshLeewaySeconds).toBe(120)
+    })
+
+    it('hands the transport a PLAIN token read — no refresh, even when stale', async () => {
+      // The transport owns refresh timing (proactive scheduler + reactive
+      // 401 + failure cooldown); a refreshing getter here would fire an
+      // ungated extra refresh per request while refreshes are failing.
+      const store = fakeStore({ accessToken: 'stale', expiresAt: Date.now() - 1000 })
+      const refresh = vi.fn(async () => ({ accessToken: 'renewed' }))
+      const manager = createTokenManager({ store, refresh })
+
+      expect(await manager.authConfig.getAccessToken?.()).toBe('stale')
+      expect(refresh).not.toHaveBeenCalled()
+
+      // The manager's own surface keeps the refreshing variant for direct
+      // callers outside the transport.
+      expect(await manager.getAccessToken()).toBe('renewed')
+      expect(refresh).toHaveBeenCalledTimes(1)
     })
   })
 

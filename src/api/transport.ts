@@ -159,6 +159,7 @@ export function createFetcher(config: AncherClientConfig): Fetcher {
       // (e.g. `withResponse: true`) the error response is returned instead.
       return sendWithAuthRetry(config, async () => doFetch(url, await buildInit(input, traceId)), {
         throwOnStatusError: input.throwOnStatusError,
+        signal: input.overrides?.signal,
       })
     },
   }

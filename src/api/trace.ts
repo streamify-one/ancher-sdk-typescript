@@ -7,7 +7,7 @@
  * published, so a dependency every consumer pays for is a poor trade for one
  * header. `crypto.getRandomValues` is available in every runtime the SDK
  * targets (browser, Node, edge, service worker) — unlike `crypto.randomUUID`,
- * which needs the guard `presets/browser.ts` carries for Safari < 15.4.
+ * which is missing in Safari < 15.4 and would need a fallback guard.
  *
  * The trace flags are always `01` (sampled). The API pins its sampler to
  * `ALWAYS_ON`, so an unsampled `00` would be honored rather than ignored and

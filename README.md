@@ -4,10 +4,12 @@ A fully-typed TypeScript SDK for the **Ancher API**.
 
 Every path, method, request body, and response is typed straight from the
 OpenAPI spec via codegen, and fronted by a small configurable transport that
-handles auth, CSRF, silent token refresh, and error normalization. The same
-client runs server-side (static API key), in the browser (cookie session), and
-on mobile/SPA (OAuth2 access token) — authentication is just a set of injectable
-hooks.
+handles auth, CSRF, silent token refresh, and error normalization. The SDK is
+built for **code and headless machine clients** — server-side (static API key),
+CLI/native (OAuth2 access token), or any custom scheme: authentication is just
+a set of injectable hooks. Interactive account flows (registration, email
+verification, password reset, Google/Apple social login) are deliberately not
+part of the SDK surface — those belong to the product web app.
 
 This package was extracted from the `streamify-one-design-system` app — it
 combines that app's `pnpm generate` codegen pipeline with its `src/lib/api-client.ts`
@@ -66,105 +68,12 @@ const notes = await client.api.get('/api/v1/notes/', { query: { limit: 20 } })
 const note = await client.api.post('/api/v1/notes/text', { body: { text: 'Hello' } })
 ```
 
-### Browser (cookie session + CSRF + silent refresh)
-
-The `browser` preset reproduces the original app's behavior: CSRF double-submit
-from the `streamify_csrf_token` cookie, a persisted device ID, the local
-timezone header, and silent session refresh via `PUT /api/v1/web-session`.
-
-```ts
-import { createAncherClient } from '@ancher-ai/sdk'
-import { browserAuthConfig } from '@ancher-ai/sdk/browser'
-
-const client = createAncherClient(
-  browserAuthConfig('https://api.ancher.ai', { // origin only
-    // Optional cross-cutting interceptors:
-    onError: (err) => {
-      if (isInsufficientCreditsError(err)) openCreditsDialog()
-    },
-    onActivationRequired: async () => (await promptActivation()) ? 'retry' : null,
-  })
-)
-```
-
-### First-party app clients — mobile & browser extension (`session` preset)
-
-Mobile apps and the browser extension are bearer-token clients: they
-authenticate via the `/session` routes and store tokens locally (Keychain /
-`chrome.storage`), rather than riding the cookie session like the web SPA. The
-`session` preset performs the login and **manages the full token lifecycle** —
-proactive + reactive refresh (`PUT /api/v1/session`), de-dup, and attaching the
-bearer. Storage and device metadata are injectable. Passwords are exchanged once
-for tokens and never stored.
-
-```ts
-import { createAncherClient } from '@ancher-ai/sdk'
-import { createSessionAuth } from '@ancher-ai/sdk/session'
-
-const session = createSessionAuth({
-  device: {
-    userAgent: navigator.userAgent,
-    deviceName: 'Chrome Extension', // or the mobile device
-    deviceModel: 'extension',
-    osName: 'chrome',
-    osVersion: '0',
-    appVersion: '1.2.3',
-  },
-  store: chromeStorageTokenStore, // or Keychain on mobile; omit for in-memory
-})
-
-// Email/password …
-await session.login(email, password)            // POST /api/v1/session
-// … or native Apple/Google ID token:
-await session.loginWithProvider('google', idToken) // POST /api/v1/session/{provider}
-
-const client = createAncherClient({ ...session.authConfig })
-
-await session.logout() // DELETE /api/v1/session + clears local tokens
-```
-
-#### Pluggable token storage
-
-`store` is a `TokenStore` (`get`/`set`, both may be async). The SDK defaults to
-in-memory and ships **no** runtime-specific store — implement one for your
-client. Tokens are plain JSON (`expiresAt` is epoch-ms, not a `Date`), so they
-serialize without any custom (de)serialization, and `set(null)` is the clear
-signal (`logout` uses it).
-
-Browser extension — back it with `chrome.storage.local`:
-
-```ts
-import type { SessionTokenStore } from '@ancher-ai/sdk/session'
-
-const chromeStorageTokenStore: SessionTokenStore = {
-  async get() {
-    const { ancherTokens } = await chrome.storage.local.get('ancherTokens')
-    return ancherTokens ?? null
-  },
-  async set(tokens) {
-    if (tokens) await chrome.storage.local.set({ ancherTokens: tokens })
-    else await chrome.storage.local.remove('ancherTokens')
-  },
-}
-```
-
-> **Extension gotcha — centralize auth in the service worker.** The refresh
-> de-dup is per-manager-instance (per JS context). If the service worker, popup,
-> and content scripts each build their own client, a simultaneous expiry can fire
-> one refresh *per context* — a race with rotating refresh tokens. Build the
-> client once in the service worker and have other contexts call it via
-> `chrome.runtime.sendMessage`. (This is a context-sharing concern, not a storage
-> one — a shared `chrome.storage` store doesn't fix it.)
-
-On mobile, implement the same interface over secure storage (Keychain /
-Keystore / Expo SecureStore).
-
 ### OAuth2 (standard authorization server / third parties)
 
 The `oauth2` preset is for an actual OAuth2 server — Authorization Code + PKCE,
 confidential clients (`clientSecret`), token endpoint + refresh — **without the
-transport ever running the redirect dance** (your app owns the login UI). It
-shares the same token-lifecycle core as the `session` preset.
+transport ever running the redirect dance** (your app owns the login UI). Its
+token lifecycle rides on `createTokenManager`.
 
 ```ts
 import { createAncherClient } from '@ancher-ai/sdk'
@@ -185,11 +94,62 @@ await oauth.exchangeCode({ code, codeVerifier })
 const client = createAncherClient({ ...oauth.authConfig })
 ```
 
-> **Why no username/password as a server-to-server auth method?** Password login
-> lives only in the `session` preset (a first-party app concern), and even there
-> the SDK stores **tokens, never the password** — the refresh token renews the
-> session. Server-to-server integrations use `apiKey`. The core client surface is
+> **Why no username/password auth method?** The SDK is a headless surface:
+> interactive login (passwords, Google/Apple ID tokens) belongs to the product
+> web app. Machine clients use `apiKey` (server-to-server) or the OAuth2
+> preset's tokens (CLI/native) — the SDK stores **tokens, never a password**,
+> and the refresh token renews the session. The core client surface is
 > password-free, so the right choice is the obvious one.
+
+#### Pluggable token storage
+
+`store` is a `TokenStore` (`get`/`set`, both may be async). The SDK defaults to
+in-memory and ships **no** runtime-specific store — implement one for your
+client. Tokens are plain JSON (`expiresAt` is epoch-ms, not a `Date`), so they
+serialize without any custom (de)serialization, and `set(null)` is the clear
+signal (`logout` uses it).
+
+Browser extension — back it with `chrome.storage.session`, and build the store
+(and the OAuth client that owns it) **only in the background service worker**:
+
+```ts
+// Background service worker ONLY — never a content script or page context.
+import type { OAuth2TokenStore } from '@ancher-ai/sdk/oauth2'
+
+const chromeStorageTokenStore: OAuth2TokenStore = {
+  async get() {
+    const { ancherTokens } = await chrome.storage.session.get('ancherTokens')
+    return ancherTokens ?? null
+  },
+  async set(tokens) {
+    if (tokens) await chrome.storage.session.set({ ancherTokens: tokens })
+    else await chrome.storage.session.remove('ancherTokens')
+  },
+}
+```
+
+> **Why `storage.session`, not `storage.local`?** `storage.session` is
+> restricted to trusted contexts by default (`TRUSTED_CONTEXTS`) — content
+> scripts, which share a page with arbitrary site code, can never read the
+> tokens. `storage.local` is readable from every extension context and survives
+> on disk. Keep the default access level (don't call `setAccessLevel`), and let
+> other contexts reach the API by messaging the worker rather than building
+> their own store. The trade-off: `storage.session` is cleared when the browser
+> restarts, so users sign in again per browser session. If you need sign-in to
+> survive restarts, treat that as a deliberate security decision — weigh the
+> broader exposure of `storage.local` (or encrypt-at-rest schemes) explicitly
+> rather than reaching for it as the default.
+
+> **Extension gotcha — centralize auth in the service worker.** The refresh
+> de-dup is per-manager-instance (per JS context). If the service worker, popup,
+> and content scripts each build their own client, a simultaneous expiry can fire
+> one refresh *per context* — a race with rotating refresh tokens. Build the
+> client once in the service worker and have other contexts call it via
+> `chrome.runtime.sendMessage`. (This is a context-sharing concern, not a storage
+> one — a shared `chrome.storage` store doesn't fix it.)
+
+On mobile, implement the same interface over secure storage (Keychain /
+Keystore / Expo SecureStore).
 
 ### Custom token source (`getAccessToken`)
 
@@ -206,9 +166,31 @@ const client = createAncherClient({
 })
 ```
 
+#### Proactive refresh (`getSessionExpiresAt`)
+
+The transport refreshes **reactively** on a 401 (retry once), and — when you
+also provide `getSessionExpiresAt` — **proactively**: any request issued within
+`refreshLeewaySeconds` (default 120) of the expiry awaits a de-duplicated
+`refreshSession()` first, so the request never pays the 401 round trip. Failed
+refreshes back off for ~30 s; an unknown (`null`) expiry disables the proactive
+path and leaves the reactive one. This works for token *and* cookie sessions —
+a cookie host tracks expiry itself and returns it here:
+
+```ts
+const client = createAncherClient({
+  refreshSession: async () => refreshMyCookieSession(), // e.g. PUT /web-session
+  getSessionExpiresAt: () => sessionExpiresAtMs,        // epoch-ms or null
+})
+```
+
+For a hand-built request that bypasses the transport, run the same guarded
+check first with `client.ensureFreshSession()`. Don't set `getSessionExpiresAt`
+by hand for `createTokenManager`/OAuth2-preset clients — their `authConfig`
+already supplies it from the token store.
+
 Need proactive (pre-expiry) renewal, de-dup, and storage but with your own
 refresh call? Use `createTokenManager` directly — it's the lifecycle core behind
-the `oauth2` and `session` presets, and returns a ready-to-spread `authConfig`:
+the `oauth2` preset, and returns a ready-to-spread `authConfig`:
 
 ```ts
 import { createTokenManager } from '@ancher-ai/sdk'
@@ -471,7 +453,7 @@ request-body unions: `SuggestionResolution` (`SuggestionStatus` minus
 | --- | --- |
 | `Note` | `list`/`count`/`iterate`, `createFromText`/`FromUrl`/`FromFile`/`FromArtifact`/`FromConversation`/`FromMessage`, `get`, `getBySlug`, `getContent(id, options?)` (raw `Response`), `getFile(noteId, fileId)`, `updateFileContent(noteId, fileId, file, options?)`, `displayPresignedUrl(id, options?)`, `downloadDisplay(id, options?)`, `filePresignedUrl(noteId, fileId, options?)`, `downloadFile(noteId, fileId, options?)`, `suggestedCollections(noteId, options?)`, `update(id, patch)`, `delete(id)`, `retry(id)`, `copy(id)`, `setTags(id, body)` |
 | `File` | `upload` (presigned 3-step), `uploadDirect(file, options?)` (one-shot multipart with `onProgress`/`signal`), `uploadBatch(files, options?)` (multipart), `get`, `verify(id)`, `presignedUrl(id, options?)`, `download(id, options?)`, `delete(id)`, `revisions(noteId, fileId, options?)`, `revertRevision(noteId, fileId, revisionId)` |
-| `User` | `me`, `register`, `update`, `preferences`/`updatePreferences`, `demographic`/`updateDemographic`, `featureFlags`, `completeTutorial`, `changePassword`, `submitActivationCode`, `regenerateInvitationCode`, `delete`, email-verification + password-reset flows |
+| `User` | `me`, `update`, `preferences`/`updatePreferences`, `demographic`/`updateDemographic`, `featureFlags`, `completeTutorial`, `changePassword`, `submitActivationCode`, `regenerateInvitationCode`, `delete` |
 | `ApiKey` | `list()` (no params → `ApiKey[]`), `create`¹, `delete(id)` (revoke) |
 | `Artifact` | `list`/`count`/`iterate`, `get`, `getBySlug`, `getContent(id, options?)` (raw `Response`), `create`, `update(id, patch)`, `updateContent(id, file, options?)`, `delete(id)`, `presignedUrl(id, options?)`, `download(id, options?)` |
 | `Tag` | `list`/`count`/`iterate`, `create`, `update(id, patch)`, `delete(id)` |
@@ -494,7 +476,7 @@ request-body unions: `SuggestionResolution` (`SuggestionStatus` minus
 | `Onboarding` | `status`, `claimReward(task)` (onboarding checklist + its credit rewards) |
 | `Retrieval` | `notes`, `chunks` (RAG) |
 | `ImagePrompt` | `generate` (multipart) |
-| `WebSession` | `current`, `login`, `loginWithProvider`, `refresh`, `logout` (browser cookie session; the browser preset refreshes silently on its own) |
+| `TextSelection` | `explain`, `summarize`, `translate` (selection toolbar) |
 
 ¹ `ApiKey.create` returns `ApiKeyCreateResponse` — it carries the one-time
 plaintext secret; surface it immediately, never persist it.
@@ -502,10 +484,18 @@ plaintext secret; surface it immediately, never persist it.
 (HTTP 202) for fire-and-forget; `chat`/`startChat`/`stream` consume the SSE
 stream as structured **`ChatEvent`**s (see below).
 
-> **Coverage.** Every product operation in the spec has a typed SDK method.
-> The only exceptions: the external-connection OAuth **callback** redirect and
-> `POST /web-verification` are intentionally left to the raw `client.api`
-> (browser-auth steps belonging with the browser preset).
+> **Coverage.** Every product operation in the spec has a typed SDK method,
+> with one deliberate exception class: **interactive account and browser-auth
+> flows** are left to the raw `client.api`. That covers registration
+> (`POST /users`), email verification (`PUT /users/verification`,
+> `POST /users/verification-requests`), the password-reset trio
+> (`/users/password-reset-*`, `PUT /users/password`), the `/web-session`
+> cookie-session lifecycle (incl. Google/Apple web login), the token-session
+> login/refresh/logout routes (`POST`/`PUT`/`DELETE /session`,
+> `POST /session/{provider}` — the OAuth2 preset owns machine tokens instead),
+> the external-connection OAuth **callback** redirect, and
+> `POST /web-verification` — human flows that belong to the product apps, not
+> a headless SDK.
 
 ### Chat streaming
 
@@ -566,7 +556,9 @@ so the same client runs in a browser, a Node service, an edge worker, or a test.
 | `getCsrfToken` | Returns the CSRF token → `X-CSRF-Token`. |
 | `getDeviceId` | Returns a device ID → `x-device-id`. |
 | `getTimezone` | Returns an IANA timezone → `x-timezone`. |
-| `refreshSession` | Called on 401; return `true` to retry once. |
+| `refreshSession` | Refresh the session; return `true` on success. Called reactively on 401 (retry once) and proactively near `getSessionExpiresAt`. De-duplicated by the transport. |
+| `getSessionExpiresAt` | Epoch-ms expiry of the session credential (or `null` = unknown). Enables proactive refresh before requests issued within the leeway. Supplied automatically by `createTokenManager`'s `authConfig`. |
+| `refreshLeewaySeconds` | Refresh this many seconds before `getSessionExpiresAt`. Default 120. |
 | `onActivationRequired` | Called on the 403 activation gate (`API-USR010`); return `'retry'`. |
 | `onError` | Side effect on every error (e.g. open insufficient-credits dialog on `API-BIS002`). |
 
@@ -617,7 +609,7 @@ fails and points at what to update.
 ## Build
 
 ```bash
-pnpm build       # tsup → dist (ESM + CJS + .d.ts): index, browser, oauth2, session, tanstack, contracts
+pnpm build       # tsup → dist (ESM + CJS + .d.ts): index, oauth2, tanstack, contracts
 pnpm typecheck   # tsc --noEmit
 ```
 
@@ -653,11 +645,9 @@ src/
 │                            collection, conversation, message, pinned, notification,
 │                            suggestion, recommendation, session, connection)
 ├── create-ancher-sdk.ts    createAncherSdk → { client, Note, File, User, … }
-├── services.ts             Action/singleton services (Billing, Device, Retrieval, ImagePrompt, WebSession)
+├── services.ts             Action/singleton services (Billing, Device, Retrieval, ImagePrompt, TextSelection)
 ├── chat.ts                 Structured SSE chat-stream consumer (ChatEvent, consumeChat)
 ├── presets/
-│   ├── browser.ts          Cookie-session preset (CSRF, device ID, refresh)
-│   ├── oauth2.ts           OAuth2 preset — PKCE, token exchange (optional entry)
-│   └── session.ts          Session preset — /session login for mobile + extension (optional entry)
+│   └── oauth2.ts           OAuth2 preset — PKCE, token exchange (optional entry)
 └── tanstack.ts             TanStack Query integration (optional entry)
 ```

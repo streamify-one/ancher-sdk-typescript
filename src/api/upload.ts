@@ -97,6 +97,7 @@ export function createUploader(config: AncherClientConfig): Uploader {
     const response = await sendWithAuthRetry(config, send, {
       throwOnStatusError: true,
       errorMessage: r => `Upload failed with status ${r.status}`,
+      signal: options.signal,
     })
 
     return parseBody<T>(response)

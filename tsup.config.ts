@@ -3,9 +3,7 @@ import { defineConfig } from 'tsup'
 export default defineConfig({
   entry: {
     index: 'src/index.ts',
-    browser: 'src/presets/browser.ts',
     oauth2: 'src/presets/oauth2.ts',
-    session: 'src/presets/session.ts',
     tanstack: 'src/tanstack.ts',
     contracts: 'src/contracts/index.ts',
   },

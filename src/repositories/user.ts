@@ -3,9 +3,10 @@
  * plain-data reads (`me`, `preferences`, `demographic`, `featureFlags`) plus
  * the current-user operations (`update`/`completeTutorial`/`changePassword`/
  * `updatePreferences`/`updateDemographic`/`submitActivationCode`/
- * `regenerateInvitationCode`/`delete`) and the registration/verification/
- * password-reset flows. Returned users are plain `Schemas.User` data — no
- * model class.
+ * `regenerateInvitationCode`/`delete`). Interactive account flows
+ * (registration, email verification, password reset) are deliberately not
+ * here — they belong to the web app, over the raw `client.api`. Returned
+ * users are plain `Schemas.User` data — no model class.
  */
 
 import type { AncherClient } from '../api/client'
@@ -43,29 +44,6 @@ export interface UserRepository {
   regenerateInvitationCode(): Promise<unknown>
   /** Delete the current user's account (`DELETE /users/me`). */
   delete(): Promise<void>
-  /** Register a new user (sends verification; returns nothing). */
-  register(body: Schemas.UserRegistration): Promise<void>
-  /** Verify an email address with the 6-digit code (`PUT /users/verification`). */
-  verifyEmail(body: Schemas.Body_confirm_verification_api_v1_users_verification_put): Promise<void>
-  /** Resend the verification code to an unverified email (`POST /users/verification-requests`). */
-  resendVerification(body: Schemas.ResendVerificationRequest): Promise<void>
-  /**
-   * Verify an email and land authenticated in one call (`POST /web-verification`).
-   *
-   * Takes no password: redeeming a code that was mailed to the address proves
-   * control of the inbox, which is what the session is being granted on. Use
-   * this wherever the password is not to hand — a verification reached from a
-   * sign-in that reported the address unverified — so the user is not asked to
-   * sign in a second time immediately after proving who they are. Sets
-   * HTTP-only cookies, so web only.
-   */
-  verifyEmailAndCreateSession(body: Schemas.WebVerification): Promise<void>
-  /** Step 1: request a password reset (sends a 6-digit code via email) (`POST /users/password-reset-requests`). */
-  requestPasswordReset(body: Schemas.ResetPasswordRequest): Promise<void>
-  /** Step 2: exchange the 6-digit code for a reset token (`POST /users/password-reset-tokens`). */
-  verifyResetCode(body: Schemas.VerifyResetCode): Promise<Schemas.VerifyResetCodeResponse>
-  /** Step 3: complete the password reset using the reset token (`PUT /users/password`). */
-  resetPassword(body: Schemas.ResetPassword): Promise<void>
 }
 
 export function createUserRepository(client: AncherClient): UserRepository {
@@ -105,30 +83,6 @@ export function createUserRepository(client: AncherClient): UserRepository {
     },
     async delete() {
       await client.api.delete('/api/v1/users/me')
-    },
-    async register(body) {
-      await client.api.post('/api/v1/users', { body })
-    },
-    async verifyEmail(body) {
-      await client.api.put('/api/v1/users/verification', { body })
-    },
-    async resendVerification(body) {
-      await client.api.post('/api/v1/users/verification-requests', { body })
-    },
-    async verifyEmailAndCreateSession(body) {
-      // header: {} matches the web-session calls — the x-device-* headers are
-      // optional on the wire but structurally required by the generated types,
-      // and the client supplies the real ones via its getHeaders hook.
-      await client.api.post('/api/v1/web-verification', { header: {}, body })
-    },
-    async requestPasswordReset(body) {
-      await client.api.post('/api/v1/users/password-reset-requests', { body })
-    },
-    async verifyResetCode(body) {
-      return await client.api.post('/api/v1/users/password-reset-tokens', { body })
-    },
-    async resetPassword(body) {
-      await client.api.put('/api/v1/users/password', { body })
     },
   }
 }

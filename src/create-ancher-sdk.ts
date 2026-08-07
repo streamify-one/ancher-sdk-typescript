@@ -40,13 +40,11 @@ import {
   createOnboardingRepository,
   createRetrievalRepository,
   createTextSelectionRepository,
-  createWebSessionRepository,
   type DeviceRepository,
   type ImagePromptRepository,
   type OnboardingRepository,
   type RetrievalRepository,
   type TextSelectionRepository,
-  type WebSessionRepository,
 } from './services'
 
 export type {
@@ -120,8 +118,6 @@ export type {
   PlansProvider,
   RetrievalRepository,
   TextSelectionRepository,
-  WebSessionProvider,
-  WebSessionRepository,
 } from './services'
 
 export interface AncherSdk {
@@ -171,10 +167,8 @@ export interface AncherSdk {
   Tag: TagRepository
   /** Text selections — `explain`/`summarize`/`translate` for the selection toolbar. */
   TextSelection: TextSelectionRepository
-  /** Current user — `me`, `register`, account update/delete, preferences/flags. */
+  /** Current user — `me`, account update/delete, preferences/flags. */
   User: UserRepository
-  /** Browser cookie session — `current`, `login`/`loginWithProvider`, `refresh`, `logout`. */
-  WebSession: WebSessionRepository
 }
 
 /**
@@ -216,6 +210,5 @@ export function createAncherSdk(input: AncherClient | AncherClientConfig = {}): 
     Retrieval: createRetrievalRepository(client),
     ImagePrompt: createImagePromptRepository(client),
     TextSelection: createTextSelectionRepository(client),
-    WebSession: createWebSessionRepository(client),
   }
 }

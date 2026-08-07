@@ -97,6 +97,19 @@ describe('createUploader', () => {
     expect(replay[2]).not.toBe(first[2])
   })
 
+  it('refreshes proactively before the upload when the session is near expiry', async () => {
+    const refreshSession = vi.fn().mockResolvedValue(true)
+    const { upload, fetchMock } = makeUploader({
+      refreshSession,
+      getSessionExpiresAt: () => Date.now() + 60_000, // inside the 120s leeway
+    })
+
+    await upload('/api/v1/files/', new Blob(['x']))
+
+    expect(refreshSession).toHaveBeenCalledOnce()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   describe('XMLHttpRequest branch (onProgress set)', () => {
     afterEach(() => {
       vi.unstubAllGlobals()

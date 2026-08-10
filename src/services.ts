@@ -6,6 +6,20 @@
 
 import type { AncherClient } from './api/client'
 import type { EndpointByMethod, Schemas } from './api/generated/api.client'
+import type { UsageActivityQuery } from './contracts/activity'
+
+// --- Activity (`/activity`) ---
+
+export interface ActivityRepository {
+  /** Aggregated captures and artifact creations for an inclusive local-date window. */
+  usage(query: UsageActivityQuery): Promise<Schemas.UsageActivity>
+}
+
+export function createActivityRepository(client: AncherClient): ActivityRepository {
+  return {
+    usage: query => client.api.get('/api/v1/activity/usage', { query }),
+  }
+}
 
 // --- Billing (`/me/billing`, `/plans`) ---
 

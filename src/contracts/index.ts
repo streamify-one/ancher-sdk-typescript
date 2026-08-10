@@ -8,6 +8,7 @@
  */
 
 export * from './api-key'
+export * from './activity'
 export * from './artifact'
 export * from './assert'
 export * from './auth'

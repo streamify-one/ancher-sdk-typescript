@@ -19,7 +19,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const API_URL =
   process.argv[2] ||
   process.env.ANCHER_OPENAPI_URL ||
-  'https://api.ancher.ai/api/v1/openapi.json' //'http://localhost:5002/api/v1/openapi.json'
+  'https://api.dev1.ancher.dev/api/v1/openapi.json' //'http://localhost:5002/api/v1/openapi.json'
 const OUTPUT = resolve(__dirname, '..', 'openapi.json')
 
 async function main() {

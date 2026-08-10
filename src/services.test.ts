@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { AncherClient } from './api/client'
 import {
+  createActivityRepository,
   createImagePromptRepository,
   createOnboardingRepository,
   createTextSelectionRepository,
@@ -16,6 +17,7 @@ function makeRepository() {
   } as unknown as AncherClient
 
   return {
+    Activity: createActivityRepository(client),
     Onboarding: createOnboardingRepository(client),
     get,
     post,
@@ -23,6 +25,22 @@ function makeRepository() {
     del,
   }
 }
+
+describe('ActivityRepository', () => {
+  it('reads aggregated daily usage for the requested local-date window', async () => {
+    const { Activity, get } = makeRepository()
+    const usage = {
+      days: [{ date: '2026-07-06', captures: 2, creations: 1 }],
+      totals: { captures: 2, creations: 1, active_days: 1 },
+    }
+    get.mockResolvedValueOnce(usage)
+
+    const query = { from: '2026-01-12', to: '2026-07-12', timezone: 'Asia/Shanghai' } as const
+
+    await expect(Activity.usage(query)).resolves.toBe(usage)
+    expect(get).toHaveBeenCalledWith('/api/v1/activity/usage', { query })
+  })
+})
 
 describe('TextSelectionRepository', () => {
   function makeTextSelection() {

@@ -33,7 +33,9 @@ import { createSuggestionRepository, type SuggestionRepository } from './reposit
 import { createTagRepository, type TagRepository } from './repositories/tag'
 import { createUserRepository, type UserRepository } from './repositories/user'
 import {
+  type ActivityRepository,
   type BillingRepository,
+  createActivityRepository,
   createBillingRepository,
   createDeviceRepository,
   createImagePromptRepository,
@@ -111,6 +113,7 @@ export type { SuggestionRepository } from './repositories/suggestion'
 export type { TagRepository } from './repositories/tag'
 export type { UserRepository } from './repositories/user'
 export type {
+  ActivityRepository,
   BillingRepository,
   DeviceRepository,
   ImagePromptRepository,
@@ -121,6 +124,8 @@ export type {
 } from './services'
 
 export interface AncherSdk {
+  /** Activity — daily capture and artifact-creation aggregates for a date window. */
+  Activity: ActivityRepository
   /** API keys — `list`, `create`, `delete(id)` (revoke). */
   ApiKey: ApiKeyRepository
   /** Artifacts — CRUD/list, `getContent`/`updateContent`, `presignedUrl(id)`, `download(id)`. */
@@ -189,6 +194,7 @@ export function createAncherSdk(input: AncherClient | AncherClientConfig = {}): 
   const client = 'api' in input ? input : createAncherClient(input)
   return {
     client,
+    Activity: createActivityRepository(client),
     Note: createNoteRepository(client),
     File: createFileRepository(client),
     User: createUserRepository(client),

@@ -8,7 +8,13 @@
 
 // Raw API layer — generated typed client + transport.
 export { type AncherClient, createAncherClient } from './api/client'
-export { ANCHER_BASE_URL, type AncherClientConfig, type MaybePromise } from './api/config'
+export { classifySessionRefresh } from './api/auth'
+export {
+  ANCHER_BASE_URL,
+  type AncherClientConfig,
+  type MaybePromise,
+  type SessionRefreshResult,
+} from './api/config'
 // Errors
 export {
   ACTIVATION_REQUIRED_ERROR_CODE,

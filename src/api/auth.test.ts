@@ -4,6 +4,7 @@ import { AncherApiError } from './errors'
 import {
   applyAuthHeader,
   buildContextHeaders,
+  classifySessionRefresh,
   ensureFreshSession,
   requestSignal,
   sendWithAuthRetry,
@@ -58,6 +59,61 @@ describe('sendWithAuthRetry', () => {
     // The unresolved 401 is still a non-2xx, so onError fires with the error.
     expect(onError).toHaveBeenCalledTimes(1)
     expect(onError.mock.calls[0]?.[0]).toBeInstanceOf(AncherApiError)
+  })
+
+  it("401 → refreshSession() 'denied' → signals the host that the session is dead", async () => {
+    const send = vi.fn<() => Promise<Response>>().mockResolvedValue(jsonResponse({}, 401))
+    const refreshSession = vi.fn().mockResolvedValue('denied')
+    const onSessionExpired = vi.fn()
+    const config = makeConfig({ refreshSession, onSessionExpired })
+
+    const response = await sendWithAuthRetry(config, send)
+
+    expect(onSessionExpired).toHaveBeenCalledTimes(1)
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(response.status).toBe(401)
+  })
+
+  it.each(['unreachable', false] as const)(
+    '401 → refreshSession() %s → leaves the session alone',
+    async result => {
+      const send = vi.fn<() => Promise<Response>>().mockResolvedValue(jsonResponse({}, 401))
+      const onSessionExpired = vi.fn()
+      const config = makeConfig({ refreshSession: vi.fn().mockResolvedValue(result), onSessionExpired })
+
+      const response = await sendWithAuthRetry(config, send)
+
+      // A refresh that never reached the server says nothing about the session,
+      // so signing the user out here would be the VITA-1124 bug in reverse.
+      expect(onSessionExpired).not.toHaveBeenCalled()
+      expect(send).toHaveBeenCalledTimes(1)
+      expect(response.status).toBe(401)
+    }
+  )
+
+  it('does not consult onSessionExpired when the refresh succeeds', async () => {
+    const send = vi
+      .fn<() => Promise<Response>>()
+      .mockResolvedValueOnce(jsonResponse({}, 401))
+      .mockResolvedValueOnce(jsonResponse({ ok: true }, 200))
+    const onSessionExpired = vi.fn()
+    const config = makeConfig({ refreshSession: vi.fn().mockResolvedValue(true), onSessionExpired })
+
+    const response = await sendWithAuthRetry(config, send)
+
+    expect(onSessionExpired).not.toHaveBeenCalled()
+    expect(response.status).toBe(200)
+  })
+
+  it('leaves a non-401 alone even when the session hooks are configured', async () => {
+    const send = vi.fn<() => Promise<Response>>().mockResolvedValue(jsonResponse({}, 500))
+    const refreshSession = vi.fn()
+    const onSessionExpired = vi.fn()
+
+    await sendWithAuthRetry(makeConfig({ refreshSession, onSessionExpired }), send)
+
+    expect(refreshSession).not.toHaveBeenCalled()
+    expect(onSessionExpired).not.toHaveBeenCalled()
   })
 
   it('403 activation gate (API-USR010) → onActivationRequired "retry" → retries once', async () => {
@@ -706,5 +762,22 @@ describe('requestSignal', () => {
     // Aborting the caller signal propagates to the composite synchronously.
     controller.abort()
     expect(combined?.aborted).toBe(true)
+  })
+})
+
+describe('classifySessionRefresh', () => {
+  it.each([200, 204])('treats %i as refreshed', status => {
+    expect(classifySessionRefresh(new Response(null, { status }))).toBe(true)
+  })
+
+  it.each([400, 401, 403, 422, 499])('treats %i as a denial — the session is dead', status => {
+    // 422 matters in its own right: a missing refresh cookie surfaces as a
+    // FastAPI validation error rather than a 401 (VITA-1124), so matching on
+    // 401 alone would miss the exact case that motivated this.
+    expect(classifySessionRefresh(new Response(null, { status }))).toBe('denied')
+  })
+
+  it.each([500, 502, 503])('treats %i as unreachable — no verdict on the session', status => {
+    expect(classifySessionRefresh(new Response(null, { status }))).toBe('unreachable')
   })
 })

@@ -15,7 +15,7 @@
  * (`for await`) or with callbacks via {@link consumeChat}.
  */
 
-import { buildContextHeaders, ensureFreshSession, joinReactiveSessionRefresh } from './api/auth'
+import { buildContextHeaders, sendWithSessionRefresh } from './api/auth'
 import type { AncherClient } from './api/client'
 import type { AncherClientConfig } from './api/config'
 import { buildApiError } from './api/errors'
@@ -368,11 +368,7 @@ async function openStreamUrl(
       signal: opts.signal,
     })
 
-  await ensureFreshSession(config, opts.signal)
-  let response = await send()
-  if (response.status === 401 && config.refreshSession) {
-    if (await joinReactiveSessionRefresh(config, opts.signal)) response = await send()
-  }
+  const response = await sendWithSessionRefresh(config, send, opts.signal)
   if (!response.ok) {
     const error = await buildApiError(response)
     config.onError?.(error)
@@ -427,12 +423,7 @@ export async function openConversationStream(
       credentials,
       signal: opts.signal,
     })
-  await ensureFreshSession(config, opts.signal)
-  let response = await send()
-  if (response.status === 401 && config.refreshSession) {
-    if (await joinReactiveSessionRefresh(config, opts.signal)) response = await send()
-  }
-  return response
+  return sendWithSessionRefresh(config, send, opts.signal)
 }
 
 /**

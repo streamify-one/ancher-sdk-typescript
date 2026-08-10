@@ -11,7 +11,7 @@
  * live here once instead of being kept in sync by hand across the files.
  */
 
-import type { AncherClientConfig } from './config'
+import type { AncherClientConfig, SessionRefreshResult } from './config'
 import { buildApiError, isActivationRequiredError } from './errors'
 import { formatTraceparent, newTraceId } from './trace'
 
@@ -31,7 +31,7 @@ export const DEFAULT_REFRESH_LEEWAY_SECONDS = 120
 const REFRESH_FAILURE_COOLDOWN_MS = 30_000
 
 interface SessionRefreshState {
-  inFlight: Promise<boolean> | null
+  inFlight: Promise<SessionRefreshResult> | null
   lastFailureAt: number
 }
 
@@ -59,7 +59,7 @@ function stateFor(config: AncherClientConfig): SessionRefreshState {
  * proactive failure cooldown; a throw is rethrown so the reactive path keeps
  * its original propagation behavior.
  */
-export function runSessionRefresh(config: AncherClientConfig): Promise<boolean> {
+export function runSessionRefresh(config: AncherClientConfig): Promise<SessionRefreshResult> {
   const state = stateFor(config)
   if (state.inFlight) return state.inFlight
   state.inFlight = (async () => {
@@ -69,9 +69,9 @@ export function runSessionRefresh(config: AncherClientConfig): Promise<boolean> 
       // the IIFE call itself — before the slot assignment completes — and the
       // rejected promise would then be written back into `state.inFlight` for
       // good, poisoning every later refresh with the original rejection.
-      const ok = await Promise.resolve().then(() => config.refreshSession!())
-      state.lastFailureAt = ok ? 0 : Date.now()
-      return ok
+      const result = await Promise.resolve().then(() => config.refreshSession!())
+      state.lastFailureAt = result === true ? 0 : Date.now()
+      return result
     } catch (error) {
       state.lastFailureAt = Date.now()
       throw error
@@ -238,6 +238,53 @@ export function requestSignal(
 }
 
 /**
+ * Classify a session-refresh response into a {@link SessionRefreshResult}.
+ *
+ * The distinction is the whole point: a 4xx means the server looked at the
+ * credentials and said no, so the session is dead; anything else means the
+ * refresh never got a verdict, so the session might be perfectly fine and the
+ * user must not be signed out. Note that a *missing* refresh cookie can surface
+ * as a 422 rather than a 401 (a FastAPI validation error), which is why this
+ * spans the whole 4xx range instead of matching on 401 alone.
+ *
+ * Hosts that refresh over something other than a `fetch` response can return
+ * the union members directly.
+ */
+export function classifySessionRefresh(response: Response): SessionRefreshResult {
+  if (response.ok) return true
+  return response.status >= 400 && response.status < 500 ? 'denied' : 'unreachable'
+}
+
+/**
+ * Run `send` under the 401 → {@link AncherClientConfig.refreshSession} →
+ * retry-once flow, firing {@link AncherClientConfig.onSessionExpired} when — and
+ * only when — the refresh was *denied*.
+ *
+ * Shared by the JSON transport, the uploader (both via
+ * {@link sendWithAuthRetry}) and the two SSE stream openers in `chat.ts`, which
+ * otherwise kept three hand-copied versions of this block in sync.
+ *
+ * `send` MUST build a fresh request on each call so the replay picks up the
+ * refreshed auth headers.
+ */
+export async function sendWithSessionRefresh(
+  config: AncherClientConfig,
+  send: () => Promise<Response>,
+  signal?: AbortSignal | null
+): Promise<Response> {
+  await ensureFreshSession(config, signal)
+  const response = await send()
+  if (response.status !== 401 || !config.refreshSession) return response
+
+  const result = await joinReactiveSessionRefresh(config, signal)
+  if (result === true) return send()
+  // `false` and `'unreachable'` both mean "no verdict" — surface the 401 and
+  // leave the session alone.
+  if (result === 'denied') config.onSessionExpired?.()
+  return response
+}
+
+/**
  * The reactive 401 join: run (or join) the de-duplicated refresh, bounded by
  * the request deadline and the caller's abort signal — a never-settling
  * refresh must not hang an operation past its configured `timeoutMs`, and an
@@ -248,7 +295,7 @@ export function requestSignal(
 export function joinReactiveSessionRefresh(
   config: AncherClientConfig,
   signal?: AbortSignal | null
-): Promise<boolean> {
+): Promise<SessionRefreshResult> {
   return withRequestDeadline(config, runSessionRefresh(config), false, signal)
 }
 
@@ -274,7 +321,9 @@ export interface SendWithAuthRetryOptions {
  * Run `send` under the shared auth lifecycle:
  *  - session near expiry → {@link ensureFreshSession} (proactive, before the
  *    first attempt)
- *  - 401 → {@link AncherClientConfig.refreshSession} → retry once
+ *  - 401 → {@link AncherClientConfig.refreshSession} → retry once, or
+ *    {@link AncherClientConfig.onSessionExpired} when the refresh is denied
+ *    (via {@link sendWithSessionRefresh})
  *  - 403 carrying the activation code → {@link AncherClientConfig.onActivationRequired} → retry once
  *  - non-2xx → normalize to `AncherApiError`, fire {@link AncherClientConfig.onError},
  *    and (optionally) throw
@@ -288,17 +337,7 @@ export async function sendWithAuthRetry(
   send: () => Promise<Response>,
   options: SendWithAuthRetryOptions = {}
 ): Promise<Response> {
-  await ensureFreshSession(config, options.signal)
-  let response = await send()
-
-  // 401 → silent refresh → retry once with fresh auth headers. Routed through
-  // the shared runner so a concurrent proactive refresh is joined, not raced —
-  // and bounded like the proactive wait, so a stalled refresh surfaces the
-  // 401 at the deadline instead of hanging the operation.
-  if (response.status === 401 && config.refreshSession) {
-    const refreshed = await joinReactiveSessionRefresh(config, options.signal)
-    if (refreshed) response = await send()
-  }
+  let response = await sendWithSessionRefresh(config, send, options.signal)
 
   // 403 activation gate → let the host prompt for activation → retry once.
   if (response.status === 403 && config.onActivationRequired) {

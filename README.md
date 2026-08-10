@@ -556,7 +556,8 @@ so the same client runs in a browser, a Node service, an edge worker, or a test.
 | `getCsrfToken` | Returns the CSRF token → `X-CSRF-Token`. |
 | `getDeviceId` | Returns a device ID → `x-device-id`. |
 | `getTimezone` | Returns an IANA timezone → `x-timezone`. |
-| `refreshSession` | Refresh the session; return `true` on success. Called reactively on 401 (retry once) and proactively near `getSessionExpiresAt`. De-duplicated by the transport. |
+| `refreshSession` | Called on 401; return `true` to retry once, `'denied'` (server rejected it) or `'unreachable'` (network error / 5xx) otherwise. `classifySessionRefresh(response)` maps a refresh response onto those. |
+| `onSessionExpired` | Called when a 401 could not be recovered because `refreshSession` returned `'denied'` — the session is dead, so clear client state and send the user to sign in. Never fires for `'unreachable'`. |
 | `getSessionExpiresAt` | Epoch-ms expiry of the session credential (or `null` = unknown). Enables proactive refresh before requests issued within the leeway. Supplied automatically by `createTokenManager`'s `authConfig`. |
 | `refreshLeewaySeconds` | Refresh this many seconds before `getSessionExpiresAt`. Default 120. |
 | `onActivationRequired` | Called on the 403 activation gate (`API-USR010`); return `'retry'`. |

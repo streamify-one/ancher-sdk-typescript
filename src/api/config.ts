@@ -13,6 +13,20 @@ import type { AncherApiError } from './errors'
 
 export type MaybePromise<T> = T | Promise<T>
 
+/**
+ * Outcome of a {@link AncherClientConfig.refreshSession} attempt.
+ *
+ * - `true` — refreshed; the original request is replayed once.
+ * - `'denied'` — the server rejected the refresh (any 4xx). The session is
+ *   unrecoverable, so {@link AncherClientConfig.onSessionExpired} fires.
+ * - `'unreachable'` — the refresh never got an answer (network error, 5xx).
+ *   The session may still be valid, so the host is *not* signed out.
+ * - `false` — the legacy spelling of "failed, cause unknown". Treated exactly
+ *   like `'unreachable'`, which keeps pre-existing boolean implementations
+ *   working and, more importantly, never signs a user out on a guess.
+ */
+export type SessionRefreshResult = boolean | 'denied' | 'unreachable'
+
 /** Default API origin used when {@link AncherClientConfig.baseUrl} is omitted. */
 export const ANCHER_BASE_URL = 'https://api.ancher.ai'
 
@@ -135,6 +149,19 @@ export interface AncherClientConfig {
   onError?: (error: AncherApiError) => void
 
   /**
+   * Called when a 401 could not be recovered because
+   * {@link AncherClientConfig.refreshSession} resolved `'denied'` — the server
+   * rejected the refresh, so the session is unrecoverable and the host should
+   * clear its client state and send the user to sign in.
+   *
+   * Deliberately NOT called when the refresh merely failed to reach the server
+   * (`'unreachable'` / legacy `false`): the session may still be valid, and
+   * signing the user out on a transient network blip is the bug this hook
+   * exists to avoid. Must not throw.
+   */
+  onSessionExpired?: () => void
+
+  /**
    * Treat the session as stale this many seconds *before*
    * {@link getSessionExpiresAt}, so the proactive refresh fires while the
    * credential is still valid. Defaults to 120.
@@ -142,11 +169,12 @@ export interface AncherClientConfig {
   refreshLeewaySeconds?: number
 
   /**
-   * Refresh the session (e.g. `PUT /web-session` using the refresh-token
-   * cookie). Resolve `true` on success, `false` to give up. Called reactively
-   * on a 401 (success retries the original request once) and proactively
-   * before requests issued near {@link getSessionExpiresAt}. Concurrent calls
-   * are de-duplicated by the transport.
+   * Called on a 401 and proactively before requests issued near
+   * {@link getSessionExpiresAt}. Attempt to refresh the session (e.g. `PUT /web-session`
+   * using the refresh-token cookie). Resolve `true` to retry the original
+   * request once, or a {@link SessionRefreshResult} describing *why* the
+   * refresh failed — only `'denied'` fires
+   * {@link AncherClientConfig.onSessionExpired}.
    */
-  refreshSession?: () => MaybePromise<boolean>
+  refreshSession?: () => MaybePromise<SessionRefreshResult>
 }

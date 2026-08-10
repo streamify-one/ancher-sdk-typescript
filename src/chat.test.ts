@@ -450,6 +450,54 @@ describe('conversation stream retries', () => {
     expectSameTraceWithNewSpan(traceparentAt(fetchMock, 0), traceparentAt(fetchMock, 1))
   })
 
+  it('reports a denied refresh on the raw stream so the host can sign the user out', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 401 }))
+    const onSessionExpired = vi.fn()
+    const client = createAncherClient({
+      baseUrl: 'https://api.test',
+      fetch: fetchMock,
+      refreshSession: vi.fn().mockResolvedValue('denied'),
+      onSessionExpired,
+    })
+
+    const response = await openConversationStream(client, '/conversations/c-1/stream')
+
+    expect(onSessionExpired).toHaveBeenCalledOnce()
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(response.status).toBe(401)
+  })
+
+  it('reports a denied refresh on the typed stream too', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 401 }))
+    const onSessionExpired = vi.fn()
+    const client = createAncherClient({
+      baseUrl: 'https://api.test',
+      fetch: fetchMock,
+      refreshSession: vi.fn().mockResolvedValue('denied'),
+      onSessionExpired,
+    })
+
+    // The typed stream throws the normalized 401 on top of firing the hook.
+    await expect(collect(streamConversation(client, 'c-1'))).rejects.toThrow()
+    expect(onSessionExpired).toHaveBeenCalledOnce()
+  })
+
+  it('does not sign the user out when the stream refresh is unreachable', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 401 }))
+    const onSessionExpired = vi.fn()
+    const client = createAncherClient({
+      baseUrl: 'https://api.test',
+      fetch: fetchMock,
+      refreshSession: vi.fn().mockResolvedValue('unreachable'),
+      onSessionExpired,
+    })
+
+    await openConversationStream(client, '/conversations/c-1/stream')
+
+    expect(onSessionExpired).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledOnce()
+  })
+
   it('refreshes proactively before opening the raw stream when the session is near expiry', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(sseResponse([]))
     const refreshSession = vi.fn().mockResolvedValue(true)
@@ -457,7 +505,7 @@ describe('conversation stream retries', () => {
       baseUrl: 'https://api.test',
       fetch: fetchMock,
       refreshSession,
-      getSessionExpiresAt: () => Date.now() + 60_000, // inside the 120s leeway
+      getSessionExpiresAt: () => Date.now() + 60_000,
     })
 
     await openConversationStream(client, '/conversations/c-1/stream')

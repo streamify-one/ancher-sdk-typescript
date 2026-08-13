@@ -464,6 +464,7 @@ request-body unions: `SuggestionResolution` (`SuggestionStatus` minus
 | `Notification` | `list`/`count`/`iterate`, `setStatus(id, body)`, `markRead(id)`, `markDismissed(id)` |
 | `Suggestion` | `list`/`count`/`iterate`, `update(id, body)`, `accept(id)`, `dismiss(id)`, `acceptMany(ids)`, `dismissMany(ids)` |
 | `Recommendation` | `list`/`count`/`iterate`, `save(id)`, `dismiss(id)`, `notInterested(id)` |
+| `DailyDigest` | `list`/`count`/`iterate`, `get` (read-only — digests are generated server-side) |
 | `Session` | `list`/`count`/`iterate`, `current` (token session), `revoke(id)`, `revokeAll` |
 | `Connection` | `list()` (no params → `Connection[]`), `connect`, `delete(id)` |
 

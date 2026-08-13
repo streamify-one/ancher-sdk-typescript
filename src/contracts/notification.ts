@@ -74,15 +74,9 @@ export type _NotificationStatusUpdateExhaustive = Expect<
   Eq<NotificationStatusUpdate, Schemas.NotificationStatusUpdate['status']>
 >
 
-/** Daily-digest generation status. */
-export const DailyDigestStatus = {
-  Processing: 'processing',
-  Ready: 'ready',
-  Error: 'error',
-} as const satisfies Record<string, Schemas.DailyDigest['status']>
-export type DailyDigestStatus = (typeof DailyDigestStatus)[keyof typeof DailyDigestStatus]
-/** @internal */
-export type _DailyDigestStatusExhaustive = Expect<Eq<DailyDigestStatus, Schemas.DailyDigest['status']>>
+// `DailyDigestStatus` lives in `./daily-digest` alongside the entity it belongs
+// to. It cannot also be declared here — `contracts/index.ts` star-exports every
+// module, and an ambiguous star-export is silently dropped from the barrel.
 
 /* ---------------------------------------------------------------------------
  * Notification entity (envelope union).

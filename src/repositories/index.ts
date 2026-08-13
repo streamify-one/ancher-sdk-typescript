@@ -20,6 +20,7 @@ export { createListSurface, type ListSurface, type Page } from './base'
 export type { CollectionRepository } from './collection'
 export type { ConnectionProvider, ConnectionRepository } from './connection'
 export type { ConversationRepository, ConversationRunOptions } from './conversation'
+export type { DailyDigestRepository } from './daily-digest'
 export type {
   FileDownloadOptions,
   FilePresignedUrlOptions,

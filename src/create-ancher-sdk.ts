@@ -19,6 +19,7 @@ import {
 import { type CollectionRepository, createCollectionRepository } from './repositories/collection'
 import { type ConnectionRepository, createConnectionRepository } from './repositories/connection'
 import { type ConversationRepository, createConversationRepository } from './repositories/conversation'
+import { createDailyDigestRepository, type DailyDigestRepository } from './repositories/daily-digest'
 import { createFileRepository, type FileRepository } from './repositories/file'
 import { createMessageRepository, type MessageRepository } from './repositories/message'
 import { createNoteRepository, type NoteRepository } from './repositories/note'
@@ -81,6 +82,7 @@ export { createListSurface, type ListSurface, type Page } from './repositories/b
 export type { CollectionRepository } from './repositories/collection'
 export type { ConnectionProvider, ConnectionRepository } from './repositories/connection'
 export type { ConversationRepository, ConversationRunOptions } from './repositories/conversation'
+export type { DailyDigestRepository } from './repositories/daily-digest'
 export type {
   FileDownloadOptions,
   FilePresignedUrlOptions,
@@ -140,6 +142,8 @@ export interface AncherSdk {
   Connection: ConnectionRepository
   /** Conversations — `list`/`count`/`iterate`, `get`/`start`, `send`/`interrupt`/`update`/`delete` by id, chat streaming. */
   Conversation: ConversationRepository
+  /** Daily digests — read-only `list`/`count`/`iterate` and `get(id)`. */
+  DailyDigest: DailyDigestRepository
   /** The raw API layer — generated typed client (`api`), `upload`, resolved `config`. */
   client: AncherClient
   /** Device — push notification token. */
@@ -203,6 +207,7 @@ export function createAncherSdk(input: AncherClient | AncherClientConfig = {}): 
     Tag: createTagRepository(client),
     Collection: createCollectionRepository(client),
     Conversation: createConversationRepository(client),
+    DailyDigest: createDailyDigestRepository(client),
     Message: createMessageRepository(client),
     Pinned: createPinnedRepository(client),
     Notification: createNotificationRepository(client),

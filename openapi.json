@@ -666,7 +666,8 @@
                 "Universal",
                 "W-SU",
                 "WET",
-                "Zulu"
+                "Zulu",
+                "localtime"
               ],
               "title": "Timezone"
             },
@@ -1067,6 +1068,8 @@
                       "-slug",
                       "+reaction",
                       "-reaction",
+                      "+reindex_requested_at",
+                      "-reindex_requested_at",
                       "+mimetype",
                       "-mimetype",
                       "+size",
@@ -1256,6 +1259,22 @@
                 }
               ],
               "title": "Reaction"
+            }
+          },
+          {
+            "name": "reindex_requested_at",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/NumericCriteria_datetime_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Reindex Requested At"
             }
           },
           {
@@ -14521,7 +14540,7 @@
           "Retrievals"
         ],
         "summary": "Retrieve Notes",
-        "description": "Perform a hybrid RAG retrieval across the user's notes and return the\nbest-matching notes (duplicate saves of the same content collapse to one\nresult).",
+        "description": "Perform a hybrid RAG retrieval across the user's notes and artifacts,\nreturned as one ranked list. Note hits collapse to one per underlying\narticle (duplicate saves of the same content) and carry ``note``/\n``article_id``; artifact hits collapse to one per artifact and carry\n``artifact``/``artifact_id`` with null article/note fields.",
         "operationId": "retrieve_notes_api_v1_retrievals_post",
         "security": [
           {
@@ -16781,6 +16800,8 @@
                       "-slug",
                       "+reaction",
                       "-reaction",
+                      "+reindex_requested_at",
+                      "-reindex_requested_at",
                       "+mimetype",
                       "-mimetype",
                       "+size",
@@ -16970,6 +16991,22 @@
                 }
               ],
               "title": "Reaction"
+            }
+          },
+          {
+            "name": "reindex_requested_at",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/NumericCriteria_datetime_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Reindex Requested At"
             }
           },
           {
@@ -21357,6 +21394,14 @@
             "title": "Reaction",
             "description": "Reaction to the artifact"
           },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            },
+            "type": "array",
+            "title": "Tags",
+            "description": "Tags for this artifact"
+          },
           "files": {
             "additionalProperties": {
               "$ref": "#/components/schemas/File"
@@ -21469,6 +21514,7 @@
           "is_public",
           "slug",
           "reaction",
+          "tags",
           "files",
           "mimetype",
           "size",
@@ -22190,8 +22236,15 @@
             "description": "The embedded text content of this chunk"
           },
           "article_id": {
-            "type": "string",
-            "format": "uuid",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Article Id",
             "description": "Reference to the source article"
           },
@@ -22207,6 +22260,19 @@
             ],
             "title": "Note Id",
             "description": "Reference to the note"
+          },
+          "artifact_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Id",
+            "description": "Reference to the artifact"
           },
           "kind": {
             "type": "string",
@@ -22241,6 +22307,7 @@
           "embedded_text",
           "article_id",
           "note_id",
+          "artifact_id",
           "kind",
           "file_ref"
         ],
@@ -24233,6 +24300,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/ExactCriteria_Literal__like____dislike____neutral___"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reindex_requested_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumericCriteria_datetime_"
               },
               {
                 "type": "null"
@@ -32316,8 +32393,15 @@
       "NoteRetrievalResult": {
         "properties": {
           "article_id": {
-            "type": "string",
-            "format": "uuid",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Article Id",
             "description": "Article identifier"
           },
@@ -32345,6 +32429,30 @@
             ],
             "description": "Note"
           },
+          "artifact_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Artifact Id",
+            "description": "Artifact identifier"
+          },
+          "artifact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Artifact"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Artifact"
+          },
           "score": {
             "type": "number",
             "title": "Score",
@@ -32353,7 +32461,6 @@
         },
         "type": "object",
         "required": [
-          "article_id",
           "score"
         ],
         "title": "NoteRetrievalResult"
@@ -38112,7 +38219,8 @@
               "Universal",
               "W-SU",
               "WET",
-              "Zulu"
+              "Zulu",
+              "localtime"
             ],
             "maxLength": 50,
             "minLength": 1,
@@ -38953,7 +39061,8 @@
                   "Universal",
                   "W-SU",
                   "WET",
-                  "Zulu"
+                  "Zulu",
+                  "localtime"
                 ],
                 "minLength": 1
               },

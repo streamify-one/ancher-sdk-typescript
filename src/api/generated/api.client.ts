@@ -513,6 +513,15 @@ export type ArtifactCreate = {
   name: string;
   description?: (string | null) | undefined;
 }
+/**
+ * Request schema for setting tags on an artifact.
+ */
+export type ArtifactTagsUpdate = {
+  /**
+   * List of tag IDs to set on the artifact
+   */
+  tag_ids: Array<string>;
+}
 export type ArtifactUpdate = Partial<{ name: (string | null), description: (string | null), is_public: (boolean | null), reaction: (("like" | "dislike" | "neutral") | null) }>
 /**
  * Granted / used / remaining for one credit bucket — a complete gauge.
@@ -4035,6 +4044,25 @@ export type delete_Delete_artifact_api_v1_artifacts__artifact_id__delete = {
       
     }
 /**
+ * Set tags on an artifact (replaces all existing tags).
+ */
+export type put_Set_artifact_tags_api_v1_artifacts__artifact_id__tags_put = {
+      method: "PUT",
+      path: "/api/v1/artifacts/{artifact_id}/tags",
+      requestFormat: "json",
+      parameters: {
+            
+        path:  {artifact_id: string,
+},
+        
+        body:  Schemas.ArtifactTagsUpdate,
+          }
+      responses: {200: Schemas.Artifact,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
+/**
  * Replace the artifact's file content, creating a new revision.
  */
 export type put_Update_artifact_content_api_v1_artifacts__artifact_id__content_put = {
@@ -7039,7 +7067,8 @@ delete: {
 "/api/v1/external-connections/{connection_id}": Endpoints.delete_Disconnect_api_v1_external_connections__connection_id__delete
          },
 put: {
-           "/api/v1/artifacts/{artifact_id}/content": Endpoints.put_Update_artifact_content_api_v1_artifacts__artifact_id__content_put,
+           "/api/v1/artifacts/{artifact_id}/tags": Endpoints.put_Set_artifact_tags_api_v1_artifacts__artifact_id__tags_put,
+"/api/v1/artifacts/{artifact_id}/content": Endpoints.put_Update_artifact_content_api_v1_artifacts__artifact_id__content_put,
 "/api/v1/notes/{note_id}/files/{file_id}/content": Endpoints.put_Update_note_content_file_api_v1_notes__note_id__files__file_id__content_put,
 "/api/v1/notes/{note_id}/tags": Endpoints.put_Set_note_tags_api_v1_notes__note_id__tags_put,
 "/api/v1/session": Endpoints.put_Refresh_session_api_v1_session_put,

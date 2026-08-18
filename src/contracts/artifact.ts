@@ -67,6 +67,9 @@ export type ArtifactListResponse = Page<Artifact>
 /** Update artifact request (plus the FE-only `pinned` local field). */
 export type ArtifactUpdate = Schemas.ArtifactUpdate & Partial<ArtifactPinnedFields>
 
+/** Set-artifact-tags request (replace-all, mirroring the note endpoint). */
+export type ArtifactTagsUpdate = Schemas.ArtifactTagsUpdate
+
 /* ---------------------------------------------------------------------------
  * Artifact list surface.
  * ------------------------------------------------------------------------- */

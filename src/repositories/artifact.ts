@@ -49,6 +49,8 @@ export interface ArtifactRepository extends ListSurface<Artifact, ArtifactWhere,
   update(artifactId: string, patch: Schemas.ArtifactUpdate): Promise<Artifact>
   /** Delete an artifact (`DELETE`). */
   delete(artifactId: string): Promise<void>
+  /** Set an artifact's tags (`PUT`, replaces all existing); returns the updated artifact. */
+  setTags(artifactId: string, body: Schemas.ArtifactTagsUpdate): Promise<Artifact>
   /** Mint a presigned CDN URL for an artifact file sibling. */
   presignedUrl(artifactId: string, options?: ArtifactPresignedUrlOptions): Promise<string>
   /**
@@ -123,6 +125,12 @@ export function createArtifactRepository(client: AncherClient): ArtifactReposito
     async delete(artifactId) {
       await client.api.delete('/api/v1/artifacts/{artifact_id}', {
         path: { artifact_id: artifactId },
+      })
+    },
+    async setTags(artifactId, body) {
+      return await client.api.put('/api/v1/artifacts/{artifact_id}/tags', {
+        path: { artifact_id: artifactId },
+        body,
       })
     },
     presignedUrl,

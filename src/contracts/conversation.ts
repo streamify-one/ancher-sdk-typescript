@@ -181,11 +181,40 @@ export type Message = Omit<Schemas.Message, 'clarification' | 'clarification_req
 /** Tag attached to a message */
 export type MessageTag = Schemas.MessageTag
 
+/**
+ * Recency + audit fields the current codegen does not carry.
+ *
+ * `last_interacted_at` arrives with api#117, which also bumps it on every
+ * user/assistant message and deletes `Schemas.ConversationSchema` in favour of
+ * the fuller `Schemas.Conversation`. The audit timestamps are overlaid for the
+ * same reason: `GET /conversations` already returns `Schemas.Conversation`
+ * (which carries them), but the alias below still points at the narrower shape.
+ * Everything here is optional because `pnpm generate` cannot yet reach an
+ * api#117 backend — **delete this overlay and repoint `Conversation` at
+ * `Schemas.Conversation` once it can.**
+ *
+ * `last_interacted_at` accepts a number *or* a string deliberately.
+ * `BaseDataSchema` sets `ser_json_temporal='seconds'`, so the wire value is
+ * Unix seconds — but unlike `AuditMixin`'s fields it carries no
+ * `{type: 'number', format: 'unix-timestamp'}` schema override, so the spec
+ * declares it a date-time string. Consumers must handle both.
+ */
+interface ConversationRecencyFields {
+  /** Unix seconds. */
+  created_at?: number
+  /** Unix seconds, or an ISO 8601 string — see the note above. */
+  last_interacted_at?: number | string | null
+  /** Unix seconds. */
+  updated_at?: number
+}
+
 /** Conversation entity */
-export type Conversation = Schemas.ConversationSchema
+export type Conversation = Schemas.ConversationSchema & ConversationRecencyFields
 
 /** Conversation with last message preview */
-export interface ConversationWithPreview extends Schemas.ConversationSchema {
+export interface ConversationWithPreview
+  extends Schemas.ConversationSchema,
+    ConversationRecencyFields {
   last_message?: Schemas.Message | null
   last_message_at?: string | null
   message_count?: number
@@ -281,8 +310,17 @@ type ConversationListEndpointQuery = GetEndpointQuery<'/api/v1/conversations'>
 /** Typed filter for conversation lists. */
 export type ConversationWhere = Where<BranchOf<ConversationListEndpointQuery>>
 
-/** Signed sort keys for conversation lists (e.g. `'-updated_at'`, `'-pinned'`). */
-export type ConversationOrderBy = OrderByOf<ConversationListEndpointQuery>
+/**
+ * Signed sort keys for conversation lists.
+ *
+ * `last_interacted_at` arrives with api#117 but is absent from the current
+ * generated query type. Remove this overlay after regenerating against that
+ * backend, alongside `ConversationRecencyFields` above.
+ */
+export type ConversationOrderBy =
+  | OrderByOf<ConversationListEndpointQuery>
+  | '+last_interacted_at'
+  | '-last_interacted_at'
 
 /** Options for `sdk.Conversation.list` / `count` / `iterate`. */
 export type ConversationListOptions = ListOptions<ConversationWhere, ConversationOrderBy>

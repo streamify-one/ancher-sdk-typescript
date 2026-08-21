@@ -4,7 +4,7 @@
  */
 
 import type { Eq, Expect } from './assert'
-import type { GetEndpointQuery } from './common'
+import type { GetEndpointQuery, Page } from './common'
 import type {
   BranchOf,
   ListOptions,
@@ -52,6 +52,9 @@ export type Recommendation = Schemas.Recommendation
 
 /** Action request body for a recommendation (dismiss, save, or not_interested). */
 export type RecommendationActionRequest = Schemas.RecommendationAction
+
+/** Recommendation list response. */
+export type RecommendationListResponse = Page<Recommendation>
 
 /* ---------------------------------------------------------------------------
  * Recommendation list surface.

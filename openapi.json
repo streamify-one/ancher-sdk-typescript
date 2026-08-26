@@ -3662,6 +3662,86 @@
         }
       }
     },
+    "/api/v1/notes/{note_id}/podcasts": {
+      "post": {
+        "tags": [
+          "Notes"
+        ],
+        "summary": "Create Note Podcast",
+        "operationId": "create_note_podcast_api_v1_notes__note_id__podcasts_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Note Id"
+            }
+          },
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Podcast"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/notes/{note_id}": {
       "get": {
         "tags": [
@@ -11667,6 +11747,8 @@
                       "-user_id",
                       "+name",
                       "-name",
+                      "+last_interacted_at",
+                      "-last_interacted_at",
                       "+pinned",
                       "-pinned"
                     ],
@@ -11790,6 +11872,22 @@
                 }
               ],
               "title": "Name"
+            }
+          },
+          {
+            "name": "last_interacted_at",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/NumericCriteria_datetime_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last Interacted At"
             }
           },
           {
@@ -12269,7 +12367,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConversationSchema"
+                  "$ref": "#/components/schemas/Conversation"
                 }
               }
             }
@@ -12360,7 +12458,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConversationSchema"
+                  "$ref": "#/components/schemas/Conversation"
                 }
               }
             }
@@ -13897,6 +13995,86 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DailyDigest"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/podcasts/{podcast_id}": {
+      "get": {
+        "tags": [
+          "Podcasts"
+        ],
+        "summary": "Get Podcast",
+        "operationId": "get_podcast_api_v1_podcasts__podcast_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "podcast_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Podcast Id"
+            }
+          },
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Podcast"
                 }
               }
             }
@@ -20162,6 +20340,87 @@
         }
       }
     },
+    "/api/v1/feedbacks/": {
+      "post": {
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Create Feedback",
+        "description": "Submit product feedback — a feature request, bug report, or comment.",
+        "operationId": "create_feedback_api_v1_feedbacks__post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Feedback"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/external-connections/{provider}/authorization": {
       "post": {
         "tags": [
@@ -23642,6 +23901,12 @@
             "title": "Name",
             "description": "Name of the conversation"
           },
+          "last_interacted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Interacted At",
+            "description": "Timestamp of the latest user/assistant message in this conversation"
+          },
           "pinned": {
             "type": "boolean",
             "title": "Pinned",
@@ -23658,6 +23923,7 @@
           "id",
           "user_id",
           "name",
+          "last_interacted_at",
           "pinned"
         ],
         "title": "Conversation",
@@ -23754,51 +24020,6 @@
         ],
         "title": "ConversationRunReceipt",
         "description": "Receipt returned when an async conversation run has been accepted."
-      },
-      "ConversationSchema": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id",
-            "description": "Unique identifier"
-          },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string",
-                "maxLength": 255,
-                "minLength": 1
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name",
-            "description": "Name or title of the conversation"
-          },
-          "user_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "User Id",
-            "description": "ID of the user who owns this conversation"
-          },
-          "pinned": {
-            "type": "boolean",
-            "title": "Pinned",
-            "description": "Whether this conversation is pinned in the sidebar",
-            "default": false
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "name",
-          "user_id",
-          "pinned"
-        ],
-        "title": "ConversationSchema",
-        "description": "Base schema for conversations."
       },
       "ConversationUpdateRequest": {
         "properties": {
@@ -25182,6 +25403,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/TextCriteria_str_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_interacted_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumericCriteria_datetime_"
               },
               {
                 "type": "null"
@@ -30060,6 +30291,156 @@
         "type": "object",
         "title": "ExactCriteria[Literal['user', 'assistant']]"
       },
+      "Feedback": {
+        "properties": {
+          "created_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Created At",
+            "description": "Creation timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Creator of the record",
+            "default": "unknown"
+          },
+          "updated_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Updated At",
+            "description": "Last update timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "updated_by": {
+            "type": "string",
+            "title": "Updated By",
+            "description": "Last updater of the record",
+            "default": "unknown"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id",
+            "description": "Unique identifier"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id",
+            "description": "Author, or null for anonymous feedback"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email",
+            "description": "Reply-to address; the only identity an anonymous author has"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "feature_request",
+              "bug_report",
+              "general"
+            ],
+            "title": "Type",
+            "description": "Feedback type"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "The feedback body"
+          },
+          "context": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Context",
+            "description": "Client-supplied context (conversation_id, page URL, ...)"
+          },
+          "surface": {
+            "type": "string",
+            "title": "Surface",
+            "description": "Client that originated the submission"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_at",
+          "created_by",
+          "updated_at",
+          "updated_by",
+          "id",
+          "user_id",
+          "email",
+          "type",
+          "content",
+          "context",
+          "surface"
+        ],
+        "title": "Feedback",
+        "description": "A stored piece of product feedback."
+      },
+      "FeedbackCreate": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "feature_request",
+              "bug_report",
+              "general"
+            ],
+            "title": "Type",
+            "description": "Feedback type"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email",
+            "description": "Reply-to address for follow-up. Not verified, and not used in place of the account email"
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 5000,
+            "minLength": 1,
+            "title": "Content",
+            "description": "The feedback body"
+          },
+          "context": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Context",
+            "description": "Arbitrary client context stored verbatim, e.g. {\"conversation_id\": ..., \"url\": ..., \"app_version\": ...}. Capped at 4096 bytes once serialized"
+          }
+        },
+        "type": "object",
+        "required": [
+          "type",
+          "content"
+        ],
+        "title": "FeedbackCreate",
+        "description": "Request body for submitting feedback.\n\n``email`` is optional here because the endpoint requires auth, so the\nauthor is always identified by ``user_id``. The lenient endpoint that\naccepts anonymous submissions will have to require it — the\n``ck_feedbacks_author_identified`` constraint refuses a row with neither."
+      },
       "File": {
         "properties": {
           "created_at": {
@@ -34565,6 +34946,142 @@
         ],
         "title": "PlanWithListings",
         "description": "Plan response that bundles its provider listings."
+      },
+      "Podcast": {
+        "properties": {
+          "created_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Created At",
+            "description": "Creation timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Creator of the record",
+            "default": "unknown"
+          },
+          "updated_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Updated At",
+            "description": "Last update timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "updated_by": {
+            "type": "string",
+            "title": "Updated By",
+            "description": "Last updater of the record",
+            "default": "unknown"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id",
+            "description": "Unique identifier"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id",
+            "description": "Owner user ID"
+          },
+          "note_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Note Id",
+            "description": "Source note ID"
+          },
+          "file_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Id",
+            "description": "Generated podcast audio file ID"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Podcast episode title"
+          },
+          "transcript": {
+            "type": "string",
+            "title": "Transcript",
+            "description": "Formatted podcast transcript"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "processing",
+              "ready",
+              "error"
+            ],
+            "title": "Status",
+            "description": "Podcast generation status"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At",
+            "description": "Timestamp when generation completed"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message",
+            "description": "Safe error message when status is error"
+          },
+          "file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File",
+            "description": "Generated podcast audio file"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_at",
+          "created_by",
+          "updated_at",
+          "updated_by",
+          "id",
+          "user_id",
+          "note_id",
+          "file_id",
+          "title",
+          "transcript",
+          "status",
+          "generated_at",
+          "error_message",
+          "file"
+        ],
+        "title": "Podcast"
       },
       "PresignedDownloadResponse": {
         "properties": {

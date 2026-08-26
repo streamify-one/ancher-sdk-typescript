@@ -25,6 +25,7 @@ import { createMessageRepository, type MessageRepository } from './repositories/
 import { createNoteRepository, type NoteRepository } from './repositories/note'
 import { createNotificationRepository, type NotificationRepository } from './repositories/notification'
 import { createPinnedRepository, type PinnedRepository } from './repositories/pinned'
+import { createPodcastRepository, type PodcastRepository } from './repositories/podcast'
 import {
   createRecommendationRepository,
   type RecommendationRepository,
@@ -102,6 +103,7 @@ export type {
 } from './repositories/note'
 export type { NotificationRepository } from './repositories/notification'
 export type { PinnedRepository } from './repositories/pinned'
+export type { PodcastGetOptions, PodcastRepository } from './repositories/podcast'
 export { buildListQuery, type AnyListOptions, type WireListQuery } from './repositories/query'
 export type {
   PresignedDownloadOptions,
@@ -164,6 +166,8 @@ export interface AncherSdk {
   Onboarding: OnboardingRepository
   /** Pinned items — `list`/`count`/`iterate`, `pin`/`reorder`/`unpin`. */
   Pinned: PinnedRepository
+  /** Note podcasts — `createForNote(noteId)` (HTTP 202) and `get(id)`; no list surface. */
+  Podcast: PodcastRepository
   /** Content recommendations — `list`/`count`/`iterate`, `save(id)`/`dismiss(id)`/`notInterested(id)`. */
   Recommendation: RecommendationRepository
   /** Retrieval (RAG) — `notes`/`chunks` for a query. */
@@ -210,6 +214,7 @@ export function createAncherSdk(input: AncherClient | AncherClientConfig = {}): 
     DailyDigest: createDailyDigestRepository(client),
     Message: createMessageRepository(client),
     Pinned: createPinnedRepository(client),
+    Podcast: createPodcastRepository(client),
     Notification: createNotificationRepository(client),
     Suggestion: createSuggestionRepository(client),
     Recommendation: createRecommendationRepository(client),

@@ -1,8 +1,8 @@
 /**
  * Conversation repository (`/conversations`).
  *
- * Based on `Schemas.ConversationSchema` (the single-fetch shape; list items are
- * a superset and assignable). Lists take the TypeScript-native
+ * Based on `Schemas.Conversation` (api#117's single shape for both the
+ * single-fetch and list forms). Lists take the TypeScript-native
  * `{ where, orderBy, … }` options (see `../contracts/query`). Chat is a
  * streaming operation: `start`/`send` return a `ConversationRunReceipt`
  * (HTTP 202) — consuming the SSE event stream from

@@ -40,6 +40,7 @@ export type {
 } from './note'
 export type { NotificationRepository } from './notification'
 export type { PinnedRepository } from './pinned'
+export type { PodcastGetOptions, PodcastRepository } from './podcast'
 export type {
   PresignedDownloadOptions,
   PresignedUrlKind,

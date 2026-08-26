@@ -1359,6 +1359,10 @@ export type Conversation = {
    */
   name: (string | null);
   /**
+   * Timestamp of the latest user/assistant message in this conversation
+   */
+  last_interacted_at: string;
+  /**
    * Whether this conversation is pinned in the sidebar
    */
   pinned: boolean;
@@ -1397,27 +1401,6 @@ export type ConversationRunReceipt = {
   status: ("running" | "finished" | "cancelled");
 }
 /**
- * Base schema for conversations.
- */
-export type ConversationSchema = {
-  /**
-   * Unique identifier
-   */
-  id: string;
-  /**
-   * Name or title of the conversation
-   */
-  name: (string | null);
-  /**
-   * ID of the user who owns this conversation
-   */
-  user_id: string;
-  /**
-   * Whether this conversation is pinned in the sidebar
-   */
-  pinned: boolean;
-}
-/**
  * Schema for updating a conversation (request).
  */
 export type ConversationUpdateRequest = Partial<{ name: (string | null), pinned: (boolean | null) }>
@@ -1436,7 +1419,7 @@ export type Criteria_CollectionSuggestion_ = Partial<{ and: (Array<Criteria_Coll
 export type ExactCriteria_Literal__neutral____slate____gray____zinc____stone____red____orange____amber____yellow____lime____green____emerald____teal____cyan____sky____blue____indigo____violet____purple____fuchsia____pink____rose___ = Partial<{ eq: (("neutral" | "slate" | "gray" | "zinc" | "stone" | "red" | "orange" | "amber" | "yellow" | "lime" | "green" | "emerald" | "teal" | "cyan" | "sky" | "blue" | "indigo" | "violet" | "purple" | "fuchsia" | "pink" | "rose") | null), is_null: (boolean | null), ne: (("neutral" | "slate" | "gray" | "zinc" | "stone" | "red" | "orange" | "amber" | "yellow" | "lime" | "green" | "emerald" | "teal" | "cyan" | "sky" | "blue" | "indigo" | "violet" | "purple" | "fuchsia" | "pink" | "rose") | null), in: (Array<("neutral" | "slate" | "gray" | "zinc" | "stone" | "red" | "orange" | "amber" | "yellow" | "lime" | "green" | "emerald" | "teal" | "cyan" | "sky" | "blue" | "indigo" | "violet" | "purple" | "fuchsia" | "pink" | "rose")> | null), not_in: (Array<("neutral" | "slate" | "gray" | "zinc" | "stone" | "red" | "orange" | "amber" | "yellow" | "lime" | "green" | "emerald" | "teal" | "cyan" | "sky" | "blue" | "indigo" | "violet" | "purple" | "fuchsia" | "pink" | "rose")> | null) }>
 export type ExactCriteria_Literal__active____archived___ = Partial<{ eq: (("active" | "archived") | null), is_null: (boolean | null), ne: (("active" | "archived") | null), in: (Array<("active" | "archived")> | null), not_in: (Array<("active" | "archived")> | null) }>
 export type Criteria_Collection_ = Partial<{ and: (Array<Criteria_Collection_> | null), or: (Array<Criteria_Collection_> | null), not: (Criteria_Collection_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), name: (TextCriteria_str_ | null), description: (TextCriteria_str_ | null), color: (ExactCriteria_Literal__neutral____slate____gray____zinc____stone____red____orange____amber____yellow____lime____green____emerald____teal____cyan____sky____blue____indigo____violet____purple____fuchsia____pink____rose___ | null), user_id: (NumericCriteria_UUID_ | null), status: (ExactCriteria_Literal__active____archived___ | null) }>
-export type Criteria_Conversation_ = Partial<{ and: (Array<Criteria_Conversation_> | null), or: (Array<Criteria_Conversation_> | null), not: (Criteria_Conversation_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), name: (TextCriteria_str_ | null), pinned: (NumericCriteria_bool_ | null) }>
+export type Criteria_Conversation_ = Partial<{ and: (Array<Criteria_Conversation_> | null), or: (Array<Criteria_Conversation_> | null), not: (Criteria_Conversation_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), name: (TextCriteria_str_ | null), last_interacted_at: (NumericCriteria_datetime_ | null), pinned: (NumericCriteria_bool_ | null) }>
 export type ExactCriteria_Literal__processing____ready____error___ = Partial<{ eq: (("processing" | "ready" | "error") | null), is_null: (boolean | null), ne: (("processing" | "ready" | "error") | null), in: (Array<("processing" | "ready" | "error")> | null), not_in: (Array<("processing" | "ready" | "error")> | null) }>
 export type Criteria_DailyDigest_ = Partial<{ and: (Array<Criteria_DailyDigest_> | null), or: (Array<Criteria_DailyDigest_> | null), not: (Criteria_DailyDigest_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), file_id: (NumericCriteria_UUID_ | null), title: (TextCriteria_str_ | null), summary: (TextCriteria_str_ | null), status: (ExactCriteria_Literal__processing____ready____error___ | null), generated_at: (NumericCriteria_datetime_ | null), error_message: (TextCriteria_str_ | null) }>
 export type Criteria_FileReference_ = Partial<{ and: (Array<Criteria_FileReference_> | null), or: (Array<Criteria_FileReference_> | null), not: (Criteria_FileReference_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), file_id: (NumericCriteria_UUID_ | null), owner_id: (NumericCriteria_UUID_ | null), mutable: (NumericCriteria_bool_ | null), label: (TextCriteria_str_ | null), category: (TextCriteria_str_ | null) }>
@@ -1750,6 +1733,91 @@ export type DeviceResponse = {
    * FCM registration token
    */
   notification_token: (string | null);
+}
+/**
+ * A stored piece of product feedback.
+ */
+export type Feedback = {
+  /**
+   * Creation timestamp in Unix seconds
+   */
+  created_at: number;
+  /**
+   * Creator of the record
+   */
+  created_by: string;
+  /**
+   * Last update timestamp in Unix seconds
+   */
+  updated_at: number;
+  /**
+   * Last updater of the record
+   */
+  updated_by: string;
+  /**
+   * Unique identifier
+   */
+  id: string;
+  /**
+   * Author, or null for anonymous feedback
+   */
+  user_id: (string | null);
+  /**
+   * Reply-to address; the only identity an anonymous author has
+   */
+  email: (string | null);
+  /**
+   * Feedback type
+   */
+  type: ("feature_request" | "bug_report" | "general");
+  /**
+   * The feedback body
+   */
+  content: string;
+  /**
+   * Client-supplied context (conversation_id, page URL, ...)
+   */
+  context: Record<string, unknown>;
+  /**
+   * Client that originated the submission
+   */
+  surface: string;
+}
+/**
+ * Request body for submitting feedback.
+ * 
+ * ``email`` is optional here because the endpoint requires auth, so the
+ * author is always identified by ``user_id``. The lenient endpoint that
+ * accepts anonymous submissions will have to require it — the
+ * ``ck_feedbacks_author_identified`` constraint refuses a row with neither.
+ */
+export type FeedbackCreate = {
+  /**
+   * Feedback type
+   */
+  type: ("feature_request" | "bug_report" | "general");
+  /**
+   * Request body for submitting feedback.
+   * 
+   * ``email`` is optional here because the endpoint requires auth, so the
+   * author is always identified by ``user_id``. The lenient endpoint that
+   * accepts anonymous submissions will have to require it — the
+   * ``ck_feedbacks_author_identified`` constraint refuses a row with neither.
+   */
+  email?: (string | null) | undefined;
+  /**
+   * The feedback body
+   */
+  content: string;
+  /**
+   * Request body for submitting feedback.
+   * 
+   * ``email`` is optional here because the endpoint requires auth, so the
+   * author is always identified by ``user_id``. The lenient endpoint that
+   * accepts anonymous submissions will have to require it — the
+   * ``ck_feedbacks_author_identified`` constraint refuses a row with neither.
+   */
+  context?: Record<string, unknown> | undefined;
 }
 /**
  * Schema for file information.
@@ -2993,6 +3061,64 @@ export type PlanListResponse = {
    * Active plans
    */
   plans: Array<PlanWithListings>;
+}
+export type Podcast = {
+  /**
+   * Creation timestamp in Unix seconds
+   */
+  created_at: number;
+  /**
+   * Creator of the record
+   */
+  created_by: string;
+  /**
+   * Last update timestamp in Unix seconds
+   */
+  updated_at: number;
+  /**
+   * Last updater of the record
+   */
+  updated_by: string;
+  /**
+   * Unique identifier
+   */
+  id: string;
+  /**
+   * Owner user ID
+   */
+  user_id: string;
+  /**
+   * Source note ID
+   */
+  note_id: string;
+  /**
+   * Generated podcast audio file ID
+   */
+  file_id: (string | null);
+  /**
+   * Podcast episode title
+   */
+  title: string;
+  /**
+   * Formatted podcast transcript
+   */
+  transcript: string;
+  /**
+   * Podcast generation status
+   */
+  status: ("processing" | "ready" | "error");
+  /**
+   * Timestamp when generation completed
+   */
+  generated_at: (string | null);
+  /**
+   * Safe error message when status is error
+   */
+  error_message: (string | null);
+  /**
+   * Generated podcast audio file
+   */
+  file: (File | null);
 }
 /**
  * Schema for presigned download URL response.
@@ -4541,6 +4667,22 @@ export type get_Get_note_by_slug_api_v1_notes_by_slug__slug__get = {
 },
       
     }
+export type post_Create_note_podcast_api_v1_notes__note_id__podcasts_post = {
+      method: "POST",
+      path: "/api/v1/notes/{note_id}/podcasts",
+      requestFormat: "json",
+      parameters: {
+            
+        path:  {note_id: string,
+},
+        
+        
+          }
+      responses: {202: Schemas.Podcast,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
 /**
  * Get note by ID.
  * 
@@ -5890,7 +6032,7 @@ export type get_List_conversations_api_v1_conversations_get = {
       path: "/api/v1/conversations",
       requestFormat: "json",
       parameters: {
-            query:  Partial<{ and: (Array<Schemas.Criteria_Conversation_> | null), or: (Array<Schemas.Criteria_Conversation_> | null), not: (Schemas.Criteria_Conversation_ | null), cursor: (Schemas.Cursor_Conversation_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+user_id" | "-user_id" | "+name" | "-name" | "+pinned" | "-pinned")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), name: (Schemas.TextCriteria_str_ | null), pinned: (Schemas.NumericCriteria_bool_ | null) }>,
+            query:  Partial<{ and: (Array<Schemas.Criteria_Conversation_> | null), or: (Array<Schemas.Criteria_Conversation_> | null), not: (Schemas.Criteria_Conversation_ | null), cursor: (Schemas.Cursor_Conversation_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+user_id" | "-user_id" | "+name" | "-name" | "+last_interacted_at" | "-last_interacted_at" | "+pinned" | "-pinned")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), name: (Schemas.TextCriteria_str_ | null), last_interacted_at: (Schemas.NumericCriteria_datetime_ | null), pinned: (Schemas.NumericCriteria_bool_ | null) }>,
         
         
         
@@ -6040,7 +6182,7 @@ export type get_Get_conversation_api_v1_conversations__conversation_id__get = {
         
         
           }
-      responses: {200: Schemas.ConversationSchema,
+      responses: {200: Schemas.Conversation,
 422: Schemas.HTTPValidationError,
 },
       
@@ -6059,7 +6201,7 @@ export type patch_Update_conversation_api_v1_conversations__conversation_id__pat
         
         body:  Schemas.ConversationUpdateRequest,
           }
-      responses: {200: Schemas.ConversationSchema,
+      responses: {200: Schemas.Conversation,
 422: Schemas.HTTPValidationError,
 },
       
@@ -6188,6 +6330,22 @@ export type get_Get_daily_digest_api_v1_daily_digests__digest_id__get = {
         
           }
       responses: {200: Schemas.DailyDigest,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
+export type get_Get_podcast_api_v1_podcasts__podcast_id__get = {
+      method: "GET",
+      path: "/api/v1/podcasts/{podcast_id}",
+      requestFormat: "json",
+      parameters: {
+            
+        path:  {podcast_id: string,
+},
+        
+        
+          }
+      responses: {200: Schemas.Podcast,
 422: Schemas.HTTPValidationError,
 },
       
@@ -6765,6 +6923,24 @@ export type put_Update_recommendation_api_v1_recommendations__recommendation_id_
       
     }
 /**
+ * Submit product feedback — a feature request, bug report, or comment.
+ */
+export type post_Create_feedback_api_v1_feedbacks__post = {
+      method: "POST",
+      path: "/api/v1/feedbacks/",
+      requestFormat: "json",
+      parameters: {
+            
+        
+        
+        body:  Schemas.FeedbackCreate,
+          }
+      responses: {201: Schemas.Feedback,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
+/**
  * Start an OAuth authorize flow for ``provider`` on behalf of the current user.
  */
 export type post_Begin_authorization_api_v1_external_connections__provider__authorization_post = {
@@ -6964,6 +7140,7 @@ export type get_Health_health_get = {
 "/api/v1/conversations/{conversation_id}/messages/{message_id}": Endpoints.get_Get_message_api_v1_conversations__conversation_id__messages__message_id__get,
 "/api/v1/daily-digests/": Endpoints.get_List_daily_digests_api_v1_daily_digests__get,
 "/api/v1/daily-digests/{digest_id}": Endpoints.get_Get_daily_digest_api_v1_daily_digests__digest_id__get,
+"/api/v1/podcasts/{podcast_id}": Endpoints.get_Get_podcast_api_v1_podcasts__podcast_id__get,
 "/api/v1/notifications/": Endpoints.get_List_notifications_api_v1_notifications__get,
 "/api/v1/collections/": Endpoints.get_List_collections_api_v1_collections__get,
 "/api/v1/collections/{collection_id}": Endpoints.get_Get_collection_api_v1_collections__collection_id__get,
@@ -6995,6 +7172,7 @@ post: {
 "/api/v1/notes/artifacts": Endpoints.post_Create_note_from_artifact_api_v1_notes_artifacts_post,
 "/api/v1/notes/text": Endpoints.post_Create_note_from_text_api_v1_notes_text_post,
 "/api/v1/notes/url": Endpoints.post_Create_note_from_url_api_v1_notes_url_post,
+"/api/v1/notes/{note_id}/podcasts": Endpoints.post_Create_note_podcast_api_v1_notes__note_id__podcasts_post,
 "/api/v1/notes/{note_id}/retry": Endpoints.post_Retry_note_api_v1_notes__note_id__retry_post,
 "/api/v1/notes/{note_id}/copy": Endpoints.post_Copy_note_api_v1_notes__note_id__copy_post,
 "/api/v1/notes/{note_id}/display/presigned-urls": Endpoints.post_Create_note_display_presigned_download_url_api_v1_notes__note_id__display_presigned_urls_post,
@@ -7034,6 +7212,7 @@ post: {
 "/api/v1/onboarding/{task}/reward": Endpoints.post_Claim_onboarding_reward_api_v1_onboarding__task__reward_post,
 "/api/v1/suggestions/acceptances": Endpoints.post_Accept_suggestions_api_v1_suggestions_acceptances_post,
 "/api/v1/suggestions/dismissals": Endpoints.post_Dismiss_suggestions_api_v1_suggestions_dismissals_post,
+"/api/v1/feedbacks/": Endpoints.post_Create_feedback_api_v1_feedbacks__post,
 "/api/v1/external-connections/{provider}/authorization": Endpoints.post_Begin_authorization_api_v1_external_connections__provider__authorization_post,
 "/api/v1/external-connections": Endpoints.post_Claim_connection_api_v1_external_connections_post,
 "/api/v1/twitter/syncs": Endpoints.post_Sync_bookmark_tweets_api_v1_twitter_syncs_post

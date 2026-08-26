@@ -182,39 +182,24 @@ export type Message = Omit<Schemas.Message, 'clarification' | 'clarification_req
 export type MessageTag = Schemas.MessageTag
 
 /**
- * Recency + audit fields the current codegen does not carry.
+ * Conversation entity.
  *
- * `last_interacted_at` arrives with api#117, which also bumps it on every
- * user/assistant message and deletes `Schemas.ConversationSchema` in favour of
- * the fuller `Schemas.Conversation`. The audit timestamps are overlaid for the
- * same reason: `GET /conversations` already returns `Schemas.Conversation`
- * (which carries them), but the alias below still points at the narrower shape.
- * Everything here is optional because `pnpm generate` cannot yet reach an
- * api#117 backend — **delete this overlay and repoint `Conversation` at
- * `Schemas.Conversation` once it can.**
+ * api#117 replaced the narrower `Schemas.ConversationSchema` with this shape and
+ * added `last_interacted_at`, which the API bumps on every user/assistant
+ * message; the hand-written recency overlay that stood in for it while codegen
+ * could not reach that backend is retired (VITA-1412).
  *
- * `last_interacted_at` accepts a number *or* a string deliberately.
- * `BaseDataSchema` sets `ser_json_temporal='seconds'`, so the wire value is
- * Unix seconds — but unlike `AuditMixin`'s fields it carries no
- * `{type: 'number', format: 'unix-timestamp'}` schema override, so the spec
- * declares it a date-time string. Consumers must handle both.
+ * **`last_interacted_at` is typed `string` but arrives as Unix seconds.**
+ * `BaseDataSchema` sets `ser_json_temporal='seconds'`, so every datetime
+ * serializes as a number — but unlike `AuditMixin`'s `created_at`/`updated_at`
+ * this field carries no `{type: 'number', format: 'unix-timestamp'}` schema
+ * override, so the spec declares it a date-time string and codegen believes it.
+ * Normalize through `apiTimestampToDate`, never `new Date(value)`.
  */
-interface ConversationRecencyFields {
-  /** Unix seconds. */
-  created_at?: number
-  /** Unix seconds, or an ISO 8601 string — see the note above. */
-  last_interacted_at?: number | string | null
-  /** Unix seconds. */
-  updated_at?: number
-}
-
-/** Conversation entity */
-export type Conversation = Schemas.ConversationSchema & ConversationRecencyFields
+export type Conversation = Schemas.Conversation
 
 /** Conversation with last message preview */
-export interface ConversationWithPreview
-  extends Schemas.ConversationSchema,
-    ConversationRecencyFields {
+export interface ConversationWithPreview extends Schemas.Conversation {
   last_message?: Schemas.Message | null
   last_message_at?: string | null
   message_count?: number
@@ -313,14 +298,10 @@ export type ConversationWhere = Where<BranchOf<ConversationListEndpointQuery>>
 /**
  * Signed sort keys for conversation lists.
  *
- * `last_interacted_at` arrives with api#117 but is absent from the current
- * generated query type. Remove this overlay after regenerating against that
- * backend, alongside `ConversationRecencyFields` above.
+ * Includes `±last_interacted_at` natively as of api#117 — the hand-declared
+ * additions that stood in for it are retired (VITA-1412).
  */
-export type ConversationOrderBy =
-  | OrderByOf<ConversationListEndpointQuery>
-  | '+last_interacted_at'
-  | '-last_interacted_at'
+export type ConversationOrderBy = OrderByOf<ConversationListEndpointQuery>
 
 /** Options for `sdk.Conversation.list` / `count` / `iterate`. */
 export type ConversationListOptions = ListOptions<ConversationWhere, ConversationOrderBy>

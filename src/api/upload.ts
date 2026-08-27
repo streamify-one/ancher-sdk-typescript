@@ -6,7 +6,13 @@
  * refresh, and activation-gate handling, plus optional progress reporting.
  */
 
-import { buildContextHeaders, requestSignal, sendWithAuthRetry } from './auth'
+import {
+  abortError,
+  buildContextHeaders,
+  fetchWithDeadline,
+  readWithDeadline,
+  sendWithAuthRetry,
+} from './auth'
 import { ANCHER_BASE_URL, type AncherClientConfig } from './config'
 import { newTraceId } from './trace'
 
@@ -16,9 +22,9 @@ export interface UploadOptions {
   /** Extra scalar form fields appended alongside the file part(s). */
   fields?: Record<string, string>
   /**
-   * Multipart part filename for a single-`Blob` upload. Defaults to the blob's
-   * own `.name` when it is a DOM `File` (array uploads always use each file's
-   * `.name`).
+   * Multipart part filename for a single-part upload. Defaults to the part's
+   * own `.name` — a DOM `File`'s, or a {@link NativeFilePart}'s (array uploads
+   * always use each part's `.name`).
    */
   filename?: string
   /** HTTP method for the multipart request. Defaults to `'POST'`. */
@@ -29,9 +35,36 @@ export interface UploadOptions {
   signal?: AbortSignal
 }
 
+/**
+ * React Native's file descriptor for `FormData`: the native networking layer
+ * streams the file at `uri` itself, so no bytes cross into JS. Only React
+ * Native's `FormData` understands it — the web/Node `FormData` stringifies a
+ * plain object — so pass a `Blob` on those runtimes.
+ */
+export interface NativeFilePart {
+  /** Local file URI (`file://…`, `content://…`, `ph://…`). */
+  uri: string
+  /** Multipart part filename (React Native percent-encodes non-ASCII names on the wire). */
+  name: string
+  /**
+   * MIME type hint. Android refuses a part without one, so an empty string
+   * falls back to `application/octet-stream`; iOS ignores it and sniffs the
+   * type from the file extension. The API sniffs the real type from the bytes
+   * either way.
+   */
+  type: string
+}
+
+/** One multipart file part: a `Blob`/`File`, or a React Native {@link NativeFilePart}. */
+export type UploadPart = Blob | NativeFilePart
+
+function isNativeFilePart(part: UploadPart): part is NativeFilePart {
+  return typeof (part as NativeFilePart).uri === 'string'
+}
+
 export type Uploader = <T>(
   endpoint: string,
-  file: Blob | readonly Blob[],
+  file: UploadPart | readonly UploadPart[],
   options?: UploadOptions
 ) => Promise<T>
 
@@ -46,7 +79,7 @@ export function createUploader(config: AncherClientConfig): Uploader {
 
   return async function upload<T>(
     endpoint: string,
-    file: Blob | readonly Blob[],
+    file: UploadPart | readonly UploadPart[],
     options: UploadOptions = {}
   ): Promise<T> {
     const url = `${baseUrl}${endpoint}`
@@ -57,14 +90,30 @@ export function createUploader(config: AncherClientConfig): Uploader {
 
     const send = async (): Promise<Response> => {
       const formData = new FormData()
+      const appendPart = (part: UploadPart, filename?: string) => {
+        if (isNativeFilePart(part)) {
+          // React Native's `FormData.append(name, value)` takes no filename
+          // argument — the part's own `.name` is what it sends as the filename.
+          const name = filename ?? part.name
+          const type = part.type || 'application/octet-stream'
+          // Pass the caller's object through untouched unless something must
+          // change: an Expo `File` keeps `uri`/`type` on its prototype, which
+          // a spread would drop — so rebuild the part from its properties.
+          const named =
+            name === part.name && type === part.type ? part : { uri: part.uri, name, type }
+          formData.append(fieldName, named as unknown as Blob)
+        } else if (filename !== undefined) {
+          formData.append(fieldName, part, filename)
+        } else {
+          formData.append(fieldName, part)
+        }
+      }
       if (Array.isArray(file)) {
         // Repeated-field batch (e.g. `files`): each part carries its own
-        // `File.name`; plain Blobs fall back to the runtime default.
-        for (const item of file as readonly Blob[]) formData.append(fieldName, item)
+        // `.name`; plain Blobs fall back to the runtime default.
+        for (const item of file as readonly UploadPart[]) appendPart(item)
       } else {
-        const single = file as Blob
-        if (options.filename !== undefined) formData.append(fieldName, single, options.filename)
-        else formData.append(fieldName, single)
+        appendPart(file as UploadPart, options.filename)
       }
       for (const [key, value] of Object.entries(options.fields ?? {})) {
         formData.append(key, value)
@@ -83,13 +132,9 @@ export function createUploader(config: AncherClientConfig): Uploader {
           config.timeoutMs
         )
       }
-      return doFetch(url, {
-        method,
-        headers,
-        credentials,
-        body: formData,
-        signal: requestSignal(config, options.signal),
-      })
+      return fetchWithDeadline(config, options.signal, signal =>
+        doFetch(url, { method, headers, credentials, body: formData, signal })
+      )
     }
 
     // Same auth lifecycle as the JSON transport (`./auth`); `send` rebuilds the
@@ -104,10 +149,14 @@ export function createUploader(config: AncherClientConfig): Uploader {
   }
 }
 
-async function parseBody<T>(response: Response): Promise<T> {
-  if (response.status === 204) return undefined as T
-  const text = await response.text()
-  return (text ? JSON.parse(text) : undefined) as T
+function parseBody<T>(response: Response): Promise<T> {
+  // Body-phase timeouts must surface as `TimeoutError` as well, and the
+  // deadline is released once the body is consumed (see `auth.ts`).
+  return readWithDeadline(response, async () => {
+    if (response.status === 204) return undefined as T
+    const text = await response.text()
+    return (text ? JSON.parse(text) : undefined) as T
+  })
 }
 
 function uploadWithProgress(
@@ -125,7 +174,7 @@ function uploadWithProgress(
     const abortUpload = () => xhr.abort()
 
     if (signal?.aborted) {
-      reject(new DOMException('Upload cancelled', 'AbortError'))
+      reject(abortError('Upload cancelled', 'AbortError'))
       return
     }
     signal?.addEventListener('abort', abortUpload, { once: true })
@@ -137,7 +186,7 @@ function uploadWithProgress(
       xhr.timeout = timeoutMs
       xhr.ontimeout = () => {
         cleanup()
-        reject(new DOMException('Upload timed out', 'TimeoutError'))
+        reject(abortError('Upload timed out', 'TimeoutError'))
       }
     }
     for (const [key, value] of Object.entries(headers)) {
@@ -170,7 +219,7 @@ function uploadWithProgress(
     }
     xhr.onabort = () => {
       cleanup()
-      reject(new DOMException('Upload cancelled', 'AbortError'))
+      reject(abortError('Upload cancelled', 'AbortError'))
     }
     xhr.send(body)
   })

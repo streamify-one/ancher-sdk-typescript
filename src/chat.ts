@@ -285,7 +285,14 @@ function mapEnvelope(env: RawEnvelope, tracker: RunTracker): ChatEvent | null {
 /** Parse an SSE `Response` body into a stream of structured {@link ChatEvent}s. */
 export async function* parseChatStream(response: Response): AsyncGenerator<ChatEvent> {
   const body = response.body
-  if (!body) return
+  if (!body) {
+    // A silent empty stream would masquerade as "the run produced nothing".
+    // The one runtime that gets here is React Native, whose `fetch` cannot
+    // stream — see `prepareConversationStream` for the transport-agnostic path.
+    throw new Error(
+      'parseChatStream: the response has no readable body. This runtime\'s fetch does not stream; open the stream over your own transport with prepareConversationStream() and feed the chunks to processSSEBuffer().'
+    )
+  }
   const reader = body.getReader()
   const decoder = new TextDecoder()
   const tracker = new RunTracker()
@@ -349,6 +356,84 @@ async function streamHeaders(
   }
 }
 
+/** A conversation stream request resolved but not yet sent — see {@link prepareConversationStream}. */
+export interface ConversationStreamRequest {
+  /** Absolute stream URL (a relative input is resolved against `baseUrl`). */
+  url: string
+  /** Trace id shared by every attempt, so a 401 replay stays in the same trace. */
+  traceId: string
+  /**
+   * Headers for ONE attempt: `Accept: text/event-stream`, `defaultHeaders`,
+   * the SDK's auth/context headers and a fresh `traceparent` span. Call it
+   * again on every attempt so a replay carries the refreshed credentials.
+   */
+  headers: () => Promise<Record<string, string>>
+}
+
+/**
+ * Resolve the URL and auth headers of a conversation SSE stream **without
+ * sending it** — for hosts whose `fetch` cannot stream a body (React Native)
+ * and open the stream over their own transport (e.g. `XMLHttpRequest`), then
+ * run the received text through `processSSEBuffer` — the buffer-level SSE
+ * reducer, which emits `SSEHandlers` events rather than this module's
+ * `ChatEvent`s. It returns the incomplete tail, which MUST be carried into the
+ * next call or a frame split across two chunks is lost:
+ * `buffer = processSSEBuffer(buffer + chunk, state, handlers)`.
+ * Pair it with {@link sendWithSessionRefresh}
+ * to keep the SDK's 401 → refresh → retry policy:
+ *
+ * ```ts
+ * const request = prepareConversationStream(client, streamUrl)
+ * const opened = await sendWithSessionRefresh(
+ *   client.config,
+ *   async () => openXhr(request.url, await request.headers(), signal), // → { status, … }
+ *   signal
+ * )
+ * ```
+ *
+ * The opener owns cancellation: wire `signal` to `xhr.abort()` — the `signal`
+ * given to {@link sendWithSessionRefresh} only bounds the refresh waits and
+ * stops a replay after a cancel; it cannot reach into the transport.
+ * {@link openConversationStream} is exactly this plus a `fetch`. Two things the
+ * opener must know: on a 401 the SDK refreshes and calls it *again* while the
+ * first request is still open (abort it, or ignore its later callbacks), and a
+ * refresh that is denied/unreachable *returns* the 401 result rather than
+ * throwing — inspect `status`. The 403 activation gate and `onError` are not
+ * applied on this path.
+ */
+export function prepareConversationStream(
+  client: AncherClient,
+  streamUrl: string
+): ConversationStreamRequest {
+  return prepareStreamRequest(client.config, resolveStreamUrl(client.config, streamUrl))
+}
+
+/** Pair an already-absolute stream `url` with one trace id and per-attempt headers. */
+function prepareStreamRequest(config: AncherClientConfig, url: string): ConversationStreamRequest {
+  // Held outside `headers` so the 401 replay stays in the same trace.
+  const traceId = newTraceId()
+  return { url, traceId, headers: () => streamHeaders(config, traceId) }
+}
+
+/** Send a prepared stream request over `fetch` under the 401-refresh-retry policy. */
+function sendConversationStream(
+  client: AncherClient,
+  request: ConversationStreamRequest,
+  opts: ChatStreamOptions
+): Promise<Response> {
+  const config = client.config
+  const doFetch = config.fetch ?? globalThis.fetch
+  const credentials = config.credentials ?? 'include'
+  const send = async () =>
+    doFetch(request.url, {
+      method: 'GET',
+      headers: await request.headers(),
+      credentials,
+      signal: opts.signal,
+    })
+  return sendWithSessionRefresh(config, send, opts.signal)
+}
+
 /** Open an SSE stream at `url` (auth + 401-refresh-retry), throwing `AncherApiError` on non-2xx. */
 async function openStreamUrl(
   client: AncherClient,
@@ -356,19 +441,9 @@ async function openStreamUrl(
   opts: ChatStreamOptions
 ): Promise<Response> {
   const config = client.config
-  const doFetch = config.fetch ?? globalThis.fetch
-  const credentials = config.credentials ?? 'include'
-  // Held outside `send` so the 401 replay stays in the same trace.
-  const traceId = newTraceId()
-  const send = async () =>
-    doFetch(url, {
-      method: 'GET',
-      headers: await streamHeaders(config, traceId),
-      credentials,
-      signal: opts.signal,
-    })
-
-  const response = await sendWithSessionRefresh(config, send, opts.signal)
+  // `url` is already absolute (`conversationStreamUrl` / `streamConversationUrl`
+  // resolved it) — do not resolve it again.
+  const response = await sendConversationStream(client, prepareStreamRequest(config, url), opts)
   if (!response.ok) {
     const error = await buildApiError(response)
     config.onError?.(error)
@@ -410,20 +485,7 @@ export async function openConversationStream(
   streamUrl: string,
   opts: ChatStreamOptions = {}
 ): Promise<Response> {
-  const config = client.config
-  const doFetch = config.fetch ?? globalThis.fetch
-  const credentials = config.credentials ?? 'include'
-  const url = resolveStreamUrl(config, streamUrl)
-  // Held outside `send` so the 401 replay stays in the same trace.
-  const traceId = newTraceId()
-  const send = async () =>
-    doFetch(url, {
-      method: 'GET',
-      headers: await streamHeaders(config, traceId),
-      credentials,
-      signal: opts.signal,
-    })
-  return sendWithSessionRefresh(config, send, opts.signal)
+  return sendConversationStream(client, prepareConversationStream(client, streamUrl), opts)
 }
 
 /**

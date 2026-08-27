@@ -14,6 +14,7 @@ import type {
   Note,
   NoteOrderBy,
   NoteSuggestedCollectionsOptions,
+  NoteUpdate,
   NoteWhere,
 } from '../contracts/note'
 import { createListSurface, type ListSurface } from './base'
@@ -100,7 +101,7 @@ export interface NoteRepository extends ListSurface<Note, NoteWhere, NoteOrderBy
     options?: NoteSuggestedCollectionsOptions
   ): Promise<Schemas.Page_CollectionSuggestion_>
   /** Update a note (`PATCH`); returns the updated note. */
-  update(noteId: string, patch: Schemas.NoteUpdate): Promise<Note>
+  update(noteId: string, patch: NoteUpdate): Promise<Note>
   /** Delete a note (`DELETE`). */
   delete(noteId: string): Promise<void>
   /** Retry a note's content pipeline (`POST`); returns the updated note. */

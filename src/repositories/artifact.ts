@@ -10,7 +10,12 @@
 import type { AncherClient } from '../api/client'
 import type { EndpointByMethod, Schemas } from '../api/generated/api.client'
 import type { UploadOptions } from '../api/upload'
-import type { Artifact, ArtifactOrderBy, ArtifactWhere } from '../contracts/artifact'
+import type {
+  Artifact,
+  ArtifactOrderBy,
+  ArtifactUpdate,
+  ArtifactWhere,
+} from '../contracts/artifact'
 import { createListSurface, type ListSurface } from './base'
 import {
   downloadPresignedUrl,
@@ -46,7 +51,7 @@ export interface ArtifactRepository extends ListSurface<Artifact, ArtifactWhere,
   /** Get a public artifact by its share slug. */
   getBySlug(slug: string): Promise<Artifact>
   /** Update an artifact (`PATCH`). */
-  update(artifactId: string, patch: Schemas.ArtifactUpdate): Promise<Artifact>
+  update(artifactId: string, patch: ArtifactUpdate): Promise<Artifact>
   /** Delete an artifact (`DELETE`). */
   delete(artifactId: string): Promise<void>
   /** Set an artifact's tags (`PUT`, replaces all existing); returns the updated artifact. */

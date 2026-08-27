@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { AncherClientConfig } from './config'
 import { AncherApiError } from './errors'
 import { createFetcher } from './transport'
@@ -333,5 +333,85 @@ describe('parseResponseData', () => {
     const headerless = new Response('abc', { status: 200 })
     headerless.headers.delete('content-type')
     await expect(parse(headerless)).resolves.toBeUndefined()
+  })
+})
+
+describe('request deadline', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('rejects a timed-out request with a TimeoutError even when fetch reports a bare AbortError', async () => {
+    // React Native's fetch rejects every abort as `AbortError('Aborted')`; the
+    // transport must still tell the host it was the deadline.
+    vi.useFakeTimers()
+    const { fetcher, fetchMock } = makeFetcher({ timeoutMs: 1_000 })
+    fetchMock.mockImplementation(
+      (_url, init) =>
+        new Promise((_, reject) => {
+          init?.signal?.addEventListener('abort', () =>
+            reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }))
+          )
+        })
+    )
+    const pending = fetcher.fetch(NOTES_INPUT)
+    const settled = expect(pending).rejects.toMatchObject({ name: 'TimeoutError' })
+
+    // The deadline is armed only once the (async) auth headers are built, so
+    // let microtasks run between timer ticks.
+    await vi.advanceTimersByTimeAsync(1_000)
+
+    await settled
+  })
+
+  it('surfaces a body-phase timeout as TimeoutError through parseResponseData', async () => {
+    vi.useFakeTimers()
+    const { fetcher, fetchMock } = makeFetcher({ timeoutMs: 1_000 })
+    fetchMock.mockImplementation(async (_url, init) => {
+      // Headers arrive; the body read then hangs until the signal aborts and
+      // fails with a generic AbortError (a reason-dropping streaming runtime).
+      const response = new Response('{"stalled":true}', {
+        headers: { 'content-type': 'application/json' },
+      })
+      response.text = () =>
+        new Promise((_, reject) => {
+          init?.signal?.addEventListener('abort', () =>
+            reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }))
+          )
+        })
+      return response
+    })
+
+    const response = await fetcher.fetch(NOTES_INPUT)
+    const settled = expect(fetcher.parseResponseData?.(response)).rejects.toMatchObject({
+      name: 'TimeoutError',
+    })
+    await vi.advanceTimersByTimeAsync(1_000)
+
+    await settled
+  })
+
+  it('releases the deadline once the response body has been parsed', async () => {
+    vi.useFakeTimers()
+    const { fetcher, fetchMock } = makeFetcher({ timeoutMs: 1_000 })
+    fetchMock.mockResolvedValue(
+      new Response('{"ok":true}', { headers: { 'content-type': 'application/json' } })
+    )
+
+    const response = await fetcher.fetch(NOTES_INPUT)
+    expect(vi.getTimerCount()).toBe(1)
+    await fetcher.parseResponseData?.(response)
+
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('hands the caller signal straight to fetch when no timeout is configured', async () => {
+    const { fetcher, fetchMock } = makeFetcher()
+    fetchMock.mockResolvedValue(new Response('[]'))
+    const controller = new AbortController()
+
+    await fetcher.fetch({ ...NOTES_INPUT, overrides: { signal: controller.signal } })
+
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).toBe(controller.signal)
   })
 })

@@ -9,7 +9,7 @@
  * `ApiClient` defaults.
  */
 
-import { buildContextHeaders, requestSignal, sendWithAuthRetry } from './auth'
+import { buildContextHeaders, fetchWithDeadline, readWithDeadline, sendWithAuthRetry } from './auth'
 import type { AncherClientConfig } from './config'
 import { AncherApiError } from './errors'
 import { newTraceId } from './trace'
@@ -39,7 +39,13 @@ function isJsonContentType(contentType: string): boolean {
  * Bodies that are legitimately absent — a 204/205, or any empty body under a
  * JSON content type — still resolve to `undefined`.
  */
-async function parseResponseData(response: Response): Promise<unknown> {
+function parseResponseData(response: Response): Promise<unknown> {
+  // The request deadline stays armed while the body streams (see `auth.ts`);
+  // read under it so a body-phase timeout surfaces as `TimeoutError` too.
+  return readWithDeadline(response, () => parseBodyData(response))
+}
+
+async function parseBodyData(response: Response): Promise<unknown> {
   const contentType = response.headers.get('content-type') ?? ''
   if (contentType.startsWith('text/')) return response.text()
   if (contentType === 'application/octet-stream') return response.arrayBuffer()
@@ -104,7 +110,6 @@ export function createFetcher(config: AncherClientConfig): Fetcher {
       headers,
       credentials,
       body: hasBody ? JSON.stringify(input.parameters?.body) : input.overrides?.body,
-      signal: requestSignal(config, input.overrides?.signal),
     }
   }
 
@@ -157,7 +162,13 @@ export function createFetcher(config: AncherClientConfig): Fetcher {
       // into status-error throwing (the default for direct `.get()/.post()`),
       // the rich `AncherApiError` is thrown; with `throwOnStatusError: false`
       // (e.g. `withResponse: true`) the error response is returned instead.
-      return sendWithAuthRetry(config, async () => doFetch(url, await buildInit(input, traceId)), {
+      const send = async () => {
+        const init = await buildInit(input, traceId)
+        return fetchWithDeadline(config, input.overrides?.signal, signal =>
+          doFetch(url, { ...init, signal })
+        )
+      }
+      return sendWithAuthRetry(config, send, {
         throwOnStatusError: input.throwOnStatusError,
         signal: input.overrides?.signal,
       })

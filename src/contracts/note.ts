@@ -157,6 +157,21 @@ interface NoteLocalFields {
 /** Note entity — the OpenAPI schema plus FE-only local fields. */
 export type Note = Schemas.Note & NoteLocalFields
 
+/**
+ * Update note request. `reaction` is narrowed to {@link ReactionType}: the API
+ * treats `null` as "not provided" (`if update_data.reaction is not None` in
+ * `app/services/note.py`), so clearing a reaction is `'neutral'`, never `null`.
+ */
+export type NoteUpdate = Omit<Schemas.NoteUpdate, 'reaction'> & { reaction?: ReactionType }
+/** @internal */
+export type _NoteUpdateReactionNarrowed = Expect<
+  Eq<NoteUpdate['reaction'], ReactionType | undefined>
+>
+/** @internal */
+export type _NoteUpdateAssignable = Expect<
+  Eq<NoteUpdate extends Schemas.NoteUpdate ? true : false, true>
+>
+
 /* ---------------------------------------------------------------------------
  * Note create/copy requests.
  * ------------------------------------------------------------------------- */

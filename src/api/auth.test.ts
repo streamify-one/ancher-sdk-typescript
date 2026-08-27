@@ -2,11 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AncherClientConfig } from './config'
 import { AncherApiError } from './errors'
 import {
+  abortError,
   applyAuthHeader,
   buildContextHeaders,
   classifySessionRefresh,
   ensureFreshSession,
-  requestSignal,
+  fetchWithDeadline,
+  readWithDeadline,
+  requestDeadline,
   sendWithAuthRetry,
 } from './auth'
 
@@ -716,25 +719,25 @@ describe('buildContextHeaders', () => {
   })
 })
 
-describe('requestSignal', () => {
+describe('requestDeadline', () => {
   it('returns undefined with no timeout and no signal', () => {
     const config = makeConfig()
 
-    expect(requestSignal(config)).toBeUndefined()
-    expect(requestSignal(config, null)).toBeUndefined()
+    expect(requestDeadline(config).signal).toBeUndefined()
+    expect(requestDeadline(config, null).signal).toBeUndefined()
   })
 
   it('returns the caller signal untouched when no timeout is configured', () => {
     const config = makeConfig()
     const controller = new AbortController()
 
-    expect(requestSignal(config, controller.signal)).toBe(controller.signal)
+    expect(requestDeadline(config, controller.signal).signal).toBe(controller.signal)
   })
 
   it('returns a timeout signal when timeoutMs is set (no caller signal)', () => {
     const config = makeConfig({ timeoutMs: 10_000 })
 
-    const signal = requestSignal(config)
+    const signal = requestDeadline(config).signal
 
     expect(signal).toBeInstanceOf(AbortSignal)
     expect(signal?.aborted).toBe(false)
@@ -744,15 +747,15 @@ describe('requestSignal', () => {
     const config = makeConfig({ timeoutMs: 0 })
     const controller = new AbortController()
 
-    expect(requestSignal(config)).toBeUndefined()
-    expect(requestSignal(config, controller.signal)).toBe(controller.signal)
+    expect(requestDeadline(config).signal).toBeUndefined()
+    expect(requestDeadline(config, controller.signal).signal).toBe(controller.signal)
   })
 
-  it('combines the caller signal with the timeout via AbortSignal.any', () => {
+  it('combines the caller signal with the timeout', () => {
     const config = makeConfig({ timeoutMs: 10_000 })
     const controller = new AbortController()
 
-    const combined = requestSignal(config, controller.signal)
+    const combined = requestDeadline(config, controller.signal).signal
 
     expect(combined).toBeInstanceOf(AbortSignal)
     // Not the caller's own signal — a composite.
@@ -762,6 +765,426 @@ describe('requestSignal', () => {
     // Aborting the caller signal propagates to the composite synchronously.
     controller.abort()
     expect(combined?.aborted).toBe(true)
+  })
+
+  describe('without AbortSignal.timeout / AbortSignal.any (React Native)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+      vi.spyOn(AbortSignal, 'timeout').mockImplementation(() => {
+        throw new Error('AbortSignal.timeout is not a function')
+      })
+      vi.spyOn(AbortSignal, 'any').mockImplementation(() => {
+        throw new Error('AbortSignal.any is not a function')
+      })
+    })
+    afterEach(() => {
+      vi.restoreAllMocks()
+      vi.useRealTimers()
+    })
+
+    it('aborts with a TimeoutError once timeoutMs elapses', () => {
+      const signal = requestDeadline(makeConfig({ timeoutMs: 1_000 })).signal
+
+      vi.advanceTimersByTime(999)
+      expect(signal?.aborted).toBe(false)
+      vi.advanceTimersByTime(1)
+      expect(signal?.aborted).toBe(true)
+      expect((signal?.reason as Error).name).toBe('TimeoutError')
+    })
+
+    it('follows the caller signal first, carrying its reason', () => {
+      const controller = new AbortController()
+      const combined = requestDeadline(makeConfig({ timeoutMs: 1_000 }), controller.signal).signal
+
+      controller.abort(new Error('user cancelled'))
+
+      expect(combined?.aborted).toBe(true)
+      expect((combined?.reason as Error).message).toBe('user cancelled')
+    })
+
+    it('detaches from the caller signal once the timeout fires', () => {
+      const controller = new AbortController()
+      const removeListener = vi.spyOn(controller.signal, 'removeEventListener')
+      const combined = requestDeadline(makeConfig({ timeoutMs: 1_000 }), controller.signal).signal
+
+      vi.advanceTimersByTime(1_000)
+
+      expect(combined?.aborted).toBe(true)
+      expect(removeListener).toHaveBeenCalledWith('abort', expect.any(Function))
+      // A later caller abort has nothing left to do on the settled composite.
+      controller.abort(new Error('late'))
+      expect((combined?.reason as Error).name).toBe('TimeoutError')
+    })
+
+    it('is already aborted when the caller signal is', () => {
+      const controller = new AbortController()
+      controller.abort()
+
+      const combined = requestDeadline(makeConfig({ timeoutMs: 1_000 }), controller.signal).signal
+
+      expect(combined?.aborted).toBe(true)
+    })
+  })
+})
+
+describe('sendWithAuthRetry abort during refresh', () => {
+  it('does not send at all when the caller aborted during the proactive refresh', async () => {
+    const controller = new AbortController()
+    const send = vi.fn<() => Promise<Response>>().mockResolvedValue(jsonResponse({}, 200))
+    const refreshSession = vi.fn(async () => {
+      controller.abort(new Error('user left'))
+      return true as const
+    })
+    const config = makeConfig({
+      refreshSession,
+      getSessionExpiresAt: () => Date.now() + 60_000, // within leeway → proactive refresh
+    })
+
+    await expect(sendWithAuthRetry(config, send, { signal: controller.signal })).rejects.toThrow(
+      'user left'
+    )
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('does not replay when the caller aborts while the refresh is running', async () => {
+    // The abort releases the refresh join (`withRequestDeadline`) with "no
+    // verdict", so the original 401 is surfaced instead of a second attempt.
+    const controller = new AbortController()
+    const send = vi.fn<() => Promise<Response>>().mockResolvedValue(jsonResponse({}, 401))
+    const refreshSession = vi.fn(async () => {
+      controller.abort(new Error('user left'))
+      return true as const
+    })
+    const config = makeConfig({ refreshSession })
+
+    const response = await sendWithAuthRetry(config, send, { signal: controller.signal })
+
+    expect(response.status).toBe(401)
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+
+  it('falls back to a named AbortError where the signal carries no reason (React Native)', async () => {
+    const send = vi.fn<() => Promise<Response>>().mockResolvedValue(jsonResponse({}, 401))
+    const signal = { aborted: false, reason: undefined, addEventListener() {}, removeEventListener() {} }
+    const refreshSession = vi.fn(async () => {
+      signal.aborted = true
+      return true as const
+    })
+    const config = makeConfig({ refreshSession })
+
+    await expect(
+      sendWithAuthRetry(config, send, { signal: signal as unknown as AbortSignal })
+    ).rejects.toMatchObject({ name: 'AbortError' })
+    expect(send).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('fetchWithDeadline', () => {
+  /**
+   * React Native's `AbortController` (the `abort-controller@3` polyfill):
+   * `abort()` takes no reason and the signal has no `reason` — so the signal
+   * alone cannot say whether it was the deadline or the caller.
+   */
+  class ReasonlessSignal {
+    aborted = false
+    private listeners = new Set<() => void>()
+    addEventListener(_type: 'abort', listener: () => void): void {
+      this.listeners.add(listener)
+    }
+    removeEventListener(_type: 'abort', listener: () => void): void {
+      this.listeners.delete(listener)
+    }
+    fire(): void {
+      if (this.aborted) return
+      this.aborted = true
+      for (const listener of [...this.listeners]) listener()
+    }
+  }
+  class ReasonlessController {
+    signal = new ReasonlessSignal()
+    abort(): void {
+      this.signal.fire()
+    }
+  }
+  /** A fetch that, like React Native's, rejects every abort as `AbortError('Aborted')`. */
+  function abortingFetch(signal: AbortSignal | undefined): Promise<Response> {
+    return new Promise((_, reject) => {
+      signal?.addEventListener('abort', () =>
+        reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }))
+      )
+    })
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+  })
+
+  it('surfaces the deadline as a TimeoutError where the abort reason is dropped (React Native)', async () => {
+    vi.stubGlobal('AbortController', ReasonlessController)
+    const pending = fetchWithDeadline(makeConfig({ timeoutMs: 1_000 }), undefined, abortingFetch)
+    const settled = expect(pending).rejects.toMatchObject({ name: 'TimeoutError' })
+
+    vi.advanceTimersByTime(1_000)
+
+    await settled
+  })
+
+  it('keeps a caller abort as the AbortError the runtime raised', async () => {
+    vi.stubGlobal('AbortController', ReasonlessController)
+    const caller = new ReasonlessController()
+    const pending = fetchWithDeadline(
+      makeConfig({ timeoutMs: 1_000 }),
+      caller.signal as unknown as AbortSignal,
+      abortingFetch
+    )
+    const settled = expect(pending).rejects.toMatchObject({ name: 'AbortError', message: 'Aborted' })
+
+    caller.abort()
+
+    await settled
+  })
+
+  it('passes a runtime-raised TimeoutError through untouched', async () => {
+    // Native runtimes reject with the signal's own reason — no re-wrapping.
+    const pending = fetchWithDeadline(makeConfig({ timeoutMs: 1_000 }), undefined, signal =>
+      new Promise((_, reject) => signal?.addEventListener('abort', () => reject(signal.reason)))
+    )
+    const settled = expect(pending).rejects.toMatchObject({
+      name: 'TimeoutError',
+      message: 'Request timed out',
+    })
+
+    vi.advanceTimersByTime(1_000)
+
+    await settled
+  })
+
+  it('keeps the deadline armed after the headers arrive, so a stalled body read still times out', async () => {
+    // The body is consumed outside the SDK (generated client / caller), after
+    // this resolves — the clock must keep running, as `AbortSignal.timeout` does.
+    let bodySignal: AbortSignal | undefined
+    await fetchWithDeadline(makeConfig({ timeoutMs: 1_000 }), undefined, async signal => {
+      bodySignal = signal
+      return new Response('headers')
+    })
+
+    expect(bodySignal?.aborted).toBe(false)
+    vi.advanceTimersByTime(1_000)
+    expect(bodySignal?.aborted).toBe(true)
+    expect((bodySignal?.reason as Error).name).toBe('TimeoutError')
+  })
+
+  it('still follows a caller abort during body consumption', async () => {
+    const caller = new AbortController()
+    let bodySignal: AbortSignal | undefined
+    await fetchWithDeadline(makeConfig({ timeoutMs: 1_000 }), caller.signal, async signal => {
+      bodySignal = signal
+      return new Response('headers')
+    })
+
+    caller.abort(new Error('user left'))
+
+    expect(bodySignal?.aborted).toBe(true)
+    expect((bodySignal?.reason as Error).message).toBe('user left')
+    // …and the deadline's own timer is gone once the caller took over.
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('releases the deadline when the attempt itself fails', async () => {
+    const caller = new AbortController()
+    const removeListener = vi.spyOn(caller.signal, 'removeEventListener')
+
+    await expect(
+      fetchWithDeadline(makeConfig({ timeoutMs: 1_000 }), caller.signal, async () => {
+        throw new TypeError('Network request failed')
+      })
+    ).rejects.toThrow('Network request failed')
+
+    expect(vi.getTimerCount()).toBe(0)
+    expect(removeListener).toHaveBeenCalledWith('abort', expect.any(Function))
+  })
+
+  it('surfaces a deadline that fires while an error body is being read as TimeoutError', async () => {
+    // `buildApiError` swallows the failed read and would otherwise report the
+    // HTTP status; the deadline must win.
+    const config = makeConfig({ timeoutMs: 1_000 })
+    const send = async () =>
+      fetchWithDeadline(config, undefined, async signal => {
+        const response = new Response('{"detail":"slow"}', {
+          status: 500,
+          headers: { 'content-type': 'application/json' },
+        })
+        response.clone = () =>
+          ({
+            json: () =>
+              new Promise((_, reject) =>
+                signal?.addEventListener('abort', () =>
+                  reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }))
+                )
+              ),
+          }) as unknown as Response
+        return response
+      })
+    const settled = expect(
+      sendWithAuthRetry(config, send, { throwOnStatusError: true })
+    ).rejects.toMatchObject({ name: 'TimeoutError' })
+
+    await vi.advanceTimersByTimeAsync(1_000)
+
+    await settled
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('releases the discarded 401 response deadline when the refresh replays the request', async () => {
+    const config = makeConfig({ timeoutMs: 1_000, refreshSession: vi.fn().mockResolvedValue(true) })
+    const send = vi
+      .fn(async () => fetchWithDeadline(config, undefined, async () => jsonResponse({}, 401)))
+      .mockImplementationOnce(async () =>
+        fetchWithDeadline(config, undefined, async () => jsonResponse({}, 401))
+      )
+      .mockImplementationOnce(async () =>
+        fetchWithDeadline(config, undefined, async () => jsonResponse({ ok: true }, 200))
+      )
+
+    const response = await sendWithAuthRetry(config, send)
+
+    expect(send).toHaveBeenCalledTimes(2)
+    // Only the live (second) response still holds a deadline …
+    expect(vi.getTimerCount()).toBe(1)
+    // … and it goes once the SDK reads the body.
+    await readWithDeadline(response, () => response.text())
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('releases the discarded 403 response deadline when the activation gate retries', async () => {
+    const config = makeConfig({
+      timeoutMs: 1_000,
+      onActivationRequired: vi.fn().mockResolvedValue('retry'),
+    })
+    const gated = () =>
+      jsonResponse({ error: { code: 'API-USR010', message: 'Activation required' } }, 403)
+    const send = vi
+      .fn(async () => fetchWithDeadline(config, undefined, async () => gated()))
+      .mockImplementationOnce(async () => fetchWithDeadline(config, undefined, async () => gated()))
+      .mockImplementationOnce(async () =>
+        fetchWithDeadline(config, undefined, async () => jsonResponse({ ok: true }, 200))
+      )
+
+    await sendWithAuthRetry(config, send)
+
+    expect(send).toHaveBeenCalledTimes(2)
+    expect(vi.getTimerCount()).toBe(1)
+  })
+
+  it('releases the deadline once the SDK has consumed the body', async () => {
+    const caller = new AbortController()
+    const removeListener = vi.spyOn(caller.signal, 'removeEventListener')
+    const response = await fetchWithDeadline(
+      makeConfig({ timeoutMs: 1_000 }),
+      caller.signal,
+      async () => new Response('body')
+    )
+    expect(vi.getTimerCount()).toBe(1)
+
+    await readWithDeadline(response, () => response.text())
+
+    expect(vi.getTimerCount()).toBe(0)
+    expect(removeListener).toHaveBeenCalledWith('abort', expect.any(Function))
+    // Released — a later read of the same Response is plain.
+    await expect(
+      readWithDeadline(response, async () => {
+        throw new Error('again')
+      })
+    ).rejects.toThrow('again')
+  })
+
+  it('releases the deadline of an error response that sendWithAuthRetry throws for', async () => {
+    const config = makeConfig({ timeoutMs: 1_000 })
+    const send = async () =>
+      fetchWithDeadline(config, undefined, async () => jsonResponse({ detail: 'nope' }, 500))
+
+    await expect(sendWithAuthRetry(config, send, { throwOnStatusError: true })).rejects.toThrow()
+
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('normalizes a body-phase deadline abort to TimeoutError via readWithDeadline', async () => {
+    // A streaming fetch on a reason-dropping runtime (expo/fetch) resolves at
+    // the headers and fails the body read with a generic error once aborted.
+    const response = await fetchWithDeadline(
+      makeConfig({ timeoutMs: 1_000 }),
+      undefined,
+      async () => new Response('headers')
+    )
+    const settled = expect(
+      readWithDeadline(response, async () => {
+        await new Promise(resolve => setTimeout(resolve, 5_000))
+        throw Object.assign(new Error('Aborted'), { name: 'AbortError' })
+      })
+    ).rejects.toMatchObject({ name: 'TimeoutError' })
+
+    vi.advanceTimersByTime(1_000) // deadline fires mid-read
+    await vi.advanceTimersByTimeAsync(4_000)
+
+    await settled
+  })
+
+  it('passes a body read error through when the deadline did not fire', async () => {
+    const response = await fetchWithDeadline(
+      makeConfig({ timeoutMs: 1_000 }),
+      undefined,
+      async () => new Response('headers')
+    )
+
+    await expect(
+      readWithDeadline(response, async () => {
+        throw new Error('bad json')
+      })
+    ).rejects.toThrow('bad json')
+  })
+
+  it('reads a Response opened elsewhere as-is', async () => {
+    const response = new Response('x')
+    const read = vi.fn(async () => 'value')
+
+    await expect(readWithDeadline(response, read)).resolves.toBe('value')
+    expect(read).toHaveBeenCalledOnce()
+  })
+
+  it('is a plain pass-through without a timeout', async () => {
+    const response = new Response('ok')
+    const controller = new AbortController()
+    const attempt = vi.fn(async () => response)
+
+    await expect(
+      fetchWithDeadline(makeConfig(), controller.signal, attempt)
+    ).resolves.toBe(response)
+    expect(attempt).toHaveBeenCalledWith(controller.signal)
+  })
+})
+
+describe('abortError', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('is a DOMException where the runtime has one', () => {
+    const error = abortError('Upload cancelled', 'AbortError')
+    expect(error).toBeInstanceOf(DOMException)
+    expect(error.name).toBe('AbortError')
+  })
+
+  it('falls back to a named Error where DOMException is missing (React Native)', () => {
+    vi.stubGlobal('DOMException', undefined)
+    const error = abortError('Request timed out', 'TimeoutError')
+    // A plain Error — not a DOMException (which is itself an Error subclass).
+    expect(error.constructor).toBe(Error)
+    expect(error.name).toBe('TimeoutError')
+    expect(error.message).toBe('Request timed out')
   })
 })
 

@@ -60,6 +60,16 @@ describe('FileRepository', () => {
       expect(result).toBe(uploaded)
     })
 
+    it('passes a React Native file part straight through to the uploader', async () => {
+      const { File, upload } = makeRepository()
+      const part = { uri: 'file:///tmp/a.pdf', name: 'a.pdf', type: 'application/pdf' }
+      upload.mockResolvedValueOnce({ id: 'file-1' })
+
+      await File.uploadDirect(part)
+
+      expect(upload).toHaveBeenCalledWith('/api/v1/files/', part, {})
+    })
+
     it('maps the public flag to a scalar form field', async () => {
       const { File, upload } = makeRepository()
       const blob = new Blob(['bytes'])
@@ -177,6 +187,19 @@ describe('FileRepository', () => {
 
       expect(upload).toHaveBeenCalledWith('/api/v1/files/batch', files, { fieldName: 'files' })
       expect(result).toBe(results)
+    })
+
+    it('accepts React Native file parts in a batch (they always carry a name)', async () => {
+      const { File, upload } = makeRepository()
+      const parts = [
+        { uri: 'file:///tmp/a.md', name: 'a.md', type: 'text/markdown' },
+        new globalThis.File(['b'], 'b.md'),
+      ]
+      upload.mockResolvedValueOnce([])
+
+      await File.uploadBatch(parts)
+
+      expect(upload).toHaveBeenCalledWith('/api/v1/files/batch', parts, { fieldName: 'files' })
     })
 
     it('rejects unnamed blobs with a wrapping hint', async () => {

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AncherClientConfig } from './config'
 import { createUploader } from './upload'
 
@@ -110,9 +110,224 @@ describe('createUploader', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 
+  it('surfaces a body-phase timeout as TimeoutError while parsing the upload response', async () => {
+    vi.useFakeTimers()
+    try {
+      const { upload, fetchMock } = makeUploader({ timeoutMs: 1_000 })
+      fetchMock.mockImplementation(async (_url, init) => {
+        // Headers arrive; the body read hangs until the signal aborts and then
+        // fails with a generic AbortError (a reason-dropping streaming runtime).
+        const response = new Response('{"id":"file-1"}')
+        response.text = () =>
+          new Promise((_, reject) => {
+            init?.signal?.addEventListener('abort', () =>
+              reject(Object.assign(new Error('Aborted'), { name: 'AbortError' }))
+            )
+          })
+        return response
+      })
+
+      const pending = upload('/api/v1/files/', new Blob(['x']))
+      const settled = expect(pending).rejects.toMatchObject({ name: 'TimeoutError' })
+      await vi.advanceTimersByTimeAsync(1_000)
+
+      await settled
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('releases the deadline once the upload response has been parsed (204 included)', async () => {
+    vi.useFakeTimers()
+    try {
+      const { upload, fetchMock } = makeUploader({ timeoutMs: 1_000 })
+      fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }))
+
+      await upload('/api/v1/files/', new Blob(['x']))
+
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  describe('React Native file parts ({ uri, name, type })', () => {
+    // Node's FormData stringifies a plain object, so record what reaches
+    // `append` instead — React Native's FormData is what consumes the part.
+    class RecordingFormData {
+      /** Exact `append` argument lists — arity matters (a 3rd `undefined` becomes the filename "undefined" on undici). */
+      parts: unknown[][] = []
+      append(...args: unknown[]): void {
+        this.parts.push(args)
+      }
+    }
+    let formData: RecordingFormData | undefined
+    beforeEach(() => {
+      vi.stubGlobal(
+        'FormData',
+        class extends RecordingFormData {
+          constructor() {
+            super()
+            formData = this
+          }
+        }
+      )
+    })
+    afterEach(() => {
+      vi.unstubAllGlobals()
+      formData = undefined
+    })
+    const part = { uri: 'file:///tmp/a.pdf', name: 'a.pdf', type: 'application/pdf' }
+
+    it('appends the part object as-is, without a filename argument', async () => {
+      const { upload } = makeUploader()
+
+      await upload('/api/v1/files/', part)
+
+      expect(formData?.parts).toEqual([['file', part]])
+    })
+
+    it('appends the very same object when nothing needs changing', async () => {
+      const { upload } = makeUploader()
+
+      await upload('/api/v1/files/', part)
+
+      expect(formData?.parts[0]?.[1]).toBe(part)
+    })
+
+    it('fills an empty type with application/octet-stream (Android rejects a part without one)', async () => {
+      const { upload } = makeUploader()
+
+      await upload('/api/v1/files/', { ...part, type: '' })
+
+      expect(formData?.parts).toEqual([
+        ['file', { uri: part.uri, name: part.name, type: 'application/octet-stream' }],
+      ])
+    })
+
+    it('rebuilds a renamed part from its properties, keeping a prototype-backed uri (Expo File)', async () => {
+      const { upload } = makeUploader()
+      class ExpoLikeFile {
+        name = 'a.pdf'
+        type = 'application/pdf'
+        get uri(): string {
+          return 'file:///tmp/a.pdf'
+        }
+      }
+
+      await upload('/api/v1/files/', new ExpoLikeFile(), { filename: 'renamed.pdf' })
+
+      expect(formData?.parts).toEqual([
+        ['file', { uri: 'file:///tmp/a.pdf', name: 'renamed.pdf', type: 'application/pdf' }],
+      ])
+    })
+
+    it('applies the filename option by renaming the part (RN reads `.name`)', async () => {
+      const { upload } = makeUploader()
+
+      await upload('/api/v1/files/', part, { filename: 'renamed.pdf' })
+
+      expect(formData?.parts).toEqual([['file', { ...part, name: 'renamed.pdf' }]])
+    })
+
+    it('appends every part of a mixed array under the same field', async () => {
+      const { upload } = makeUploader()
+      const blob = new Blob(['b'])
+
+      await upload('/api/v1/files/batch', [part, blob], { fieldName: 'files' })
+
+      expect(formData?.parts).toEqual([
+        ['files', part],
+        ['files', blob],
+      ])
+    })
+
+    it('still passes the filename argument for Blob parts', async () => {
+      const { upload } = makeUploader()
+      const blob = new Blob(['b'])
+
+      await upload('/api/v1/files/', blob, { filename: 'b.md' })
+
+      expect(formData?.parts).toEqual([['file', blob, 'b.md']])
+    })
+  })
+
   describe('XMLHttpRequest branch (onProgress set)', () => {
     afterEach(() => {
       vi.unstubAllGlobals()
+    })
+
+    it('rejects an aborted upload with an AbortError on runtimes without DOMException', async () => {
+      // React Native installs no global `DOMException`; the rejection must not
+      // itself throw a ReferenceError there.
+      class FakeXhr {
+        upload = { onprogress: null as unknown }
+        onload: (() => void) | null = null
+        onerror: (() => void) | null = null
+        onabort: (() => void) | null = null
+        ontimeout: (() => void) | null = null
+        status = 0
+        statusText = ''
+        responseText = ''
+        withCredentials = false
+        timeout = 0
+        open = vi.fn()
+        setRequestHeader = vi.fn()
+        getAllResponseHeaders = () => ''
+        send(): void {
+          sent = true
+        }
+        abort(): void {
+          aborted = true
+          this.onabort?.()
+        }
+      }
+      let sent = false
+      let aborted = false
+      vi.stubGlobal('XMLHttpRequest', FakeXhr)
+      vi.stubGlobal('DOMException', undefined)
+      const { upload } = makeUploader()
+      const controller = new AbortController()
+
+      const pending = upload('/api/v1/files/', new Blob(['x']), {
+        onProgress: vi.fn(),
+        signal: controller.signal,
+      })
+      // Abort only once the XHR is in flight, so the rejection comes from
+      // `xhr.abort()` → `onabort`, not from the pre-aborted early return.
+      await vi.waitFor(() => expect(sent).toBe(true))
+      controller.abort()
+
+      await expect(pending).rejects.toMatchObject({ name: 'AbortError', message: 'Upload cancelled' })
+      expect(aborted).toBe(true)
+    })
+
+    it('rejects a timed-out upload with a TimeoutError on runtimes without DOMException', async () => {
+      class FakeXhr {
+        upload = { onprogress: null as unknown }
+        onload: (() => void) | null = null
+        onerror: (() => void) | null = null
+        onabort: (() => void) | null = null
+        ontimeout: (() => void) | null = null
+        status = 0
+        statusText = ''
+        responseText = ''
+        withCredentials = false
+        timeout = 0
+        open = vi.fn()
+        setRequestHeader = vi.fn()
+        getAllResponseHeaders = () => ''
+        send(): void {
+          this.ontimeout?.()
+        }
+      }
+      vi.stubGlobal('XMLHttpRequest', FakeXhr)
+      vi.stubGlobal('DOMException', undefined)
+      const { upload } = makeUploader({ timeoutMs: 5_000 })
+
+      await expect(
+        upload('/api/v1/files/', new Blob(['x']), { onProgress: vi.fn() })
+      ).rejects.toMatchObject({ name: 'TimeoutError', message: 'Upload timed out' })
     })
 
     it('honors the method override when uploading with progress', async () => {

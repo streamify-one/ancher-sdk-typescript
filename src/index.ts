@@ -8,7 +8,7 @@
 
 // Raw API layer — generated typed client + transport.
 export { type AncherClient, createAncherClient } from './api/client'
-export { classifySessionRefresh } from './api/auth'
+export { classifySessionRefresh, sendWithSessionRefresh } from './api/auth'
 export {
   ANCHER_BASE_URL,
   type AncherClientConfig,
@@ -68,7 +68,13 @@ export {
 } from './api/token-manager'
 // Transport / upload (advanced)
 export { createFetcher } from './api/transport'
-export { createUploader, type Uploader, type UploadOptions } from './api/upload'
+export {
+  createUploader,
+  type NativeFilePart,
+  type Uploader,
+  type UploadOptions,
+  type UploadPart,
+} from './api/upload'
 export {
   appendVisibleTextPart,
   createInitialStreamState,

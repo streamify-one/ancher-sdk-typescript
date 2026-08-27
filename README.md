@@ -286,6 +286,15 @@ the response type, and the endpoint string is unchecked. It sends one field
 shares the same auth / refresh / activation / error handling as the rest of the
 client.
 
+On **React Native** pass the platform's file descriptor instead of a `Blob` —
+the native networking layer streams the file, so no bytes cross into JS:
+
+```ts
+// `NativeFilePart` — only React Native's FormData understands it.
+await sdk.File.uploadDirect({ uri: asset.uri, name: 'photo.jpg', type: 'image/jpeg' }, { onProgress })
+await sdk.File.uploadBatch([{ uri, name, type }, { uri, name, type }])
+```
+
 ## Entities (SDK layer)
 
 `createAncherSdk(config | client)` exposes a repository per entity. Repositories
@@ -541,6 +550,62 @@ await sdk.Conversation.interrupt(id) // stops the active run (surfaces as `done`
 `clarification-resolved`, `done`, `error`. Unmapped internal trace events are
 dropped, so you only ever see meaningful, typed events.
 
+#### Bring your own transport (React Native)
+
+React Native's built-in `fetch` has no streaming `body`, so the SSE helpers
+above cannot read it there (`parseChatStream` throws rather than yielding an
+empty run — and only once the whole run has finished, since that `fetch`
+resolves on load). Injecting a streaming `fetch` via `config.fetch` lifts that;
+otherwise bring your own transport:
+`prepareConversationStream` resolves the URL and auth headers **without
+sending**; open the request over your own transport (e.g. `XMLHttpRequest`),
+keep the SDK's 401 → refresh → retry policy with `sendWithSessionRefresh`, and
+run the received text through `processSSEBuffer` — the buffer-level SSE
+reducer. It returns the incomplete tail, which you must carry into the next
+call (a frame split across two chunks is otherwise lost), and it emits the
+`SSEHandlers` event vocabulary (`onText`, `onToolCall`, …), not the typed
+`ChatEvent`s of `streamConversation`:
+
+```ts
+import {
+  createInitialStreamState,
+  prepareConversationStream,
+  processSSEBuffer,
+  sendWithSessionRefresh,
+} from '@ancher-ai/sdk'
+
+const request = prepareConversationStream(client, receipt.stream_url)
+const opened = await sendWithSessionRefresh(
+  client.config,
+  async () => openXhr(request.url, await request.headers(), signal), // resolves once headers arrive → { status, … }
+  signal
+)
+if (opened.status !== 200) { /* … */ }
+
+// The opener owns cancellation — `sendWithSessionRefresh` only uses `signal`
+// to bound the refresh waits and to skip the replay after a cancel:
+function openXhr(url, headers, signal) {
+  if (signal?.aborted) throw signal.reason ?? new Error('Aborted') // a listener never fires retroactively
+  const xhr = new XMLHttpRequest()
+  signal?.addEventListener('abort', () => xhr.abort(), { once: true })
+  // … open, set headers, resolve { status } once the headers arrive
+}
+
+// Parsing: keep the tail between chunks.
+const state = createInitialStreamState()
+let buffer = ''
+onChunk = chunk => {
+  buffer = processSSEBuffer(buffer + chunk, state, handlers)
+}
+```
+
+`request.headers()` must be called anew on every attempt — a replay after a
+refresh needs the refreshed credentials and a fresh `traceparent` span. On a
+401 the SDK refreshes and calls your opener *again* while the first request is
+still open, so abort it (or ignore its later callbacks); a denied/unreachable
+refresh *returns* the 401 result instead of throwing — check `opened.status`.
+The 403 activation gate and `onError` do not run on this path.
+
 ## Configuration
 
 `createAncherClient(config)` — every browser/app concern is an injectable hook,
@@ -557,6 +622,7 @@ so the same client runs in a browser, a Node service, an edge worker, or a test.
 | `getCsrfToken` | Returns the CSRF token → `X-CSRF-Token`. |
 | `getDeviceId` | Returns a device ID → `x-device-id`. |
 | `getTimezone` | Returns an IANA timezone → `x-timezone`. |
+| `timeoutMs` | Per-request deadline in ms (also bounds the proactive/reactive session refresh). Off by default. Rejects with a `TimeoutError` — also on React Native, whose `AbortController` cannot carry an abort reason. |
 | `refreshSession` | Called on 401; return `true` to retry once, `'denied'` (server rejected it) or `'unreachable'` (network error / 5xx) otherwise. `classifySessionRefresh(response)` maps a refresh response onto those. |
 | `onSessionExpired` | Called when a 401 could not be recovered because `refreshSession` returned `'denied'` — the session is dead, so clear client state and send the user to sign in. Never fires for `'unreachable'`. |
 | `getSessionExpiresAt` | Epoch-ms expiry of the session credential (or `null` = unknown). Enables proactive refresh before requests issued within the leeway. Supplied automatically by `createTokenManager`'s `authConfig`. |

@@ -5,7 +5,7 @@
  * drift-checks against `Schemas.Artifact['reaction']` there.
  */
 
-import type { Expect } from './assert'
+import type { Eq, Expect } from './assert'
 import type { GetEndpointQuery, Page } from './common'
 import type {
   BranchOf,
@@ -14,6 +14,7 @@ import type {
   OrderByOf,
   Where,
 } from './query'
+import type { ReactionType } from './note'
 import type { Schemas } from './schemas'
 
 /* ---------------------------------------------------------------------------
@@ -64,8 +65,29 @@ export type ArtifactCreate = Schemas.ArtifactCreate
 /** Artifact list response. */
 export type ArtifactListResponse = Page<Artifact>
 
-/** Update artifact request (plus the FE-only `pinned` local field). */
-export type ArtifactUpdate = Schemas.ArtifactUpdate & Partial<ArtifactPinnedFields>
+/**
+ * Update artifact request — the wire shape only. `pinned` is a client-derived
+ * read-model field (see {@link Artifact}) and deliberately absent: the API has
+ * no such field and would silently drop it. `reaction` is narrowed to
+ * {@link ReactionType}: the API treats `null` as "not provided"
+ * (`if reaction is not None` in `app/services/artifact.py`), so clearing a
+ * reaction is `'neutral'`, never `null`.
+ */
+export type ArtifactUpdate = Omit<Schemas.ArtifactUpdate, 'reaction'> & {
+  reaction?: ReactionType
+}
+/** @internal */
+export type _ArtifactUpdateReactionNarrowed = Expect<
+  Eq<ArtifactUpdate['reaction'], ReactionType | undefined>
+>
+/** @internal */
+export type _ArtifactUpdateNoLocalFields = Expect<
+  Eq<keyof ArtifactPinnedFields extends keyof ArtifactUpdate ? true : false, false>
+>
+/** @internal */
+export type _ArtifactUpdateAssignable = Expect<
+  Eq<ArtifactUpdate extends Schemas.ArtifactUpdate ? true : false, true>
+>
 
 /** Set-artifact-tags request (replace-all, mirroring the note endpoint). */
 export type ArtifactTagsUpdate = Schemas.ArtifactTagsUpdate

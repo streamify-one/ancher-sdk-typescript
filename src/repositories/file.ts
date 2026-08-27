@@ -7,7 +7,7 @@
 
 import type { AncherClient } from '../api/client'
 import type { EndpointByMethod, Schemas } from '../api/generated/api.client'
-import type { UploadOptions } from '../api/upload'
+import type { UploadOptions, UploadPart } from '../api/upload'
 import type { FileRevision, FileRevisionListOptions } from '../contracts/file'
 import type { Page } from './base'
 import {
@@ -61,17 +61,19 @@ export interface FileRepository {
    * Upload a file in one direct multipart `POST /files/` request — supports
    * upload progress (`onProgress`) and aborting (`signal`). Prefer
    * {@link upload} (the presigned S3 flow) for large files; this route
-   * buffers the bytes through the API.
+   * buffers the bytes through the API. On React Native pass a
+   * `NativeFilePart` (`{ uri, name, type }`) — the native layer streams it.
    */
-  uploadDirect(file: Blob, options?: UploadDirectOptions): Promise<File>
+  uploadDirect(file: UploadPart, options?: UploadDirectOptions): Promise<File>
   /**
    * Upload several files in one multipart `POST /files/batch` request.
    * Each entry must carry its own name (wrap plain Blobs in
-   * `new File([blob], name)`); per-file failures come back in each result's
-   * `error` field rather than rejecting the batch.
+   * `new File([blob], name)`; a React Native `NativeFilePart` always has one);
+   * per-file failures come back in each result's `error` field rather than
+   * rejecting the batch.
    */
   uploadBatch(
-    files: readonly Blob[],
+    files: readonly UploadPart[],
     options?: UploadBatchOptions
   ): Promise<Schemas.BatchFileUploadResult[]>
   /** Verify a file's DB/S3 integrity (`POST /files/{id}/verifications`). */

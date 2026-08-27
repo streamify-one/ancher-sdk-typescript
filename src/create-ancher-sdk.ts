@@ -60,6 +60,7 @@ export type {
   ChatResourceUpdate,
   ChatResult,
   ChatStreamOptions,
+  ConversationStreamRequest,
 } from './chat'
 // Re-export the SDK surface (repository types + chat helpers). Friendly entity
 // types are exported from `@ancher-ai/sdk/contracts`.
@@ -67,6 +68,7 @@ export {
   consumeChat,
   openConversationStream,
   parseChatStream,
+  prepareConversationStream,
   streamConversation,
   streamConversationUrl,
 } from './chat'

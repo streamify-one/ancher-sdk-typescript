@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createAncherClient } from './api/client'
 import type { ChatEvent } from './chat'
+import { sendWithSessionRefresh } from './api/auth'
 import {
   consumeChat,
   openConversationStream,
   parseChatStream,
+  prepareConversationStream,
   streamConversation,
 } from './chat'
 
@@ -320,9 +322,12 @@ describe('parseChatStream', () => {
     expect(events).toEqual([{ type: 'text', text: 'ok', run: null }])
   })
 
-  it('yields nothing for a response with no body', async () => {
-    const events = await collect(parseChatStream({ body: null } as unknown as Response))
-    expect(events).toEqual([])
+  it('throws for a response with no body instead of masquerading as an empty run', async () => {
+    // React Native's fetch has no `body`; a silent empty stream would read as
+    // "the assistant produced nothing".
+    await expect(
+      collect(parseChatStream({ body: null } as unknown as Response))
+    ).rejects.toThrow('no readable body')
   })
 
   it('tolerates CRLF line endings', async () => {
@@ -410,6 +415,93 @@ describe('consumeChat', () => {
     const result = await consumeChat(stream)
     expect(result.text).toBe('main ')
     expect(result.finishReason).toBe('stop')
+  })
+})
+
+describe('prepareConversationStream', () => {
+  function makeClient(fetchMock = vi.fn<typeof fetch>()) {
+    return createAncherClient({
+      baseUrl: 'https://api.test',
+      fetch: fetchMock,
+      getAccessToken: () => 'tok-1',
+      defaultHeaders: { 'x-app': 'rn' },
+    })
+  }
+
+  it('resolves relative and receipt stream URLs against baseUrl and keeps absolute ones', () => {
+    const client = makeClient()
+
+    expect(prepareConversationStream(client, '/conversations/c-1/stream').url).toBe(
+      'https://api.test/api/v1/conversations/c-1/stream'
+    )
+    expect(prepareConversationStream(client, '/api/v1/conversations/c-1/stream').url).toBe(
+      'https://api.test/api/v1/conversations/c-1/stream'
+    )
+    expect(prepareConversationStream(client, 'https://other.test/s').url).toBe(
+      'https://other.test/s'
+    )
+  })
+
+  it('builds the same headers a fetch-opened stream sends, with a new span per attempt', async () => {
+    const client = makeClient()
+    const request = prepareConversationStream(client, '/conversations/c-1/stream')
+
+    const first = await request.headers()
+    const second = await request.headers()
+
+    expect(first.Accept).toBe('text/event-stream')
+    expect(first['x-app']).toBe('rn')
+    expect(first.Authorization).toBe('Bearer tok-1')
+    expect(first.traceparent?.split('-')[1]).toBe(request.traceId)
+    expectSameTraceWithNewSpan(first.traceparent as string, second.traceparent as string)
+  })
+
+  it('does not re-resolve the typed stream URL (path-prefix baseUrl stays intact)', async () => {
+    // `streamConversation` builds an absolute URL from `baseUrl` itself; the
+    // shared opener must send that verbatim — resolving it a second time would
+    // double a non-origin `baseUrl` such as a same-origin proxy prefix.
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(envelopeResponse([{ type: 'done', finish_reason: 'stop' }]))
+    const client = createAncherClient({ baseUrl: '/proxy', fetch: fetchMock })
+
+    await collect(streamConversation(client, 'c-1'))
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/proxy/api/v1/conversations/c-1/stream')
+  })
+
+  it('does not send anything by itself', () => {
+    const fetchMock = vi.fn<typeof fetch>()
+    prepareConversationStream(makeClient(fetchMock), '/conversations/c-1/stream')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('pairs with sendWithSessionRefresh over a non-fetch transport ({ status } results)', async () => {
+    // A host whose fetch cannot stream opens the request itself (XHR on React
+    // Native) and only hands the SDK the status — the 401 → refresh → replay
+    // policy must work on that shape, not just on `Response`.
+    const refreshSession = vi.fn().mockResolvedValue(true)
+    const client = createAncherClient({
+      baseUrl: 'https://api.test',
+      refreshSession,
+      getAccessToken: () => 'tok-1',
+    })
+    const request = prepareConversationStream(client, '/conversations/c-1/stream')
+    const attempts: string[] = []
+    const openXhr = vi
+      .fn(async (headers: Record<string, string>) => {
+        attempts.push(headers.traceparent as string)
+        return attempts.length === 1 ? { status: 401, stream: null } : { status: 200, stream: 'xhr' }
+      })
+
+    const opened = await sendWithSessionRefresh(client.config, async () =>
+      openXhr(await request.headers())
+    )
+
+    expect(opened).toEqual({ status: 200, stream: 'xhr' })
+    expect(refreshSession).toHaveBeenCalledOnce()
+    expect(attempts).toHaveLength(2)
+    expectSameTraceWithNewSpan(attempts[0] as string, attempts[1] as string)
   })
 })
 

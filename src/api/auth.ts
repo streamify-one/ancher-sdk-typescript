@@ -222,19 +222,162 @@ export async function buildContextHeaders(
 }
 
 /**
- * Combine the caller's optional `AbortSignal` with the configured request
- * timeout ({@link AncherClientConfig.timeoutMs}). Returns a signal that aborts
- * when either fires — or the caller's signal (or `undefined`) when no timeout
- * is configured.
+ * The `AbortError` / `TimeoutError` rejection the fetch spec prescribes, built
+ * on runtimes with or without a global `DOMException` — React Native installs
+ * none, so a bare `new DOMException(...)` is a `ReferenceError` there.
  */
-export function requestSignal(
+export function abortError(message: string, name: 'AbortError' | 'TimeoutError'): Error {
+  if (typeof DOMException !== 'undefined') return new DOMException(message, name)
+  const error = new Error(message)
+  error.name = name
+  return error
+}
+
+/** The signal to hand a network attempt, plus whether the configured deadline is what aborted it. */
+export interface RequestDeadline {
+  signal: AbortSignal | undefined
+  timedOut(): boolean
+  /**
+   * Stop the clock and detach from the caller's signal. Called once the SDK
+   * has finished consuming the response body ({@link readWithDeadline}) — a
+   * completed request must not retain a timer, closure and caller-signal
+   * listener until `timeoutMs` elapses. Idempotent.
+   */
+  release(): void
+}
+
+/**
+ * Combine the caller's optional `AbortSignal` with the configured request
+ * timeout ({@link AncherClientConfig.timeoutMs}). The returned signal aborts
+ * when either fires — or is the caller's signal (or `undefined`) when no
+ * timeout is configured.
+ *
+ * Hand-rolled rather than `AbortSignal.timeout` + `AbortSignal.any`: React
+ * Native's `AbortSignal` implements neither. `timedOut()` exists because React
+ * Native's `AbortController` polyfill drops the abort *reason*, so the signal
+ * alone cannot tell a timeout from a caller abort there.
+ *
+ * The clock is NOT stopped when the response headers arrive: the body is read
+ * afterwards (the generated client's `parseResponseData`, the uploader's
+ * `parseBody`), and a stalled body read must still hit the deadline and still
+ * follow a caller abort. It is released once the SDK has consumed the body
+ * ({@link readWithDeadline}); a `Response` whose body stays caller-owned keeps
+ * its deadline until it fires — exactly like `AbortSignal.timeout`.
+ */
+export function requestDeadline(
   config: AncherClientConfig,
   signal?: AbortSignal | null
-): AbortSignal | undefined {
+): RequestDeadline {
   const timeout = config.timeoutMs
-  if (!timeout || timeout <= 0) return signal ?? undefined
-  const timeoutSignal = AbortSignal.timeout(timeout)
-  return signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal
+  if (!timeout || timeout <= 0) {
+    return { signal: signal ?? undefined, timedOut: () => false, release: () => {} }
+  }
+  const controller = new AbortController()
+  let timedOut = false
+  const release = () => {
+    clearTimeout(timer)
+    signal?.removeEventListener('abort', follow)
+  }
+  const follow = () => {
+    release()
+    controller.abort(signal?.reason)
+  }
+  const timer = setTimeout(() => {
+    release()
+    timedOut = true
+    controller.abort(abortError('Request timed out', 'TimeoutError'))
+  }, timeout)
+  // Node timers hold the event loop open; DOM/React Native timers are numbers.
+  ;(timer as unknown as { unref?: () => void }).unref?.()
+  if (signal?.aborted) follow()
+  else signal?.addEventListener('abort', follow, { once: true })
+  return { signal: controller.signal, timedOut: () => timedOut, release }
+}
+
+/**
+ * The deadline each in-flight `Response` was opened under, for
+ * {@link readWithDeadline}. Keyed on `object` so the generic
+ * {@link sendWithSessionRefresh} can release a discarded result of any shape.
+ */
+const responseDeadlines = new WeakMap<object, RequestDeadline>()
+
+/** Re-throw a deadline abort as `TimeoutError` where the runtime reported it as something else. */
+function normalizeDeadlineError(deadline: RequestDeadline, error: unknown): never {
+  if (deadline.timedOut() && (error as { name?: unknown } | null)?.name !== 'TimeoutError') {
+    throw abortError('Request timed out', 'TimeoutError')
+  }
+  throw error
+}
+
+/**
+ * Run one network attempt under {@link requestDeadline}, surfacing a deadline
+ * abort as a `TimeoutError` even where the runtime cannot carry the abort
+ * reason (React Native's `fetch` rejects every abort as `AbortError('Aborted')`,
+ * which hosts rightly treat as a user cancel — a timeout must not hide there).
+ * The deadline stays armed after this resolves — see {@link requestDeadline} —
+ * and the returned `Response` is remembered so {@link readWithDeadline} can
+ * apply the same normalization while its body is consumed.
+ */
+export async function fetchWithDeadline(
+  config: AncherClientConfig,
+  signal: AbortSignal | null | undefined,
+  attempt: (signal: AbortSignal | undefined) => Promise<Response>
+): Promise<Response> {
+  const deadline = requestDeadline(config, signal)
+  let response: Response
+  try {
+    response = await attempt(deadline.signal)
+  } catch (error) {
+    // No response will ever be read — nothing to keep the clock alive for.
+    deadline.release()
+    normalizeDeadlineError(deadline, error)
+  }
+  responseDeadlines.set(response, deadline)
+  return response
+}
+
+/**
+ * Consume the body of a `Response` opened by {@link fetchWithDeadline} with
+ * the same `TimeoutError` normalization: a streaming `fetch` on a runtime that
+ * drops abort reasons (e.g. `expo/fetch`) fails the body read with a generic
+ * error when the deadline fires. A `Response` opened elsewhere reads as-is.
+ */
+export async function readWithDeadline<T>(response: Response, read: () => Promise<T>): Promise<T> {
+  const deadline = responseDeadlines.get(response)
+  if (!deadline) return read()
+  try {
+    return await read()
+  } catch (error) {
+    normalizeDeadlineError(deadline, error)
+  } finally {
+    releaseResponseDeadline(response)
+  }
+}
+
+/**
+ * Read an *error* body under its deadline. `buildApiError` swallows a failed
+ * read (it falls back to the status text), so a deadline that fired mid-read
+ * is detected afterwards and surfaced as `TimeoutError` — an error body that
+ * timed out has nothing worth returning. The deadline is kept: with
+ * `throwOnStatusError: false` the generated client still parses the body next.
+ */
+async function readErrorBodyWithDeadline<T>(response: Response, read: () => Promise<T>): Promise<T> {
+  const deadline = responseDeadlines.get(response)
+  if (!deadline) return read()
+  let value: T
+  try {
+    value = await read()
+  } catch (error) {
+    normalizeDeadlineError(deadline, error)
+  }
+  if (deadline.timedOut()) throw abortError('Request timed out', 'TimeoutError')
+  return value
+}
+
+/** Release the deadline of a response the SDK has finished with (no-op for others). */
+function releaseResponseDeadline(response: object): void {
+  responseDeadlines.get(response)?.release()
+  responseDeadlines.delete(response)
 }
 
 /**
@@ -255,29 +398,45 @@ export function classifySessionRefresh(response: Response): SessionRefreshResult
   return response.status >= 400 && response.status < 500 ? 'denied' : 'unreachable'
 }
 
+function throwIfAborted(signal: AbortSignal | null | undefined): void {
+  if (signal?.aborted) throw signal.reason ?? abortError('The operation was aborted', 'AbortError')
+}
+
 /**
  * Run `send` under the 401 → {@link AncherClientConfig.refreshSession} →
  * retry-once flow, firing {@link AncherClientConfig.onSessionExpired} when — and
  * only when — the refresh was *denied*.
  *
  * Shared by the JSON transport, the uploader (both via
- * {@link sendWithAuthRetry}) and the two SSE stream openers in `chat.ts`, which
- * otherwise kept three hand-copied versions of this block in sync.
+ * {@link sendWithAuthRetry}) and the SSE stream openers in `chat.ts`. Only the
+ * response's `status` is read, so hosts that open a stream over their own
+ * transport (e.g. `XMLHttpRequest` on React Native, where `fetch` cannot
+ * stream) can pass any `{ status }`-shaped result and keep the same policy.
  *
  * `send` MUST build a fresh request on each call so the replay picks up the
  * refreshed auth headers.
  */
-export async function sendWithSessionRefresh(
+export async function sendWithSessionRefresh<T extends { status: number }>(
   config: AncherClientConfig,
-  send: () => Promise<Response>,
+  send: () => Promise<T>,
   signal?: AbortSignal | null
-): Promise<Response> {
+): Promise<T> {
   await ensureFreshSession(config, signal)
+  // A caller that cancelled while a refresh ran (proactive here, reactive
+  // below) must not get a request — `fetch` would reject on the aborted
+  // signal anyway; a host-owned opener (an XHR on React Native) would
+  // otherwise open one after the cancel.
+  throwIfAborted(signal)
   const response = await send()
   if (response.status !== 401 || !config.refreshSession) return response
 
   const result = await joinReactiveSessionRefresh(config, signal)
-  if (result === true) return send()
+  if (result === true) {
+    throwIfAborted(signal)
+    // The 401 is discarded unread — don't let its deadline outlive it.
+    releaseResponseDeadline(response)
+    return send()
+  }
   // `false` and `'unreachable'` both mean "no verdict" — surface the 401 and
   // leave the session alone.
   if (result === 'denied') config.onSessionExpired?.()
@@ -341,19 +500,28 @@ export async function sendWithAuthRetry(
 
   // 403 activation gate → let the host prompt for activation → retry once.
   if (response.status === 403 && config.onActivationRequired) {
-    const error = await buildApiError(response)
+    const error = await readErrorBodyWithDeadline(response, () => buildApiError(response))
     if (isActivationRequiredError(error)) {
       const result = await config.onActivationRequired(response)
-      if (result === 'retry') response = await send()
+      if (result === 'retry') {
+        releaseResponseDeadline(response) // discarded unread, same as the 401 replay
+        response = await send()
+      }
     }
   }
 
   if (!response.ok) {
     // Fire side-effect interceptors (e.g. insufficient-credits dialog)
     // regardless of throwOnStatusError, matching the original client.
-    const error = await buildApiError(response, options.errorMessage?.(response))
+    const error = await readErrorBodyWithDeadline(response, () =>
+      buildApiError(response, options.errorMessage?.(response))
+    )
     config.onError?.(error)
-    if (options.throwOnStatusError) throw error
+    if (options.throwOnStatusError) {
+      // Nobody will read this body any more — don't keep its deadline alive.
+      releaseResponseDeadline(response)
+      throw error
+    }
   }
 
   return response

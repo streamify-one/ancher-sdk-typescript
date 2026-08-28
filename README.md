@@ -315,6 +315,45 @@ await sdk.Note.delete(note.id)                                 // DELETE
 const page = await sdk.Note.list({ where: { status: NoteStatus.Ready }, limit: 20 }) // Page<Note>
 ```
 
+### File slots
+
+Never read `note.files` / `note.article.files` / `artifact.files` directly —
+the file-slot accessors in `@ancher-ai/sdk/contracts` are the one place the
+API's resolution rules live, and they accept every payload shape the API has
+or will have (the ≤ v1.4 `files` map, v1.5.0's typed `content_file` /
+`thumbnail_file` / … slots, and the post-flatten note with `origin_files`
+hoisted onto it), so the restructure is an SDK bump and nothing else:
+
+```ts
+import {
+  getFileContentKey,
+  getFileRevisionNumber,
+  getFileUrl,
+  getNoteContentFile,
+  getNoteOriginFiles,
+  getNoteOwnContentFile,
+  getNoteThumbnailFile,
+  getArtifactThumbnailFile,
+} from '@ancher-ai/sdk/contracts'
+
+const thumbnailUrl = getFileUrl(getNoteThumbnailFile(note))   // note → article → signed image content
+const origins = getNoteOriginFiles(note)                       // N files, API order
+const editTarget = getNoteOwnContentFile(note)                 // the PUT-able, note-owned copy only
+const revision = getFileRevisionNumber(editTarget)             // save-preflight snapshot
+const cardImage = getFileUrl(getArtifactThumbnailFile(artifact)) // thumbnail → display (check the mimetype before <img>)
+const cacheKey = getFileContentKey(file)                       // `id:content_hash` — changes with the bytes, not the URL
+```
+
+Each accessor documents the `app/schemas/*.py` property it mirrors. Two
+deliberate steps beyond the backend: note accessors fall back to the article's
+file (the API does not), and the thumbnail falls back to a signed image content
+file (direct image uploads), then to any image in the note's own map (which
+carries `generated` files on API ≤ v1.4). `getFileUrl` is `undefined` for a note's
+`content` (served by `GET /notes/{id}/content`) and for markdown/HTML artifact
+content — fetch those through the content endpoints. The accessors are generic
+on the file type, so a client with its own generated `Note`/`File` gets its own
+`File` back. `asFileMap` remains exported but is deprecated.
+
 ### Listing, filtering, counting
 
 Every criteria list endpoint exposes the same typed surface:

@@ -14,6 +14,13 @@ import type {
   OrderByOf,
   Where,
 } from './query'
+import {
+  getArtifactContentFile,
+  getArtifactDisplayFile,
+  getArtifactThumbnailFile,
+  getFileRevisionNumber,
+  getFileUrl,
+} from './file-slots'
 import type { ReactionType } from './note'
 import type { Schemas } from './schemas'
 
@@ -155,11 +162,15 @@ export function getArtifactDisplayFileId(
   return artifact?.display_file_id ?? undefined
 }
 
-/** The embedded content file info, across the live and legacy payload shapes. */
+/**
+ * The embedded content file info, across the live and legacy payload shapes.
+ * Slot resolution goes through {@link getArtifactContentFile}; the `file_ref`
+ * arm only serves payloads from the 2026-05 backends that still sent it.
+ */
 export function getArtifactEmbeddedFile(
   artifact: Artifact | null | undefined
 ): ArtifactFileInfo | null {
-  return artifact?.files?.content ?? artifact?.file_ref?.file ?? null
+  return getArtifactContentFile(artifact) ?? artifact?.file_ref?.file ?? null
 }
 
 /**
@@ -173,22 +184,11 @@ export function getArtifactEmbeddedFile(
  * message lists can render thumbnails without a per-artifact presigned-URL fetch.
  */
 export function getArtifactPreviewUrl(artifact: Artifact | null | undefined): string | undefined {
-  const files = artifact?.files
-  if (!files) return undefined
-
-  const thumbnail = files.thumbnail?.presigned_url
+  const thumbnail = getFileUrl(getArtifactThumbnailFile(artifact, { displayFallback: false }))
   if (thumbnail) return thumbnail
-
-  const display = files.display
-  if (display?.mimetype?.startsWith('image/') && display.presigned_url) {
-    return display.presigned_url
+  for (const file of [getArtifactDisplayFile(artifact), getArtifactContentFile(artifact)]) {
+    if (file?.mimetype?.startsWith('image/') && file.presigned_url) return file.presigned_url
   }
-
-  const content = files.content
-  if (content?.mimetype?.startsWith('image/') && content.presigned_url) {
-    return content.presigned_url
-  }
-
   return undefined
 }
 
@@ -202,5 +202,5 @@ export function getArtifactPreviewUrl(artifact: Artifact | null | undefined): st
 export function getArtifactContentRevisionNumber(
   artifact: Artifact | null | undefined
 ): number | undefined {
-  return artifact?.files?.content?.revision?.revision_number ?? undefined
+  return getFileRevisionNumber(getArtifactContentFile(artifact))
 }

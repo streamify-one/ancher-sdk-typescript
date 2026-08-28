@@ -133,10 +133,13 @@ export interface CreateTagForNoteRequest {
 export type FileMap = Record<string, Schemas.File>
 
 /**
- * Cast the untyped `files` field on Note / Article to a typed FileMap.
- * The OpenAPI schema types `files` as `Record<string, unknown>` but the
- * actual payload contains `File` objects keyed by role (e.g. "thumbnail",
- * "content").
+ * Narrow a `files` map to a typed FileMap, dropping empty maps to `undefined`.
+ *
+ * @deprecated Read files through the named accessors in `./file-slots`
+ * (`getNoteContentFile`, `getNoteThumbnailFile`, `getArtifactDisplayFile`, …):
+ * they encapsulate the note → article fallback and keep working when the
+ * v1.5.0 restructure replaces the `files` map with typed slots. This cast
+ * hands back the raw map and leaves every caller to re-derive those rules.
  */
 export function asFileMap(files: Record<string, unknown> | null | undefined): FileMap | undefined {
   if (!files || Object.keys(files).length === 0) return undefined

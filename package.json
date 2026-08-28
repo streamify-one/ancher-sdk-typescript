@@ -1,6 +1,6 @@
 {
   "name": "@ancher-ai/sdk",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Fully-typed TypeScript SDK for the Ancher API, generated from the OpenAPI spec.",
   "license": "Apache-2.0",
   "homepage": "https://ancher.ai",

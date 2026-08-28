@@ -679,7 +679,32 @@ fails and points at what to update.
 ```bash
 pnpm build       # tsup → dist (ESM + CJS + .d.ts): index, oauth2, tanstack, contracts
 pnpm typecheck   # tsc --noEmit
+pnpm verify:package # pack + install + strict external TS/ESM/CJS consumer smoke test
 ```
+
+## Publishing
+
+The first npm release is a one-time manual bootstrap because npm requires the
+package to exist before its GitHub Actions Trusted Publisher can be configured.
+From `apps/sdk`, after setting `package.json` to the version being released:
+
+```bash
+pnpm typecheck
+pnpm test
+pnpm verify:package
+pnpm pack
+npm publish ancher-ai-sdk-X.Y.Z.tgz --access public
+```
+
+The publishing npm account must have write access to the `@ancher-ai` scope and
+meet npm's 2FA requirements. After that first publish, configure the package's
+GitHub Actions Trusted Publisher with owner `streamify-one`, repository
+`streamify-one-design-system`, workflow `publish-npm.yml`, and no environment.
+
+Later releases are automated: update the package version, then publish a GitHub
+Release tagged `sdk-vX.Y.Z`. The release workflow requires the tag version to
+match `package.json`, reruns the SDK gates and external-package smoke test, packs
+the package with pnpm, and publishes the tarball to npm over OIDC.
 
 ## Layout
 

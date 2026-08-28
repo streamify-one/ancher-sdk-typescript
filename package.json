@@ -1,8 +1,13 @@
 {
   "name": "@ancher-ai/sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Fully-typed TypeScript SDK for the Ancher API, generated from the OpenAPI spec.",
   "license": "Apache-2.0",
+  "homepage": "https://ancher.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/streamify-one/ancher-sdk-typescript.git"
+  },
   "type": "module",
   "sideEffects": false,
   "files": [
@@ -19,26 +24,47 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "publishConfig": {
+    "access": "public",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
-        "import": "./dist/index.js",
-        "require": "./dist/index.cjs"
+        "import": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js"
+        },
+        "require": {
+          "types": "./dist/index.d.cts",
+          "default": "./dist/index.cjs"
+        }
       },
       "./oauth2": {
-        "types": "./dist/oauth2.d.ts",
-        "import": "./dist/oauth2.js",
-        "require": "./dist/oauth2.cjs"
+        "import": {
+          "types": "./dist/oauth2.d.ts",
+          "default": "./dist/oauth2.js"
+        },
+        "require": {
+          "types": "./dist/oauth2.d.cts",
+          "default": "./dist/oauth2.cjs"
+        }
       },
       "./tanstack": {
-        "types": "./dist/tanstack.d.ts",
-        "import": "./dist/tanstack.js",
-        "require": "./dist/tanstack.cjs"
+        "import": {
+          "types": "./dist/tanstack.d.ts",
+          "default": "./dist/tanstack.js"
+        },
+        "require": {
+          "types": "./dist/tanstack.d.cts",
+          "default": "./dist/tanstack.cjs"
+        }
       },
       "./contracts": {
-        "types": "./dist/contracts.d.ts",
-        "import": "./dist/contracts.js",
-        "require": "./dist/contracts.cjs"
+        "import": {
+          "types": "./dist/contracts.d.ts",
+          "default": "./dist/contracts.js"
+        },
+        "require": {
+          "types": "./dist/contracts.d.cts",
+          "default": "./dist/contracts.cjs"
+        }
       }
     },
     "main": "./dist/index.cjs",
@@ -48,7 +74,8 @@
   "scripts": {
     "generate": "node scripts/fetch-openapi.js && typed-openapi openapi.json --output src/api/generated/api.client.ts --tanstack",
     "dev": "tsup --watch",
-    "build": "tsup",
+    "build": "tsup && node scripts/fix-tanstack-declarations.mjs",
+    "verify:package": "pnpm build && node scripts/verify-package.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "prepublishOnly": "pnpm build"
@@ -63,6 +90,7 @@
   },
   "devDependencies": {
     "@tanstack/react-query": "catalog:",
+    "@types/react": "catalog:",
     "tsup": "^8.3.0",
     "typed-openapi": "^2.2.7",
     "typescript": "catalog:",

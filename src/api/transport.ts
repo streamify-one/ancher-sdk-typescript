@@ -36,13 +36,43 @@ function isJsonContentType(contentType: string): boolean {
  * it, e.g. as an uncaught `has_more` of `undefined` during a React render
  * (VITA-1216).
  *
- * Bodies that are legitimately absent — a 204/205, or any empty body under a
- * JSON content type — still resolve to `undefined`.
+ * The contract is about JSON bodies — the ones the generated types describe.
+ * A `text/*` body is returned verbatim and a binary one as an `ArrayBuffer`,
+ * empty or not (an empty text file is content); a response with no
+ * recognisable content type resolves `undefined` as before (the list surface
+ * has its own guard for that). Under a JSON content type, a body that is
+ * legitimately absent — a 204/205, or an empty error response — still
+ * resolves to `undefined`; an empty body on any other success status is a
+ * defect and throws too (see `emptyBodyValue`).
  */
 function parseResponseData(response: Response): Promise<unknown> {
   // The request deadline stays armed while the body streams (see `auth.ts`);
   // read under it so a body-phase timeout surfaces as `TimeoutError` too.
   return readWithDeadline(response, () => parseBodyData(response))
+}
+
+/**
+ * What an EMPTY body means, by status. `204 No Content` and `205 Reset Content`
+ * are the statuses the protocol defines as bodiless; they resolve `undefined`.
+ * An error response stays data (`withResponse: true` callers read `.status`
+ * instead of catching — same rule as the malformed-JSON branch below). Any
+ * other success status — a `200`, or a `202` whose schema is a run receipt —
+ * is a truncated or broken response, and used to reach the caller as
+ * `undefined` typed as the entity, surfacing wherever the first field was
+ * read (VITA-1449; mobile's own client made the same call for VITA-1413).
+ * `202` is deliberately NOT exempt: every 202 the API answers carries a body
+ * (a `None` handler serialises as the JSON literal `null`), so an empty one
+ * is exactly the cut-short receipt this guard exists to catch.
+ */
+export function emptyBodyValue(response: Response): undefined {
+  if (response.status === 204 || response.status === 205 || !response.ok) {
+    return undefined
+  }
+  throw new AncherApiError({
+    message: `Empty body in the API response (HTTP ${response.status})`,
+    status: response.status,
+    traceId: response.headers.get('x-trace-id') || undefined,
+  })
 }
 
 async function parseBodyData(response: Response): Promise<unknown> {
@@ -54,8 +84,17 @@ async function parseBodyData(response: Response): Promise<unknown> {
   if (!isJsonContentType(contentType)) return undefined
 
   const raw = await response.text()
-  if (raw.trim() === '') return undefined
+  if (raw.trim() === '') return emptyBodyValue(response)
+  return parseJsonBody(response, raw)
+}
 
+/**
+ * Parse a non-empty JSON body. Shared with the multipart uploader so a
+ * truncated success body surfaces the same way on every transport: an
+ * `AncherApiError` carrying the response's status and trace id, not a bare
+ * `SyntaxError` the caller cannot classify (VITA-1216, VITA-1449).
+ */
+export function parseJsonBody(response: Response, raw: string): unknown {
   try {
     return JSON.parse(raw)
   } catch {

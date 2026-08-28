@@ -273,7 +273,7 @@ the API with the typed `sdk.File.uploadDirect`:
 
 ```ts
 const uploaded = await sdk.File.uploadDirect(file, {
-  onProgress: (pct) => console.log(pct), // 0–100; uses XMLHttpRequest when set
+  onProgress: (pct) => console.log(pct), // 0–100; uses XMLHttpRequest when set. 100 only on success
   // public: true,                       // create publicly readable (default false)
   // signal: abortController.signal,     // optional cancellation
 })
@@ -685,6 +685,14 @@ import {
 
 > When you call with `withResponse: true`, the error response is returned (not
 > thrown) so you can inspect `.status` / `.data`; `onError` still fires.
+
+A **success** response can throw too, on every transport (the JSON client and
+`client.upload` alike): a JSON body that does not parse, or an empty JSON body
+on a status other than `204`/`205`, is a truncated or broken response and
+surfaces as an `AncherApiError` carrying that success `status` (e.g. `200`)
+rather than resolving `undefined` typed as the entity. This is a rule about
+JSON bodies — `text/*` responses come back verbatim and binary ones as an
+`ArrayBuffer`, empty or not.
 
 ## Regenerating from the API (`pnpm generate`)
 

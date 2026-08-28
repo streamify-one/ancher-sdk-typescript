@@ -13,6 +13,7 @@ import {
   readWithDeadline,
   sendWithAuthRetry,
 } from './auth'
+import { emptyBodyValue, parseJsonBody } from './transport'
 import { ANCHER_BASE_URL, type AncherClientConfig } from './config'
 import { newTraceId } from './trace'
 
@@ -145,7 +146,13 @@ export function createUploader(config: AncherClientConfig): Uploader {
       signal: options.signal,
     })
 
-    return parseBody<T>(response)
+    const data = await parseBody<T>(response)
+    // 100 means "done": reported only once the request succeeded AND its body
+    // parsed — never from the transport, where a 2xx with a malformed or
+    // empty body, or the first attempt of a 401 replay, would flash the bar
+    // full for an upload that then fails (VITA-1449).
+    options.onProgress?.(100)
+    return data
   }
 }
 
@@ -153,9 +160,12 @@ function parseBody<T>(response: Response): Promise<T> {
   // Body-phase timeouts must surface as `TimeoutError` as well, and the
   // deadline is released once the body is consumed (see `auth.ts`).
   return readWithDeadline(response, async () => {
-    if (response.status === 204) return undefined as T
     const text = await response.text()
-    return (text ? JSON.parse(text) : undefined) as T
+    // Same body rules as the JSON transport (VITA-1449): bodiless statuses
+    // resolve `undefined`, an empty success body is a defect, and a truncated
+    // one is an `AncherApiError` rather than a bare `SyntaxError`.
+    if (text.trim() === '') return emptyBodyValue(response) as T
+    return parseJsonBody(response, text) as T
   })
 }
 
@@ -204,18 +214,42 @@ function uploadWithProgress(
     }
     xhr.onload = () => {
       cleanup()
-      onProgress(100)
-      resolve(
-        new Response(xhr.responseText, {
+      // A `load` with no HTTP status is a completion without a response —
+      // the connection dropped after the request left. Reject it as the
+      // transport failure it is; the `Response` constructor would otherwise
+      // throw on the out-of-range status and leave this promise pending
+      // forever (VITA-1449).
+      if (xhr.status === 0) {
+        reject(new TypeError('Upload failed: network error'))
+        return
+      }
+      let response: Response
+      try {
+        // `null`, not `''`, for a bodiless status: `Response` refuses any
+        // body — an empty string included — on 204/205/304, so a 204 from
+        // this path used to throw here instead of resolving `undefined`.
+        response = new Response(xhr.responseText || null, {
           status: xhr.status,
           statusText: xhr.statusText,
           headers: parseXhrHeaders(xhr.getAllResponseHeaders()),
         })
-      )
+      } catch (error) {
+        // Whatever else the constructor refuses must reject, never hang.
+        reject(error instanceof Error ? error : new Error(String(error)))
+        return
+      }
+      // No 100 here: `onload` fires for a 4xx/5xx too, and even a 2xx can
+      // still fail on body validation. The uploader reports 100 once the
+      // upload has actually resolved (VITA-1449); this transport only ever
+      // reports the bytes in flight.
+      resolve(response)
     }
     xhr.onerror = () => {
       cleanup()
-      reject(new Error('Upload failed'))
+      // The same shape the fetch path produces for a dropped connection: a
+      // `TypeError`, which is what consumers' offline classification keys on
+      // (VITA-1449). A plain `Error` here was filed as an unknown failure.
+      reject(new TypeError('Upload failed: network error'))
     }
     xhr.onabort = () => {
       cleanup()

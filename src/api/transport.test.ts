@@ -297,11 +297,31 @@ describe('parseResponseData', () => {
     await expect(parse(malformed)).rejects.toMatchObject({ status: 200, traceId: 'abc123' })
   })
 
-  it('resolves undefined for a bodyless response', async () => {
+  it('resolves undefined for the bodiless statuses the protocol defines: 204 and 205', async () => {
     const parse = makeParser()
     await expect(parse(response(null, 'application/json', 204))).resolves.toBeUndefined()
-    await expect(parse(response('', 'application/json'))).resolves.toBeUndefined()
-    await expect(parse(response('   ', 'application/json'))).resolves.toBeUndefined()
+    await expect(parse(response(null, 'application/json', 205))).resolves.toBeUndefined()
+  })
+  it('throws for an empty body on any other success status (VITA-1449)', async () => {
+    // A `200` typed as returning its schema with nothing in it is a truncated
+    // or broken response; it used to reach the caller as `undefined` typed as
+    // the entity — the same class of defect as the malformed body above. A
+    // `202` is not exempt: every 202 the API answers carries a body (a run
+    // receipt, a podcast row, or the JSON literal `null`), so an empty one is
+    // the cut-short receipt this guard exists to catch.
+    const parse = makeParser()
+    await expect(parse(response('', 'application/json'))).rejects.toThrow(AncherApiError)
+    await expect(parse(response('   ', 'application/json'))).rejects.toMatchObject({ status: 200 })
+    await expect(parse(response('', 'application/json', 202))).rejects.toMatchObject({ status: 202 })
+    const empty = new Response('', {
+      status: 200,
+      headers: { 'content-type': 'application/json', 'x-trace-id': 'trace-empty' },
+    })
+    await expect(parse(empty)).rejects.toMatchObject({ status: 200, traceId: 'trace-empty' })
+  })
+  it('keeps an empty ERROR body as data, like an unparseable one', async () => {
+    const parse = makeParser()
+    await expect(parse(response('', 'application/json', 404))).resolves.toBeUndefined()
   })
 
   it('keeps an unparseable error body as data rather than throwing', async () => {

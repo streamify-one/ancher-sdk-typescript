@@ -363,5 +363,215 @@ describe('createUploader', () => {
       expect(result).toEqual({ id: 'file-1' })
       expect(fetchMock).not.toHaveBeenCalled()
     })
+    it('reports 100 only for a success — a failed upload never flashes the bar full (VITA-1449)', async () => {
+      function fakeXhr(status: number, responseText: string) {
+        return class FakeXhr {
+          upload = { onprogress: null as unknown as ((event: { lengthComputable: boolean; loaded: number; total: number }) => void) | null }
+          onload: (() => void) | null = null
+          onerror: (() => void) | null = null
+          onabort: (() => void) | null = null
+          ontimeout: (() => void) | null = null
+          status = status
+          statusText = ''
+          responseText = responseText
+          withCredentials = false
+          timeout = 0
+          open = vi.fn()
+          setRequestHeader = vi.fn()
+          getAllResponseHeaders = () => 'content-type: application/json'
+          send(): void {
+            this.upload.onprogress?.({ lengthComputable: true, loaded: 50, total: 100 })
+            this.upload.onprogress?.({ lengthComputable: true, loaded: 100, total: 100 })
+            this.onload?.()
+          }
+        }
+      }
+      vi.stubGlobal('XMLHttpRequest', fakeXhr(200, '{"id":"file-1"}'))
+      const { upload } = makeUploader()
+      const onSuccess = vi.fn()
+      await upload('/api/v1/files/', new Blob(['x']), { onProgress: onSuccess })
+      expect(onSuccess.mock.calls.map(([value]) => value)).toEqual([50, 95, 100])
+
+      vi.stubGlobal('XMLHttpRequest', fakeXhr(413, '{"error":{"code":"API-FIL001","message":"too large"}}'))
+      const onFailure = vi.fn()
+      await expect(
+        upload('/api/v1/files/', new Blob(['x']), { onProgress: onFailure })
+      ).rejects.toMatchObject({ status: 413 })
+      expect(onFailure.mock.calls.map(([value]) => value)).toEqual([50, 95])
+    })
+    it('resolves undefined for a 204 answered over XHR (the Response must carry a null body)', async () => {
+      class FakeXhr {
+        upload = { onprogress: null as unknown }
+        onload: (() => void) | null = null
+        onerror: (() => void) | null = null
+        onabort: (() => void) | null = null
+        ontimeout: (() => void) | null = null
+        status = 204
+        statusText = 'No Content'
+        responseText = ''
+        withCredentials = false
+        timeout = 0
+        open = vi.fn()
+        setRequestHeader = vi.fn()
+        getAllResponseHeaders = () => ''
+        send(): void {
+          this.onload?.()
+        }
+      }
+      vi.stubGlobal('XMLHttpRequest', FakeXhr)
+      const { upload } = makeUploader()
+      const onProgress = vi.fn()
+      await expect(upload('/api/v1/files/', new Blob(['x']), { onProgress })).resolves.toBeUndefined()
+      expect(onProgress).toHaveBeenLastCalledWith(100)
+    })
+    it('rejects a load that carries no HTTP status instead of hanging (VITA-1449)', async () => {
+      class FakeXhr {
+        upload = { onprogress: null as unknown }
+        onload: (() => void) | null = null
+        onerror: (() => void) | null = null
+        onabort: (() => void) | null = null
+        ontimeout: (() => void) | null = null
+        status = 0
+        statusText = ''
+        responseText = ''
+        withCredentials = false
+        timeout = 0
+        open = vi.fn()
+        setRequestHeader = vi.fn()
+        getAllResponseHeaders = () => ''
+        send(): void {
+          this.onload?.()
+        }
+      }
+      vi.stubGlobal('XMLHttpRequest', FakeXhr)
+      const { upload } = makeUploader()
+      const onProgress = vi.fn()
+      const failure = await upload('/api/v1/files/', new Blob(['x']), { onProgress }).catch(
+        (error: unknown) => error
+      )
+      expect(failure).toBeInstanceOf(TypeError)
+      expect(onProgress).not.toHaveBeenCalledWith(100)
+    })
+    it('does not report 100 when the response cannot be constructed, and rejects instead of hanging', async () => {
+      class FakeXhr {
+        upload = { onprogress: null as unknown }
+        onload: (() => void) | null = null
+        onerror: (() => void) | null = null
+        onabort: (() => void) | null = null
+        ontimeout: (() => void) | null = null
+        status = 200
+        statusText = 'OK'
+        responseText = '{"id":"file-1"}'
+        withCredentials = false
+        timeout = 0
+        open = vi.fn()
+        setRequestHeader = vi.fn()
+        getAllResponseHeaders = (): string => {
+          throw new Error('malformed header block')
+        }
+        send(): void {
+          this.onload?.()
+        }
+      }
+      vi.stubGlobal('XMLHttpRequest', FakeXhr)
+      const { upload } = makeUploader()
+      const onProgress = vi.fn()
+      await expect(upload('/api/v1/files/', new Blob(['x']), { onProgress })).rejects.toThrow(
+        'malformed header block'
+      )
+      expect(onProgress).not.toHaveBeenCalledWith(100)
+    })
+    it('never reports 100 for a 2xx whose body fails validation — malformed or empty JSON (VITA-1449)', async () => {
+      function fakeXhr(responseText: string) {
+        return class FakeXhr {
+          upload = { onprogress: null as unknown as ((event: { lengthComputable: boolean; loaded: number; total: number }) => void) | null }
+          onload: (() => void) | null = null
+          onerror: (() => void) | null = null
+          onabort: (() => void) | null = null
+          ontimeout: (() => void) | null = null
+          status = 200
+          statusText = 'OK'
+          responseText = responseText
+          withCredentials = false
+          timeout = 0
+          open = vi.fn()
+          setRequestHeader = vi.fn()
+          getAllResponseHeaders = () => 'content-type: application/json'
+          send(): void {
+            this.upload.onprogress?.({ lengthComputable: true, loaded: 100, total: 100 })
+            this.onload?.()
+          }
+        }
+      }
+      for (const body of ['{"id":"file-', '']) {
+        vi.stubGlobal('XMLHttpRequest', fakeXhr(body))
+        const { upload } = makeUploader()
+        const onProgress = vi.fn()
+        await expect(upload('/api/v1/files/', new Blob(['x']), { onProgress })).rejects.toMatchObject({
+          name: 'AncherApiError',
+          status: 200,
+        })
+        expect(onProgress.mock.calls.map(([value]) => value)).toEqual([95])
+      }
+    })
+    it('rejects a transport failure with a TypeError, like the fetch path (VITA-1449)', async () => {
+      class FakeXhr {
+        upload = { onprogress: null as unknown }
+        onload: (() => void) | null = null
+        onerror: (() => void) | null = null
+        onabort: (() => void) | null = null
+        ontimeout: (() => void) | null = null
+        status = 0
+        statusText = ''
+        responseText = ''
+        withCredentials = false
+        timeout = 0
+        open = vi.fn()
+        setRequestHeader = vi.fn()
+        getAllResponseHeaders = () => ''
+        send(): void {
+          this.onerror?.()
+        }
+      }
+      vi.stubGlobal('XMLHttpRequest', FakeXhr)
+      const { upload } = makeUploader()
+      const failure = await upload('/api/v1/files/', new Blob(['x']), { onProgress: vi.fn() }).catch(
+        (error: unknown) => error
+      )
+      expect(failure).toBeInstanceOf(TypeError)
+      expect(failure).toMatchObject({ message: 'Upload failed: network error' })
+    })
+  })
+})
+
+describe('empty response bodies (VITA-1449)', () => {
+  it('resolves undefined for a 204', async () => {
+    const { upload, fetchMock } = makeUploader()
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 204 }))
+    await expect(upload('/api/v1/files/', new Blob(['x']))).resolves.toBeUndefined()
+  })
+  it('throws an AncherApiError, not a bare SyntaxError, for a truncated success body', async () => {
+    const { upload, fetchMock } = makeUploader()
+    fetchMock.mockResolvedValueOnce(
+      new Response('{"id":"file-', {
+        status: 200,
+        headers: { 'content-type': 'application/json', 'x-trace-id': 'trace-cut' },
+      })
+    )
+    await expect(upload('/api/v1/files/', new Blob(['x']))).rejects.toMatchObject({
+      name: 'AncherApiError',
+      status: 200,
+      traceId: 'trace-cut',
+    })
+  })
+  it('throws for an empty success body instead of resolving undefined typed as the entity', async () => {
+    const { upload, fetchMock } = makeUploader()
+    fetchMock.mockResolvedValueOnce(
+      new Response('', { status: 200, headers: { 'content-type': 'application/json' } })
+    )
+    await expect(upload('/api/v1/files/', new Blob(['x']))).rejects.toMatchObject({
+      name: 'AncherApiError',
+      status: 200,
+    })
   })
 })

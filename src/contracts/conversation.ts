@@ -13,6 +13,9 @@ import type {
   Where,
 } from './query'
 import type { Schemas } from './schemas'
+import type { File } from './file'
+import type { Artifact } from './artifact'
+import type { Note } from './note'
 
 /* ---------------------------------------------------------------------------
  * Enums.
@@ -129,8 +132,20 @@ export type SelectionSourceType = (typeof SelectionSourceType)[keyof typeof Sele
  * Entities + clarification payloads.
  * ------------------------------------------------------------------------- */
 
-/** Junction record linking a message to a file */
-export type FileReference = Schemas.FileReference
+/**
+ * Junction record linking a message to a file. v1.5.0 (VITA-1141) renamed the
+ * schema `LegacyFileReference` (`Message.voice_file_reference` still carries
+ * it; the typed `voice_file` / `files` slots are the fields to read).
+ */
+export type FileReference = Omit<Schemas.LegacyFileReference, 'file'> & { file: File | null }
+
+type MessageFileReference = Omit<Schemas.LegacyMessageFileReference, 'file_ref'> & {
+  file_ref: FileReference | null
+}
+
+type MessageArtifactReference = Omit<Schemas.MessageArtifact, 'artifact'> & {
+  artifact: Artifact | null
+}
 
 /** User response item for a clarification request. */
 export interface ClarificationSubmitItem {
@@ -172,10 +187,26 @@ export interface SuggestedAction {
  * client-side UI metadata the clarification feature relies on). `suggested_actions`
  * is overlaid until the generated schema includes it (see {@link SuggestedAction}).
  */
-export type Message = Omit<Schemas.Message, 'clarification' | 'clarification_request_id'> & {
+export type Message = Omit<
+  Schemas.Message,
+  | 'clarification'
+  | 'clarification_request_id'
+  | 'files'
+  | 'message_file_references'
+  | 'message_artifacts'
+  | 'message_notes'
+  | 'voice_file'
+  | 'voice_file_reference'
+> & {
   clarification?: ClarificationMessagePayload | null
   clarification_request_id?: UUID | null
+  files?: File[]
+  message_artifacts: MessageArtifactReference[]
+  message_file_references: MessageFileReference[]
+  message_notes: MessageNoteReference[]
   suggested_actions?: SuggestedAction[] | null
+  voice_file?: File | null
+  voice_file_reference: FileReference | null
 }
 
 /** Tag attached to a message */
@@ -198,9 +229,9 @@ export type MessageTag = Schemas.MessageTag
  */
 export type Conversation = Schemas.Conversation
 
-/** Conversation with last message preview */
-export interface ConversationWithPreview extends Schemas.Conversation {
-  last_message?: Schemas.Message | null
+/** Conversation with a version-compatible last-message preview. */
+export interface ConversationWithPreview extends Omit<Schemas.Conversation, 'last_message'> {
+  last_message?: Message | null
   last_message_at?: string | null
   message_count?: number
 }
@@ -270,7 +301,7 @@ export interface ConversationRunReceipt {
 }
 
 /** Note reference in a message (cited by AI) */
-export type MessageNoteReference = Schemas.MessageNote
+export type MessageNoteReference = Omit<Schemas.MessageNote, 'note'> & { note: Note | null }
 
 /** Update conversation request */
 export type ConversationUpdateRequest = Schemas.ConversationUpdateRequest

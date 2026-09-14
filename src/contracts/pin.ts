@@ -8,7 +8,7 @@
 import type { Artifact } from './artifact'
 import type { Eq, Expect } from './assert'
 import type { Collection } from './collection'
-import type { GetEndpointQuery } from './common'
+import type { GetEndpointQuery, Page } from './common'
 import type { Note } from './note'
 import type {
   BranchOf,
@@ -55,8 +55,8 @@ export interface PinnedItem {
 /** `POST /pinned` body. */
 export type PinItemRequest = Schemas.PinItemRequest
 
-/** Raw `GET /pinned` and `PUT /pinned` response (envelopes embed raw schemas). */
-export type PinListResponse = Schemas.Page_PinnedItemEnvelope_
+/** `GET /pinned` and `PUT /pinned` response with compatible embedded entities. */
+export type PinListResponse = Page<PinnedItem>
 
 /** One entry in the `PUT /pinned` reorder body. */
 export type ReorderPinEntry = Schemas.PinnedItemReorderEntry

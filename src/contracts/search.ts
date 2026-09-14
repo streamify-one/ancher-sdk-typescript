@@ -2,7 +2,9 @@
  * Search types for semantic and keyword search
  */
 
+import type { Artifact } from './artifact'
 import type { UUID } from './common'
+import type { FileReference } from './conversation'
 import type { Note } from './note'
 import type { Schemas } from './schemas'
 
@@ -42,8 +44,19 @@ export interface SearchResponse {
 /** Retrieval request (RAG-based search via POST /retrievals) */
 export type RetrievalRequest = Schemas.RetrievalRequest
 
-/** Single retrieval result from the RAG endpoint */
-export type NoteRetrievalResult = Schemas.NoteRetrievalResult
+/** Single retrieval result with a version-compatible embedded note. */
+export type NoteRetrievalResult = Omit<Schemas.NoteRetrievalResult, 'artifact' | 'note'> & {
+  artifact?: Artifact | null
+  note?: Note | null
+}
+
+/** Chunk row returned by pre-v1.5 retrieval endpoints. */
+export type LegacyChunkRetrievalResult = Omit<Schemas.ChunkRetrievalResult, 'score'> & {
+  file_ref: FileReference | null
+}
+
+/** Chunk retrieval result across legacy file references and v1.5 scores. */
+export type ChunkRetrievalResult = Schemas.ChunkRetrievalResult | LegacyChunkRetrievalResult
 
 /** AI-powered search request (via conversation) */
 export interface AISearchRequest {

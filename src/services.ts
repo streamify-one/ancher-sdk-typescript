@@ -7,6 +7,7 @@
 import type { AncherClient } from './api/client'
 import type { EndpointByMethod, Schemas } from './api/generated/api.client'
 import type { UsageActivityQuery } from './contracts/activity'
+import type { ChunkRetrievalResult, NoteRetrievalResult } from './contracts/search'
 
 // --- Activity (`/activity`) ---
 
@@ -115,12 +116,12 @@ export function createOnboardingRepository(client: AncherClient): OnboardingRepo
 
 export interface RetrievalRepository {
   /** Retrieve relevant content chunks for a query (RAG). */
-  chunks(query: string): Promise<Schemas.Chunk[]>
+  chunks(query: string): Promise<ChunkRetrievalResult[]>
   /**
    * Retrieve relevant notes for a query (RAG). Accepts either a plain query
    * string or the full {@link Schemas.RetrievalRequest} body (limit + filters).
    */
-  notes(query: string | Schemas.RetrievalRequest): Promise<Schemas.NoteRetrievalResult[]>
+  notes(query: string | Schemas.RetrievalRequest): Promise<NoteRetrievalResult[]>
 }
 
 export function createRetrievalRepository(client: AncherClient): RetrievalRepository {

@@ -1068,8 +1068,6 @@
                       "-slug",
                       "+reaction",
                       "-reaction",
-                      "+reindex_requested_at",
-                      "-reindex_requested_at",
                       "+mimetype",
                       "-mimetype",
                       "+size",
@@ -1259,22 +1257,6 @@
                 }
               ],
               "title": "Reaction"
-            }
-          },
-          {
-            "name": "reindex_requested_at",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/NumericCriteria_datetime_"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Reindex Requested At"
             }
           },
           {
@@ -1850,7 +1832,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FileUploadResponse"
+                  "$ref": "#/components/schemas/File"
                 }
               }
             }
@@ -4130,14 +4112,8 @@
                       "-error_message",
                       "+last_accessed_at",
                       "-last_accessed_at",
-                      "+reindex_requested_at",
-                      "-reindex_requested_at",
                       "+comment",
                       "-comment",
-                      "+title_override",
-                      "-title_override",
-                      "+description_override",
-                      "-description_override",
                       "+is_public",
                       "-is_public",
                       "+slug",
@@ -4146,14 +4122,22 @@
                       "-reaction",
                       "+user_id",
                       "-user_id",
-                      "+article_id",
-                      "-article_id",
-                      "+source",
-                      "-source",
                       "+title",
                       "-title",
                       "+description",
-                      "-description"
+                      "-description",
+                      "+source",
+                      "-source",
+                      "+url",
+                      "-url",
+                      "+author",
+                      "-author",
+                      "+site_name",
+                      "-site_name",
+                      "+published_date",
+                      "-published_date",
+                      "+language",
+                      "-language"
                     ],
                     "type": "string"
                   }
@@ -4294,22 +4278,6 @@
             }
           },
           {
-            "name": "reindex_requested_at",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/NumericCriteria_datetime_"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Reindex Requested At"
-            }
-          },
-          {
             "name": "comment",
             "in": "query",
             "required": false,
@@ -4323,38 +4291,6 @@
                 }
               ],
               "title": "Comment"
-            }
-          },
-          {
-            "name": "title_override",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/TextCriteria_str_"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Title Override"
-            }
-          },
-          {
-            "name": "description_override",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/TextCriteria_str_"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Description Override"
             }
           },
           {
@@ -4422,38 +4358,6 @@
             }
           },
           {
-            "name": "article_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/NumericCriteria_UUID_"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Article Id"
-            }
-          },
-          {
-            "name": "source",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/TextCriteria_str_"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Source"
-            }
-          },
-          {
             "name": "title",
             "in": "query",
             "required": false,
@@ -4486,67 +4390,99 @@
             }
           },
           {
-            "name": "file_refs",
+            "name": "source",
             "in": "query",
             "required": false,
             "schema": {
               "anyOf": [
                 {
-                  "$ref": "#/components/schemas/Criteria_FileReference_"
+                  "$ref": "#/components/schemas/TextCriteria_str_"
                 },
                 {
                   "type": "null"
                 }
               ],
-              "title": "File Refs"
+              "title": "Source"
             }
           },
           {
-            "name": "files",
+            "name": "url",
             "in": "query",
             "required": false,
             "schema": {
               "anyOf": [
                 {
-                  "$ref": "#/components/schemas/Criteria_File_"
+                  "$ref": "#/components/schemas/TextCriteria_str_"
                 },
                 {
                   "type": "null"
                 }
               ],
-              "title": "Files"
+              "title": "Url"
             }
           },
           {
-            "name": "key_frames",
+            "name": "author",
             "in": "query",
             "required": false,
             "schema": {
               "anyOf": [
                 {
-                  "$ref": "#/components/schemas/Criteria_KeyFrame_"
+                  "$ref": "#/components/schemas/TextCriteria_str_"
                 },
                 {
                   "type": "null"
                 }
               ],
-              "title": "Key Frames"
+              "title": "Author"
             }
           },
           {
-            "name": "article",
+            "name": "site_name",
             "in": "query",
             "required": false,
             "schema": {
               "anyOf": [
                 {
-                  "$ref": "#/components/schemas/Criteria_Article_"
+                  "$ref": "#/components/schemas/TextCriteria_str_"
                 },
                 {
                   "type": "null"
                 }
               ],
-              "title": "Article"
+              "title": "Site Name"
+            }
+          },
+          {
+            "name": "published_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/NumericCriteria_datetime_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Published Date"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TextCriteria_str_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Language"
             }
           },
           {
@@ -4893,7 +4829,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FileInfo"
+                  "$ref": "#/components/schemas/File"
                 }
               }
             }
@@ -5406,7 +5342,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FileUploadResponse"
+                  "$ref": "#/components/schemas/File"
                 }
               }
             }
@@ -5978,7 +5914,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FileUploadResponse"
+                  "$ref": "#/components/schemas/File"
                 }
               }
             }
@@ -7354,7 +7290,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FileUploadResponse"
+                  "$ref": "#/components/schemas/File"
                 }
               }
             }
@@ -7435,7 +7371,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FileInfo"
+                  "$ref": "#/components/schemas/File"
                 }
               }
             }
@@ -7911,7 +7847,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FileUploadResponse"
+                  "$ref": "#/components/schemas/File"
                 }
               }
             }
@@ -13660,8 +13596,6 @@
                       "-id",
                       "+user_id",
                       "-user_id",
-                      "+file_id",
-                      "-file_id",
                       "+title",
                       "-title",
                       "+summary",
@@ -13671,7 +13605,11 @@
                       "+generated_at",
                       "-generated_at",
                       "+error_message",
-                      "-error_message"
+                      "-error_message",
+                      "+target_minutes",
+                      "-target_minutes",
+                      "+duration_seconds",
+                      "-duration_seconds"
                     ],
                     "type": "string"
                   }
@@ -13780,22 +13718,6 @@
             }
           },
           {
-            "name": "file_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/NumericCriteria_UUID_"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "File Id"
-            }
-          },
-          {
             "name": "title",
             "in": "query",
             "required": false,
@@ -13873,6 +13795,38 @@
                 }
               ],
               "title": "Error Message"
+            }
+          },
+          {
+            "name": "target_minutes",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/NumericCriteria_int_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Minutes"
+            }
+          },
+          {
+            "name": "duration_seconds",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/NumericCriteria_int_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Duration Seconds"
             }
           },
           {
@@ -14078,6 +14032,78 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Podcasts"
+        ],
+        "summary": "Delete Podcast",
+        "description": "Delete a podcast in any status, freeing its note for a new one.",
+        "operationId": "delete_podcast_api_v1_podcasts__podcast_id__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "podcast_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Podcast Id"
+            }
+          },
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -14953,7 +14979,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/Chunk"
+                    "$ref": "#/components/schemas/ChunkRetrievalResult"
                   },
                   "title": "Response Retrieve Chunks Api V1 Retrievals Chunks Post"
                 }
@@ -16128,14 +16154,8 @@
                       "-error_message",
                       "+last_accessed_at",
                       "-last_accessed_at",
-                      "+reindex_requested_at",
-                      "-reindex_requested_at",
                       "+comment",
                       "-comment",
-                      "+title_override",
-                      "-title_override",
-                      "+description_override",
-                      "-description_override",
                       "+is_public",
                       "-is_public",
                       "+slug",
@@ -16144,14 +16164,22 @@
                       "-reaction",
                       "+user_id",
                       "-user_id",
-                      "+article_id",
-                      "-article_id",
-                      "+source",
-                      "-source",
                       "+title",
                       "-title",
                       "+description",
-                      "-description"
+                      "-description",
+                      "+source",
+                      "-source",
+                      "+url",
+                      "-url",
+                      "+author",
+                      "-author",
+                      "+site_name",
+                      "-site_name",
+                      "+published_date",
+                      "-published_date",
+                      "+language",
+                      "-language"
                     ],
                     "type": "string"
                   }
@@ -16292,22 +16320,6 @@
             }
           },
           {
-            "name": "reindex_requested_at",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/NumericCriteria_datetime_"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Reindex Requested At"
-            }
-          },
-          {
             "name": "comment",
             "in": "query",
             "required": false,
@@ -16321,38 +16333,6 @@
                 }
               ],
               "title": "Comment"
-            }
-          },
-          {
-            "name": "title_override",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/TextCriteria_str_"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Title Override"
-            }
-          },
-          {
-            "name": "description_override",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/TextCriteria_str_"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Description Override"
             }
           },
           {
@@ -16420,38 +16400,6 @@
             }
           },
           {
-            "name": "article_id",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/NumericCriteria_UUID_"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Article Id"
-            }
-          },
-          {
-            "name": "source",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/TextCriteria_str_"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Source"
-            }
-          },
-          {
             "name": "title",
             "in": "query",
             "required": false,
@@ -16481,6 +16429,102 @@
                 }
               ],
               "title": "Description"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TextCriteria_str_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "name": "url",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TextCriteria_str_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Url"
+            }
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TextCriteria_str_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Author"
+            }
+          },
+          {
+            "name": "site_name",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TextCriteria_str_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Site Name"
+            }
+          },
+          {
+            "name": "published_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/NumericCriteria_datetime_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Published Date"
+            }
+          },
+          {
+            "name": "language",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TextCriteria_str_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Language"
             }
           },
           {
@@ -17069,8 +17113,6 @@
                       "-slug",
                       "+reaction",
                       "-reaction",
-                      "+reindex_requested_at",
-                      "-reindex_requested_at",
                       "+mimetype",
                       "-mimetype",
                       "+size",
@@ -17260,22 +17302,6 @@
                 }
               ],
               "title": "Reaction"
-            }
-          },
-          {
-            "name": "reindex_requested_at",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "$ref": "#/components/schemas/NumericCriteria_datetime_"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Reindex Requested At"
             }
           },
           {
@@ -19953,10 +19979,18 @@
                       "-site_name",
                       "+search_query",
                       "-search_query",
+                      "+source",
+                      "-source",
                       "+status",
                       "-status",
                       "+note_id",
-                      "-note_id"
+                      "-note_id",
+                      "+batch_id",
+                      "-batch_id",
+                      "+cluster_run_id",
+                      "-cluster_run_id",
+                      "+slot_index",
+                      "-slot_index"
                     ],
                     "type": "string"
                   }
@@ -20161,6 +20195,22 @@
             }
           },
           {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TextCriteria_str_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
             "name": "status",
             "in": "query",
             "required": false,
@@ -20190,6 +20240,54 @@
                 }
               ],
               "title": "Note Id"
+            }
+          },
+          {
+            "name": "batch_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/NumericCriteria_UUID_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "cluster_run_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/NumericCriteria_UUID_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cluster Run Id"
+            }
+          },
+          {
+            "name": "slot_index",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/NumericCriteria_int_"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Slot Index"
             }
           },
           {
@@ -21060,6 +21158,80 @@
         }
       }
     },
+    "/api/v1/trending": {
+      "get": {
+        "tags": [
+          "Trending"
+        ],
+        "summary": "List Trending",
+        "operationId": "list_trending_api_v1_trending_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TrendingPlatform"
+                  },
+                  "title": "Response List Trending Api V1 Trending Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health",
@@ -21467,12 +21639,53 @@
             "title": "Origin Files Hash Md5",
             "description": "Combined MD5 hash of origin file content hashes for redundant deduplication"
           },
-          "files": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/File"
-            },
-            "type": "object",
-            "title": "Files"
+          "content_file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content File",
+            "description": "Generated content markdown file"
+          },
+          "content_tldr_file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Tldr File",
+            "description": "Generated TLDR markdown file"
+          },
+          "thumbnail_file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail File",
+            "description": "Preview image file"
+          },
+          "display_file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display File",
+            "description": "Rendered display file"
           },
           "origin_files": {
             "items": {
@@ -21480,7 +21693,17 @@
             },
             "type": "array",
             "title": "Origin Files",
-            "description": "User-uploaded source files (not present for URL/text-sourced notes)"
+            "description": "User-uploaded source files (not present for URL/text notes)"
+          },
+          "files": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/File"
+            },
+            "type": "object",
+            "title": "Files",
+            "description": "The article's files keyed by the category the pre-slot schema stored, assembled from the slots.",
+            "deprecated": true,
+            "readOnly": true
           }
         },
         "type": "object",
@@ -21503,8 +21726,12 @@
           "source",
           "origin_files_hash",
           "origin_files_hash_md5",
-          "files",
-          "origin_files"
+          "content_file",
+          "content_tldr_file",
+          "thumbnail_file",
+          "display_file",
+          "origin_files",
+          "files"
         ],
         "title": "Article",
         "description": "Schema for article data."
@@ -21657,6 +21884,228 @@
         "title": "ArticleCreateFromUrl",
         "description": "Request schema for creating note from a URL or share text containing a URL."
       },
+      "ArticleDownloadedFile": {
+        "properties": {
+          "created_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Created At",
+            "description": "Creation timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Creator of the record",
+            "default": "unknown"
+          },
+          "updated_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Updated At",
+            "description": "Last update timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "updated_by": {
+            "type": "string",
+            "title": "Updated By",
+            "description": "Last updater of the record",
+            "default": "unknown"
+          },
+          "kind": {
+            "type": "string",
+            "const": "article_downloaded",
+            "title": "Kind",
+            "default": "article_downloaded"
+          },
+          "file_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "File Id",
+            "description": "Reference to the file"
+          },
+          "owner_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Owner Id",
+            "description": "Reference to the owning entity"
+          },
+          "file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          },
+          "can_show": {
+            "type": "boolean",
+            "title": "Can Show",
+            "description": "Fetcher per-source policy: may this be surfaced to readers?"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_at",
+          "created_by",
+          "updated_at",
+          "updated_by",
+          "kind",
+          "file_id",
+          "owner_id",
+          "file",
+          "can_show"
+        ],
+        "title": "ArticleDownloadedFile",
+        "description": "Fetched media retained for processing; the only visibility-bearing edge."
+      },
+      "ArticleGeneratedFile": {
+        "properties": {
+          "created_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Created At",
+            "description": "Creation timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Creator of the record",
+            "default": "unknown"
+          },
+          "updated_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Updated At",
+            "description": "Last update timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "updated_by": {
+            "type": "string",
+            "title": "Updated By",
+            "description": "Last updater of the record",
+            "default": "unknown"
+          },
+          "kind": {
+            "type": "string",
+            "const": "article_generated",
+            "title": "Kind",
+            "default": "article_generated"
+          },
+          "file_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "File Id",
+            "description": "Reference to the file"
+          },
+          "owner_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Owner Id",
+            "description": "Reference to the owning entity"
+          },
+          "file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_at",
+          "created_by",
+          "updated_at",
+          "updated_by",
+          "kind",
+          "file_id",
+          "owner_id",
+          "file"
+        ],
+        "title": "ArticleGeneratedFile",
+        "description": "Generated supporting images for the article."
+      },
+      "ArticleTranscriptFile": {
+        "properties": {
+          "created_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Created At",
+            "description": "Creation timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Creator of the record",
+            "default": "unknown"
+          },
+          "updated_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Updated At",
+            "description": "Last update timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "updated_by": {
+            "type": "string",
+            "title": "Updated By",
+            "description": "Last updater of the record",
+            "default": "unknown"
+          },
+          "kind": {
+            "type": "string",
+            "const": "article_transcript",
+            "title": "Kind",
+            "default": "article_transcript"
+          },
+          "file_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "File Id",
+            "description": "Reference to the file"
+          },
+          "owner_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Owner Id",
+            "description": "Reference to the owning entity"
+          },
+          "file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_at",
+          "created_by",
+          "updated_at",
+          "updated_by",
+          "kind",
+          "file_id",
+          "owner_id",
+          "file"
+        ],
+        "title": "ArticleTranscriptFile",
+        "description": "Transcript/subtitle files derived for the article."
+      },
       "Artifact": {
         "properties": {
           "created_at": {
@@ -21752,13 +22201,41 @@
             "title": "Tags",
             "description": "Tags for this artifact"
           },
-          "files": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/File"
-            },
-            "type": "object",
-            "title": "Files",
-            "description": "Files attached to this artifact, keyed by category."
+          "content_file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content File",
+            "description": "Artifact content body"
+          },
+          "display_file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display File",
+            "description": "Rendered display file"
+          },
+          "thumbnail_file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail File",
+            "description": "Preview image"
           },
           "mimetype": {
             "anyOf": [
@@ -21784,41 +22261,6 @@
             ],
             "title": "Size",
             "description": "Size in bytes of the active content file",
-            "readOnly": true
-          },
-          "content_file_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Content File Id",
-            "description": "Primary (content) file ID",
-            "readOnly": true
-          },
-          "display_file_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Display File Id",
-            "description": "Display file ID if a renderable sibling exists",
-            "readOnly": true
-          },
-          "thumbnail_file_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Thumbnail File Id",
-            "description": "Thumbnail file ID if a thumbnail sibling exists",
             "readOnly": true
           },
           "is_html": {
@@ -21849,6 +22291,61 @@
             "title": "Share Url",
             "description": "Public page URL (https://<slug>.<share-domain>) when the artifact is public and its content is HTML; null otherwise. Non-HTML content is rejected by the public resolver (404), so no URL is advertised. Revoking is_public drops this and makes the page itself 404.",
             "readOnly": true
+          },
+          "files": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/File"
+            },
+            "type": "object",
+            "title": "Files",
+            "description": "The artifact's files keyed by the category the pre-slot schema stored, assembled from the slots.",
+            "deprecated": true,
+            "readOnly": true
+          },
+          "content_file_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content File Id",
+            "description": "Primary (content) file ID. Null when the slot is empty — the pre-slot schema raised instead, but an empty content slot is representable now, and a response is no place to discover that.",
+            "deprecated": true,
+            "readOnly": true
+          },
+          "display_file_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display File Id",
+            "description": "Display file ID if a renderable sibling exists",
+            "deprecated": true,
+            "readOnly": true
+          },
+          "thumbnail_file_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail File Id",
+            "description": "Thumbnail file ID if a thumbnail sibling exists",
+            "deprecated": true,
+            "readOnly": true
           }
         },
         "type": "object",
@@ -21865,14 +22362,17 @@
           "slug",
           "reaction",
           "tags",
-          "files",
+          "content_file",
+          "display_file",
+          "thumbnail_file",
           "mimetype",
           "size",
+          "is_html",
+          "share_url",
+          "files",
           "content_file_id",
           "display_file_id",
-          "thumbnail_file_id",
-          "is_html",
-          "share_url"
+          "thumbnail_file_id"
         ],
         "title": "Artifact"
       },
@@ -22043,18 +22543,6 @@
             "title": "Filename",
             "description": "file name"
           },
-          "s3_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "S3 Id",
-            "description": "S3 object key"
-          },
           "content_hash": {
             "anyOf": [
               {
@@ -22120,7 +22608,6 @@
           "id",
           "parent_file_id",
           "filename",
-          "s3_id",
           "content_hash",
           "content_hash_md5",
           "size",
@@ -22565,7 +23052,7 @@
         "title": "CheckoutSessionStatusResponse",
         "description": "Response for ``GET /me/billing/checkout-session/{session_id}``."
       },
-      "Chunk": {
+      "ChunkRetrievalResult": {
         "properties": {
           "created_at": {
             "type": "number",
@@ -22602,7 +23089,7 @@
           "embedded_text": {
             "type": "string",
             "title": "Embedded Text",
-            "description": "The embedded text content of this chunk"
+            "description": "The embedded text of this chunk"
           },
           "article_id": {
             "anyOf": [
@@ -22615,7 +23102,7 @@
               }
             ],
             "title": "Article Id",
-            "description": "Reference to the source article"
+            "description": "Reference to the source article (null for artifact chunks)"
           },
           "note_id": {
             "anyOf": [
@@ -22641,7 +23128,7 @@
               }
             ],
             "title": "Artifact Id",
-            "description": "Reference to the artifact"
+            "description": "Reference to the artifact (null for note chunks)"
           },
           "kind": {
             "type": "string",
@@ -22651,19 +23138,12 @@
               "metadata"
             ],
             "title": "Kind",
-            "description": "Chunk role: 'content' (source-derived text), 'markdown' (split from the note's content file) or 'metadata' (title+tags row)",
-            "default": "content"
+            "description": "Chunk role"
           },
-          "file_ref": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/FileReference"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "File Ref"
+          "score": {
+            "type": "number",
+            "title": "Score",
+            "description": "Relevance score from vector retrieval"
           }
         },
         "type": "object",
@@ -22678,10 +23158,10 @@
           "note_id",
           "artifact_id",
           "kind",
-          "file_ref"
+          "score"
         ],
-        "title": "Chunk",
-        "description": "Schema for embedded text chunks."
+        "title": "ChunkRetrievalResult",
+        "description": "A matched chunk, flat, with the score that matched it.\n\nFlat rather than nested so the chunk's fields stay where callers already\nread them, and built from the same mixins as ``Chunk`` (id, audit columns,\nUnix-second timestamps) rather than by extending it: ``Chunk.file_ref`` is\na ``Relation`` whose serializer reaches through the ORM provider, which a\nschema rebuilt for a response does not carry. Without ``score`` a caller\ncannot tell a strong match from rank-fusion noise, which is how nonsense\nqueries came back looking confident (VITA-1203)."
       },
       "ClaimConnectionRequest": {
         "properties": {
@@ -24054,330 +24534,6 @@
         "title": "ConversationUpdateRequest",
         "description": "Schema for updating a conversation (request)."
       },
-      "Criteria_Article_": {
-        "properties": {
-          "and": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/Criteria_Article_"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "And",
-            "examples": [
-              [
-                {
-                  "created_at": {
-                    "eq": "2026-05-25T16:59:31.252Z",
-                    "ge": "2026-05-25T16:59:31.252Z",
-                    "gt": "2026-05-25T16:59:31.252Z",
-                    "in": [
-                      "2026-05-25T16:59:31.252Z"
-                    ],
-                    "is_null": true,
-                    "le": "2026-05-25T16:59:31.252Z",
-                    "lt": "2026-05-25T16:59:31.252Z",
-                    "ne": "2026-05-25T16:59:31.252Z",
-                    "not_in": [
-                      "2026-05-25T16:59:31.252Z"
-                    ]
-                  }
-                },
-                {
-                  "created_by": {
-                    "contains": "string",
-                    "ends_with": "string",
-                    "eq": "string",
-                    "ge": "string",
-                    "gt": "string",
-                    "ilike": "string",
-                    "in": [
-                      "string"
-                    ],
-                    "is_null": true,
-                    "le": "string",
-                    "like": "string",
-                    "lt": "string",
-                    "ne": "string",
-                    "not_contains": "string",
-                    "not_in": [
-                      "string"
-                    ],
-                    "not_like": "string",
-                    "starts_with": "string"
-                  }
-                }
-              ]
-            ]
-          },
-          "or": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/Criteria_Article_"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Or",
-            "examples": [
-              [
-                {
-                  "created_at": {
-                    "eq": "2026-05-25T16:59:31.252Z",
-                    "ge": "2026-05-25T16:59:31.252Z",
-                    "gt": "2026-05-25T16:59:31.252Z",
-                    "in": [
-                      "2026-05-25T16:59:31.252Z"
-                    ],
-                    "is_null": true,
-                    "le": "2026-05-25T16:59:31.252Z",
-                    "lt": "2026-05-25T16:59:31.252Z",
-                    "ne": "2026-05-25T16:59:31.252Z",
-                    "not_in": [
-                      "2026-05-25T16:59:31.252Z"
-                    ]
-                  }
-                },
-                {
-                  "created_by": {
-                    "contains": "string",
-                    "ends_with": "string",
-                    "eq": "string",
-                    "ge": "string",
-                    "gt": "string",
-                    "ilike": "string",
-                    "in": [
-                      "string"
-                    ],
-                    "is_null": true,
-                    "le": "string",
-                    "like": "string",
-                    "lt": "string",
-                    "ne": "string",
-                    "not_contains": "string",
-                    "not_in": [
-                      "string"
-                    ],
-                    "not_like": "string",
-                    "starts_with": "string"
-                  }
-                }
-              ]
-            ]
-          },
-          "not": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Criteria_Article_"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "examples": [
-              {
-                "created_at": {
-                  "eq": "2026-05-25T16:59:31.252Z",
-                  "ge": "2026-05-25T16:59:31.252Z",
-                  "gt": "2026-05-25T16:59:31.252Z",
-                  "in": [
-                    "2026-05-25T16:59:31.252Z"
-                  ],
-                  "is_null": true,
-                  "le": "2026-05-25T16:59:31.252Z",
-                  "lt": "2026-05-25T16:59:31.252Z",
-                  "ne": "2026-05-25T16:59:31.252Z",
-                  "not_in": [
-                    "2026-05-25T16:59:31.252Z"
-                  ]
-                }
-              }
-            ]
-          },
-          "created_at": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_datetime_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "created_by": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "updated_at": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_datetime_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "updated_by": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "id": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_UUID_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "status": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ExactCriteria_Literal__queued____processing____ready____error___"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "error_message": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "title": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "description": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "author": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "published_date": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_datetime_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "site_name": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "language": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "url": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "source": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "origin_files_hash": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "origin_files_hash_md5": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "Criteria[Article]"
-      },
       "Criteria_Artifact_": {
         "properties": {
           "and": {
@@ -24631,16 +24787,6 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/ExactCriteria_Literal__like____dislike____neutral___"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "reindex_requested_at": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_datetime_"
               },
               {
                 "type": "null"
@@ -25643,16 +25789,6 @@
               }
             ]
           },
-          "file_id": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_UUID_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "title": {
             "anyOf": [
               {
@@ -25702,245 +25838,21 @@
                 "type": "null"
               }
             ]
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "Criteria[DailyDigest]"
-      },
-      "Criteria_FileReference_": {
-        "properties": {
-          "and": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/Criteria_FileReference_"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "And",
-            "examples": [
-              [
-                {
-                  "created_at": {
-                    "eq": "2026-05-25T16:59:31.252Z",
-                    "ge": "2026-05-25T16:59:31.252Z",
-                    "gt": "2026-05-25T16:59:31.252Z",
-                    "in": [
-                      "2026-05-25T16:59:31.252Z"
-                    ],
-                    "is_null": true,
-                    "le": "2026-05-25T16:59:31.252Z",
-                    "lt": "2026-05-25T16:59:31.252Z",
-                    "ne": "2026-05-25T16:59:31.252Z",
-                    "not_in": [
-                      "2026-05-25T16:59:31.252Z"
-                    ]
-                  }
-                },
-                {
-                  "created_by": {
-                    "contains": "string",
-                    "ends_with": "string",
-                    "eq": "string",
-                    "ge": "string",
-                    "gt": "string",
-                    "ilike": "string",
-                    "in": [
-                      "string"
-                    ],
-                    "is_null": true,
-                    "le": "string",
-                    "like": "string",
-                    "lt": "string",
-                    "ne": "string",
-                    "not_contains": "string",
-                    "not_in": [
-                      "string"
-                    ],
-                    "not_like": "string",
-                    "starts_with": "string"
-                  }
-                }
-              ]
-            ]
           },
-          "or": {
+          "target_minutes": {
             "anyOf": [
               {
-                "items": {
-                  "$ref": "#/components/schemas/Criteria_FileReference_"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Or",
-            "examples": [
-              [
-                {
-                  "created_at": {
-                    "eq": "2026-05-25T16:59:31.252Z",
-                    "ge": "2026-05-25T16:59:31.252Z",
-                    "gt": "2026-05-25T16:59:31.252Z",
-                    "in": [
-                      "2026-05-25T16:59:31.252Z"
-                    ],
-                    "is_null": true,
-                    "le": "2026-05-25T16:59:31.252Z",
-                    "lt": "2026-05-25T16:59:31.252Z",
-                    "ne": "2026-05-25T16:59:31.252Z",
-                    "not_in": [
-                      "2026-05-25T16:59:31.252Z"
-                    ]
-                  }
-                },
-                {
-                  "created_by": {
-                    "contains": "string",
-                    "ends_with": "string",
-                    "eq": "string",
-                    "ge": "string",
-                    "gt": "string",
-                    "ilike": "string",
-                    "in": [
-                      "string"
-                    ],
-                    "is_null": true,
-                    "le": "string",
-                    "like": "string",
-                    "lt": "string",
-                    "ne": "string",
-                    "not_contains": "string",
-                    "not_in": [
-                      "string"
-                    ],
-                    "not_like": "string",
-                    "starts_with": "string"
-                  }
-                }
-              ]
-            ]
-          },
-          "not": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Criteria_FileReference_"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "examples": [
-              {
-                "created_at": {
-                  "eq": "2026-05-25T16:59:31.252Z",
-                  "ge": "2026-05-25T16:59:31.252Z",
-                  "gt": "2026-05-25T16:59:31.252Z",
-                  "in": [
-                    "2026-05-25T16:59:31.252Z"
-                  ],
-                  "is_null": true,
-                  "le": "2026-05-25T16:59:31.252Z",
-                  "lt": "2026-05-25T16:59:31.252Z",
-                  "ne": "2026-05-25T16:59:31.252Z",
-                  "not_in": [
-                    "2026-05-25T16:59:31.252Z"
-                  ]
-                }
-              }
-            ]
-          },
-          "created_at": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_datetime_"
+                "$ref": "#/components/schemas/NumericCriteria_int_"
               },
               {
                 "type": "null"
               }
             ]
           },
-          "created_by": {
+          "duration_seconds": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "updated_at": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_datetime_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "updated_by": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "file_id": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_UUID_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "owner_id": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_UUID_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "mutable": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_bool_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "label": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "category": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
+                "$ref": "#/components/schemas/NumericCriteria_int_"
               },
               {
                 "type": "null"
@@ -25950,7 +25862,7 @@
         },
         "additionalProperties": false,
         "type": "object",
-        "title": "Criteria[FileReference]"
+        "title": "Criteria[DailyDigest]"
       },
       "Criteria_FileRevision_": {
         "properties": {
@@ -26185,524 +26097,6 @@
         "additionalProperties": false,
         "type": "object",
         "title": "Criteria[FileRevision]"
-      },
-      "Criteria_File_": {
-        "properties": {
-          "and": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/Criteria_File_"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "And",
-            "examples": [
-              [
-                {
-                  "created_at": {
-                    "eq": "2026-05-25T16:59:31.252Z",
-                    "ge": "2026-05-25T16:59:31.252Z",
-                    "gt": "2026-05-25T16:59:31.252Z",
-                    "in": [
-                      "2026-05-25T16:59:31.252Z"
-                    ],
-                    "is_null": true,
-                    "le": "2026-05-25T16:59:31.252Z",
-                    "lt": "2026-05-25T16:59:31.252Z",
-                    "ne": "2026-05-25T16:59:31.252Z",
-                    "not_in": [
-                      "2026-05-25T16:59:31.252Z"
-                    ]
-                  }
-                },
-                {
-                  "created_by": {
-                    "contains": "string",
-                    "ends_with": "string",
-                    "eq": "string",
-                    "ge": "string",
-                    "gt": "string",
-                    "ilike": "string",
-                    "in": [
-                      "string"
-                    ],
-                    "is_null": true,
-                    "le": "string",
-                    "like": "string",
-                    "lt": "string",
-                    "ne": "string",
-                    "not_contains": "string",
-                    "not_in": [
-                      "string"
-                    ],
-                    "not_like": "string",
-                    "starts_with": "string"
-                  }
-                }
-              ]
-            ]
-          },
-          "or": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/Criteria_File_"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Or",
-            "examples": [
-              [
-                {
-                  "created_at": {
-                    "eq": "2026-05-25T16:59:31.252Z",
-                    "ge": "2026-05-25T16:59:31.252Z",
-                    "gt": "2026-05-25T16:59:31.252Z",
-                    "in": [
-                      "2026-05-25T16:59:31.252Z"
-                    ],
-                    "is_null": true,
-                    "le": "2026-05-25T16:59:31.252Z",
-                    "lt": "2026-05-25T16:59:31.252Z",
-                    "ne": "2026-05-25T16:59:31.252Z",
-                    "not_in": [
-                      "2026-05-25T16:59:31.252Z"
-                    ]
-                  }
-                },
-                {
-                  "created_by": {
-                    "contains": "string",
-                    "ends_with": "string",
-                    "eq": "string",
-                    "ge": "string",
-                    "gt": "string",
-                    "ilike": "string",
-                    "in": [
-                      "string"
-                    ],
-                    "is_null": true,
-                    "le": "string",
-                    "like": "string",
-                    "lt": "string",
-                    "ne": "string",
-                    "not_contains": "string",
-                    "not_in": [
-                      "string"
-                    ],
-                    "not_like": "string",
-                    "starts_with": "string"
-                  }
-                }
-              ]
-            ]
-          },
-          "not": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Criteria_File_"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "examples": [
-              {
-                "created_at": {
-                  "eq": "2026-05-25T16:59:31.252Z",
-                  "ge": "2026-05-25T16:59:31.252Z",
-                  "gt": "2026-05-25T16:59:31.252Z",
-                  "in": [
-                    "2026-05-25T16:59:31.252Z"
-                  ],
-                  "is_null": true,
-                  "le": "2026-05-25T16:59:31.252Z",
-                  "lt": "2026-05-25T16:59:31.252Z",
-                  "ne": "2026-05-25T16:59:31.252Z",
-                  "not_in": [
-                    "2026-05-25T16:59:31.252Z"
-                  ]
-                }
-              }
-            ]
-          },
-          "created_at": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_datetime_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "created_by": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "updated_at": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_datetime_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "updated_by": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "id": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_UUID_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "parent_file_id": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_UUID_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "user_id": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_UUID_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "filename": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "current_revision_id": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_UUID_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "is_public": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_bool_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "expires_at": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_datetime_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "size": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_int_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "mimetype": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "Criteria[File]"
-      },
-      "Criteria_KeyFrame_": {
-        "properties": {
-          "and": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/Criteria_KeyFrame_"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "And",
-            "examples": [
-              [
-                {
-                  "created_at": {
-                    "eq": "2026-05-25T16:59:31.252Z",
-                    "ge": "2026-05-25T16:59:31.252Z",
-                    "gt": "2026-05-25T16:59:31.252Z",
-                    "in": [
-                      "2026-05-25T16:59:31.252Z"
-                    ],
-                    "is_null": true,
-                    "le": "2026-05-25T16:59:31.252Z",
-                    "lt": "2026-05-25T16:59:31.252Z",
-                    "ne": "2026-05-25T16:59:31.252Z",
-                    "not_in": [
-                      "2026-05-25T16:59:31.252Z"
-                    ]
-                  }
-                },
-                {
-                  "created_by": {
-                    "contains": "string",
-                    "ends_with": "string",
-                    "eq": "string",
-                    "ge": "string",
-                    "gt": "string",
-                    "ilike": "string",
-                    "in": [
-                      "string"
-                    ],
-                    "is_null": true,
-                    "le": "string",
-                    "like": "string",
-                    "lt": "string",
-                    "ne": "string",
-                    "not_contains": "string",
-                    "not_in": [
-                      "string"
-                    ],
-                    "not_like": "string",
-                    "starts_with": "string"
-                  }
-                }
-              ]
-            ]
-          },
-          "or": {
-            "anyOf": [
-              {
-                "items": {
-                  "$ref": "#/components/schemas/Criteria_KeyFrame_"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Or",
-            "examples": [
-              [
-                {
-                  "created_at": {
-                    "eq": "2026-05-25T16:59:31.252Z",
-                    "ge": "2026-05-25T16:59:31.252Z",
-                    "gt": "2026-05-25T16:59:31.252Z",
-                    "in": [
-                      "2026-05-25T16:59:31.252Z"
-                    ],
-                    "is_null": true,
-                    "le": "2026-05-25T16:59:31.252Z",
-                    "lt": "2026-05-25T16:59:31.252Z",
-                    "ne": "2026-05-25T16:59:31.252Z",
-                    "not_in": [
-                      "2026-05-25T16:59:31.252Z"
-                    ]
-                  }
-                },
-                {
-                  "created_by": {
-                    "contains": "string",
-                    "ends_with": "string",
-                    "eq": "string",
-                    "ge": "string",
-                    "gt": "string",
-                    "ilike": "string",
-                    "in": [
-                      "string"
-                    ],
-                    "is_null": true,
-                    "le": "string",
-                    "like": "string",
-                    "lt": "string",
-                    "ne": "string",
-                    "not_contains": "string",
-                    "not_in": [
-                      "string"
-                    ],
-                    "not_like": "string",
-                    "starts_with": "string"
-                  }
-                }
-              ]
-            ]
-          },
-          "not": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Criteria_KeyFrame_"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "examples": [
-              {
-                "created_at": {
-                  "eq": "2026-05-25T16:59:31.252Z",
-                  "ge": "2026-05-25T16:59:31.252Z",
-                  "gt": "2026-05-25T16:59:31.252Z",
-                  "in": [
-                    "2026-05-25T16:59:31.252Z"
-                  ],
-                  "is_null": true,
-                  "le": "2026-05-25T16:59:31.252Z",
-                  "lt": "2026-05-25T16:59:31.252Z",
-                  "ne": "2026-05-25T16:59:31.252Z",
-                  "not_in": [
-                    "2026-05-25T16:59:31.252Z"
-                  ]
-                }
-              }
-            ]
-          },
-          "created_at": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_datetime_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "created_by": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "updated_at": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_datetime_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "updated_by": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "id": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_UUID_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "milliseconds": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_int_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "description": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "video_id": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_UUID_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "additionalProperties": false,
-        "type": "object",
-        "title": "Criteria[KeyFrame]"
       },
       "Criteria_Message_": {
         "properties": {
@@ -27227,37 +26621,7 @@
               }
             ]
           },
-          "reindex_requested_at": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_datetime_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "comment": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "title_override": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "description_override": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/TextCriteria_str_"
@@ -27307,10 +26671,20 @@
               }
             ]
           },
-          "article_id": {
+          "title": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/NumericCriteria_UUID_"
+                "$ref": "#/components/schemas/TextCriteria_str_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TextCriteria_str_"
               },
               {
                 "type": "null"
@@ -27327,7 +26701,7 @@
               }
             ]
           },
-          "title": {
+          "url": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/TextCriteria_str_"
@@ -27337,7 +26711,37 @@
               }
             ]
           },
-          "description": {
+          "author": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TextCriteria_str_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "site_name": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TextCriteria_str_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "published_date": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumericCriteria_datetime_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "language": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/TextCriteria_str_"
@@ -28139,6 +27543,16 @@
               }
             ]
           },
+          "source": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TextCriteria_str_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "status": {
             "anyOf": [
               {
@@ -28153,6 +27567,36 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/NumericCriteria_UUID_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "batch_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumericCriteria_UUID_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cluster_run_id": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumericCriteria_UUID_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "slot_index": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumericCriteria_int_"
               },
               {
                 "type": "null"
@@ -28824,19 +28268,6 @@
             "title": "User Id",
             "description": "Owner user ID"
           },
-          "file_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "File Id",
-            "description": "Generated podcast audio file ID"
-          },
           "title": {
             "type": "string",
             "title": "Title",
@@ -28845,7 +28276,7 @@
           "summary": {
             "type": "string",
             "title": "Summary",
-            "description": "Formatted podcast transcript"
+            "description": "Legacy inline transcript; empty on digests that carry a transcript_file"
           },
           "key_points": {
             "items": {
@@ -28896,6 +28327,24 @@
             "title": "Error Message",
             "description": "Error message when status is error"
           },
+          "target_minutes": {
+            "type": "integer",
+            "title": "Target Minutes",
+            "description": "Target episode length in minutes, snapshotted when marked ready",
+            "default": 15
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds",
+            "description": "Measured audio length in seconds; null on legacy and unfinished rows"
+          },
           "file": {
             "anyOf": [
               {
@@ -28908,6 +28357,18 @@
             "title": "File",
             "description": "Generated podcast audio file"
           },
+          "transcript_file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript File",
+            "description": "Timestamped transcript as a JSON file: an ordered array of PodcastSegment ({start, end, text, role}, offsets in seconds) carrying the full episode text. Fetch it via the presigned URL, signed on single-object reads only. Null while processing, on error, and for episodes generated before transcripts moved to files — those legacy rows keep the plain inline transcript string instead."
+          },
           "notes": {
             "items": {
               "$ref": "#/components/schemas/Note"
@@ -28915,6 +28376,34 @@
             "type": "array",
             "title": "Notes",
             "description": "Notes referenced by the digest"
+          },
+          "file_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Id",
+            "description": "Generated podcast audio file ID",
+            "readOnly": true
+          },
+          "transcript_file_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript File Id",
+            "description": "Timestamped transcript JSON file ID",
+            "readOnly": true
           }
         },
         "type": "object",
@@ -28925,7 +28414,6 @@
           "updated_by",
           "id",
           "user_id",
-          "file_id",
           "title",
           "summary",
           "key_points",
@@ -28933,8 +28421,13 @@
           "digest_date",
           "generated_at",
           "error_message",
+          "target_minutes",
+          "duration_seconds",
           "file",
-          "notes"
+          "transcript_file",
+          "notes",
+          "file_id",
+          "transcript_file_id"
         ],
         "title": "DailyDigest"
       },
@@ -30488,36 +29981,10 @@
             "title": "Parent File Id",
             "description": "Parent file id"
           },
-          "user_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "User Id",
-            "description": "User who uploaded this file"
-          },
           "filename": {
             "type": "string",
             "title": "Filename",
             "description": "file name"
-          },
-          "current_revision_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Current Revision Id",
-            "description": "Currently active revision"
           },
           "is_public": {
             "type": "boolean",
@@ -30537,23 +30004,6 @@
             ],
             "title": "Expires At",
             "description": "When this file expires and should be cleaned up"
-          },
-          "revision": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/FileRevision"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Revision"
-          },
-          "s3_id": {
-            "type": "string",
-            "title": "S3 Id",
-            "description": "S3 object key",
-            "readOnly": true
           },
           "content_hash": {
             "type": "string",
@@ -30579,6 +30029,19 @@
             "description": "MIME type of the file",
             "readOnly": true
           },
+          "revision_number": {
+            "type": "integer",
+            "title": "Revision Number",
+            "description": "Revision number of the active content revision",
+            "readOnly": true
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Content metadata (e.g. display_width/display_height in pixels for images)",
+            "readOnly": true
+          },
           "presigned_url": {
             "anyOf": [
               {
@@ -30601,248 +30064,19 @@
           "updated_by",
           "id",
           "parent_file_id",
-          "user_id",
           "filename",
-          "current_revision_id",
           "is_public",
           "expires_at",
-          "revision",
-          "s3_id",
           "content_hash",
           "content_hash_md5",
           "size",
           "mimetype",
+          "revision_number",
+          "metadata",
           "presigned_url"
         ],
         "title": "File",
         "description": "Transmuter for File model."
-      },
-      "FileInfo": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id",
-            "description": "Unique identifier"
-          },
-          "parent_file_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent File Id",
-            "description": "Parent file id"
-          },
-          "filename": {
-            "type": "string",
-            "title": "Filename",
-            "description": "file name"
-          },
-          "current_revision_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Current Revision Id",
-            "description": "Currently active revision"
-          },
-          "is_public": {
-            "type": "boolean",
-            "title": "Is Public",
-            "description": "Whether file is publicly accessible",
-            "default": false
-          },
-          "expires_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Expires At",
-            "description": "When this file expires and should be cleaned up"
-          },
-          "s3_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "S3 Id",
-            "description": "S3 object key"
-          },
-          "content_hash": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content Hash",
-            "description": "SHA256 hash of file content"
-          },
-          "content_hash_md5": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content Hash Md5",
-            "description": "MD5 hash of file content"
-          },
-          "size": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Size",
-            "description": "File size in bytes"
-          },
-          "mimetype": {
-            "type": "string",
-            "title": "Mimetype",
-            "description": "MIME type of the file"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "parent_file_id",
-          "filename",
-          "current_revision_id",
-          "is_public",
-          "expires_at",
-          "s3_id",
-          "content_hash",
-          "content_hash_md5",
-          "size",
-          "mimetype"
-        ],
-        "title": "FileInfo",
-        "description": "Schema for file information."
-      },
-      "FileReference": {
-        "properties": {
-          "created_at": {
-            "type": "number",
-            "format": "unix-timestamp",
-            "title": "Created At",
-            "description": "Creation timestamp in Unix seconds",
-            "example": 1743552000.123456
-          },
-          "created_by": {
-            "type": "string",
-            "title": "Created By",
-            "description": "Creator of the record",
-            "default": "unknown"
-          },
-          "updated_at": {
-            "type": "number",
-            "format": "unix-timestamp",
-            "title": "Updated At",
-            "description": "Last update timestamp in Unix seconds",
-            "example": 1743552000.123456
-          },
-          "updated_by": {
-            "type": "string",
-            "title": "Updated By",
-            "description": "Last updater of the record",
-            "default": "unknown"
-          },
-          "file_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "File Id",
-            "description": "Reference to the file"
-          },
-          "owner_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Owner Id",
-            "description": "Reference to the owning entity"
-          },
-          "mutable": {
-            "type": "boolean",
-            "title": "Mutable",
-            "description": "Whether this owner holds mutation rights",
-            "default": false
-          },
-          "label": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Label",
-            "description": "Collection group discriminator"
-          },
-          "category": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Category",
-            "description": "Semantic category"
-          },
-          "file": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/File"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "File"
-          }
-        },
-        "type": "object",
-        "required": [
-          "created_at",
-          "created_by",
-          "updated_at",
-          "updated_by",
-          "file_id",
-          "owner_id",
-          "mutable",
-          "label",
-          "category",
-          "file"
-        ],
-        "title": "FileReference",
-        "description": "Transmuter for FileReference model."
       },
       "FileRevision": {
         "properties": {
@@ -30895,16 +30129,24 @@
             "title": "Revision Number",
             "description": "Revision number within the file"
           },
-          "s3_object": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/S3Object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "S3 Object"
+          "size": {
+            "type": "integer",
+            "title": "Size",
+            "description": "File size in bytes",
+            "readOnly": true
+          },
+          "mimetype": {
+            "type": "string",
+            "title": "Mimetype",
+            "description": "MIME type of the file",
+            "readOnly": true
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metadata",
+            "description": "Content metadata (e.g. display_width/display_height in pixels for images)",
+            "readOnly": true
           }
         },
         "type": "object",
@@ -30917,146 +30159,12 @@
           "file_id",
           "s3_object_id",
           "revision_number",
-          "s3_object"
+          "size",
+          "mimetype",
+          "metadata"
         ],
         "title": "FileRevision",
         "description": "Transmuter for FileRevision model (file-to-S3Object association)."
-      },
-      "FileUploadResponse": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Id",
-            "description": "Unique identifier"
-          },
-          "parent_file_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Parent File Id",
-            "description": "Parent file id"
-          },
-          "filename": {
-            "type": "string",
-            "title": "Filename",
-            "description": "file name"
-          },
-          "current_revision_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "uuid"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Current Revision Id",
-            "description": "Currently active revision"
-          },
-          "is_public": {
-            "type": "boolean",
-            "title": "Is Public",
-            "description": "Whether file is publicly accessible",
-            "default": false
-          },
-          "expires_at": {
-            "anyOf": [
-              {
-                "type": "string",
-                "format": "date-time"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Expires At",
-            "description": "When this file expires and should be cleaned up"
-          },
-          "s3_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "S3 Id",
-            "description": "S3 object key"
-          },
-          "content_hash": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content Hash",
-            "description": "SHA256 hash of file content"
-          },
-          "content_hash_md5": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Content Hash Md5",
-            "description": "MD5 hash of file content"
-          },
-          "size": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Size",
-            "description": "File size in bytes"
-          },
-          "mimetype": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Mimetype",
-            "description": "MIME type of the file"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "parent_file_id",
-          "filename",
-          "current_revision_id",
-          "is_public",
-          "expires_at",
-          "s3_id",
-          "content_hash",
-          "content_hash_md5",
-          "size",
-          "mimetype"
-        ],
-        "title": "FileUploadResponse",
-        "description": "Flat response schema for file upload endpoints."
       },
       "FileVerificationResponse": {
         "properties": {
@@ -31242,12 +30350,17 @@
             "title": "Video Id",
             "description": "Source video this key frame was extracted from"
           },
-          "files": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/File"
-            },
-            "type": "object",
-            "title": "Files"
+          "image_file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image File",
+            "description": "Extracted key frame image"
           },
           "video": {
             "anyOf": [
@@ -31271,11 +30384,166 @@
           "milliseconds",
           "description",
           "video_id",
-          "files",
+          "image_file",
           "video"
         ],
         "title": "KeyFrame",
         "description": "Schema for video key frame data."
+      },
+      "LegacyFileReference": {
+        "properties": {
+          "created_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Created At",
+            "description": "Creation timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Creator of the record",
+            "default": "unknown"
+          },
+          "updated_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Updated At",
+            "description": "Last update timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "updated_by": {
+            "type": "string",
+            "title": "Updated By",
+            "description": "Last updater of the record",
+            "default": "unknown"
+          },
+          "file_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "File Id",
+            "description": "Reference to the file"
+          },
+          "owner_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Owner Id",
+            "description": "Reference to the owning entity"
+          },
+          "mutable": {
+            "type": "boolean",
+            "title": "Mutable",
+            "description": "Whether this owner holds mutation rights. Always false: mutation is entity ownership plus the fork-on-shared guard now.",
+            "default": false
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label",
+            "description": "Collection group discriminator"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category",
+            "description": "Semantic category"
+          },
+          "file": {
+            "$ref": "#/components/schemas/File",
+            "description": "The referenced file"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_at",
+          "created_by",
+          "updated_at",
+          "updated_by",
+          "file_id",
+          "owner_id",
+          "mutable",
+          "label",
+          "category",
+          "file"
+        ],
+        "title": "LegacyFileReference",
+        "description": "A pre-slot ``file_references`` row, rebuilt from the slot that replaced it.\n\n``label``, ``category`` and ``mutable`` name columns that no longer exist:\n``kind`` subsumed the first two and the third was never finished. Each call\nsite passes the constants its edge used to store."
+      },
+      "LegacyMessageFileReference": {
+        "properties": {
+          "created_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Created At",
+            "description": "Creation timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Creator of the record",
+            "default": "unknown"
+          },
+          "updated_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Updated At",
+            "description": "Last update timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "updated_by": {
+            "type": "string",
+            "title": "Updated By",
+            "description": "Last updater of the record",
+            "default": "unknown"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id",
+            "description": "Synthesized from the message and file ids"
+          },
+          "message_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Message Id",
+            "description": "Reference to the owning message"
+          },
+          "index": {
+            "type": "integer",
+            "title": "Index",
+            "description": "Position of the file in the message"
+          },
+          "file_ref": {
+            "$ref": "#/components/schemas/LegacyFileReference",
+            "description": "The underlying reference"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_at",
+          "created_by",
+          "updated_at",
+          "updated_by",
+          "id",
+          "message_id",
+          "index",
+          "file_ref"
+        ],
+        "title": "LegacyMessageFileReference",
+        "description": "A row of the message attachment junction as it was before the slots."
       },
       "Message": {
         "properties": {
@@ -31447,25 +30715,25 @@
             "title": "Message Web Pages",
             "description": "Web page context attached to this message"
           },
-          "message_file_references": {
+          "files": {
             "items": {
-              "$ref": "#/components/schemas/MessageFileReference"
+              "$ref": "#/components/schemas/File"
             },
             "type": "array",
-            "title": "Message File References",
+            "title": "Files",
             "description": "Ordered file attachments for this message"
           },
-          "voice_file_reference": {
+          "voice_file": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/FileReference"
+                "$ref": "#/components/schemas/File"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Voice File Reference",
-            "description": "Original voice input file reference"
+            "title": "Voice File",
+            "description": "Original voice input recording"
           },
           "message_artifacts": {
             "items": {
@@ -31474,6 +30742,29 @@
             "type": "array",
             "title": "Message Artifacts",
             "description": "Artifacts attached to this message"
+          },
+          "message_file_references": {
+            "items": {
+              "$ref": "#/components/schemas/LegacyMessageFileReference"
+            },
+            "type": "array",
+            "title": "Message File References",
+            "description": "Attachments in the shape the pre-slot schema served. Each `id` is synthesized from the message and file ids, deterministically, because the junction no longer has a key of its own.",
+            "deprecated": true,
+            "readOnly": true
+          },
+          "voice_file_reference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LegacyFileReference"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Voice recording in the shape the pre-slot schema served.",
+            "deprecated": true,
+            "readOnly": true
           }
         },
         "type": "object",
@@ -31498,9 +30789,11 @@
           "message_collections",
           "message_selected_contents",
           "message_web_pages",
+          "files",
+          "voice_file",
+          "message_artifacts",
           "message_file_references",
-          "voice_file_reference",
-          "message_artifacts"
+          "voice_file_reference"
         ],
         "title": "Message",
         "description": "Transmuter for public user-visible Message rows."
@@ -31649,7 +30942,7 @@
         "title": "MessageCollection",
         "description": "Transmuter for MessageCollection junction table."
       },
-      "MessageFileReference": {
+      "MessageFile": {
         "properties": {
           "created_at": {
             "type": "number",
@@ -31677,34 +30970,45 @@
             "description": "Last updater of the record",
             "default": "unknown"
           },
-          "id": {
+          "kind": {
+            "type": "string",
+            "const": "message_file",
+            "title": "Kind",
+            "default": "message_file"
+          },
+          "file_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Id",
-            "description": "Unique identifier"
+            "title": "File Id",
+            "description": "Reference to the file"
           },
-          "message_id": {
+          "owner_id": {
             "type": "string",
             "format": "uuid",
-            "title": "Message Id",
-            "description": "Reference to the owning message"
+            "title": "Owner Id",
+            "description": "Reference to the owning entity"
           },
-          "index": {
-            "type": "integer",
-            "title": "Index",
-            "description": "Position of the file in the message"
-          },
-          "file_ref": {
+          "file": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/FileReference"
+                "$ref": "#/components/schemas/File"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "File Ref",
-            "description": "The attached file reference"
+            "title": "File"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id",
+            "description": "Owner of both message and file"
+          },
+          "index": {
+            "type": "integer",
+            "title": "Index",
+            "description": "Position of the attachment"
           }
         },
         "type": "object",
@@ -31713,13 +31017,15 @@
           "created_by",
           "updated_at",
           "updated_by",
-          "id",
-          "message_id",
-          "index",
-          "file_ref"
+          "kind",
+          "file_id",
+          "owner_id",
+          "file",
+          "user_id",
+          "index"
         ],
-        "title": "MessageFileReference",
-        "description": "Transmuter for MessageFileReference — an Inventory subclass that owns a FileReference."
+        "title": "MessageFile",
+        "description": "Ordered file attachment on a message (creation-ownership chained)."
       },
       "MessageNote": {
         "properties": {
@@ -31996,6 +31302,85 @@
         "type": "object",
         "title": "MessageUpdateRequest",
         "description": "Schema for updating a message (request).\n\nConvention: ``reaction=null`` (or absent) is a no-op — it leaves the\nexisting value untouched. Send ``reaction='neutral'`` to clear a\nprevious like/dislike."
+      },
+      "MessageVoiceFile": {
+        "properties": {
+          "created_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Created At",
+            "description": "Creation timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Creator of the record",
+            "default": "unknown"
+          },
+          "updated_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Updated At",
+            "description": "Last update timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "updated_by": {
+            "type": "string",
+            "title": "Updated By",
+            "description": "Last updater of the record",
+            "default": "unknown"
+          },
+          "kind": {
+            "type": "string",
+            "const": "message_voice",
+            "title": "Kind",
+            "default": "message_voice"
+          },
+          "file_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "File Id",
+            "description": "Reference to the file"
+          },
+          "owner_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Owner Id",
+            "description": "Reference to the owning entity"
+          },
+          "file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "User Id",
+            "description": "Owner of both message and file"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_at",
+          "created_by",
+          "updated_at",
+          "updated_by",
+          "kind",
+          "file_id",
+          "owner_id",
+          "file",
+          "user_id"
+        ],
+        "title": "MessageVoiceFile",
+        "description": "User voice recording attached to a message."
       },
       "MessageWebPage": {
         "properties": {
@@ -32317,37 +31702,7 @@
               }
             ]
           },
-          "reindex_requested_at": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_datetime_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "comment": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "title_override": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "description_override": {
             "anyOf": [
               {
                 "$ref": "#/components/schemas/TextCriteria_str_"
@@ -32397,26 +31752,6 @@
               }
             ]
           },
-          "article_id": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/NumericCriteria_UUID_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "source": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/TextCriteria_str_"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
           "title": {
             "anyOf": [
               {
@@ -32437,40 +31772,60 @@
               }
             ]
           },
-          "file_refs": {
+          "source": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Criteria_FileReference_"
+                "$ref": "#/components/schemas/TextCriteria_str_"
               },
               {
                 "type": "null"
               }
             ]
           },
-          "files": {
+          "url": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Criteria_File_"
+                "$ref": "#/components/schemas/TextCriteria_str_"
               },
               {
                 "type": "null"
               }
             ]
           },
-          "key_frames": {
+          "author": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Criteria_KeyFrame_"
+                "$ref": "#/components/schemas/TextCriteria_str_"
               },
               {
                 "type": "null"
               }
             ]
           },
-          "article": {
+          "site_name": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Criteria_Article_"
+                "$ref": "#/components/schemas/TextCriteria_str_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "published_date": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NumericCriteria_datetime_"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "language": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TextCriteria_str_"
               },
               {
                 "type": "null"
@@ -32670,36 +32025,53 @@
             "title": "User Id",
             "description": "User who saved this note"
           },
-          "article_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Article Id",
-            "description": "Referenced article ID"
-          },
-          "source": {
-            "type": "string",
-            "title": "Source",
-            "description": "Source: file, text, URL, conversation, message, or artifact",
-            "default": "text"
-          },
-          "files": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/File"
-            },
-            "type": "object",
-            "title": "Files"
-          },
-          "article": {
+          "content_file": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/Article"
+                "$ref": "#/components/schemas/File"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Article",
-            "description": "Article data"
+            "title": "Content File",
+            "description": "The note's own content markdown file"
+          },
+          "content_tldr_file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Tldr File",
+            "description": "The note's own TLDR markdown file"
+          },
+          "thumbnail_file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail File",
+            "description": "Preview image file"
+          },
+          "display_file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display File",
+            "description": "Rendered display file"
           },
           "tags": {
             "items": {
@@ -32716,6 +32088,18 @@
             "type": "array",
             "title": "Collections",
             "description": "Collections containing this note"
+          },
+          "podcast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Podcast"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Podcast",
+            "description": "The podcast generated from this note (at most one)"
           },
           "title": {
             "anyOf": [
@@ -32742,6 +32126,90 @@
             "title": "Description",
             "description": "Effective description: the user-edited override when set, otherwise article.description; writes set the override",
             "readOnly": true
+          },
+          "source": {
+            "type": "string",
+            "title": "Source",
+            "description": "Source: file, text, URL, conversation, message, or artifact",
+            "readOnly": true
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url",
+            "description": "Normalized source URL (absent for text/file notes)",
+            "readOnly": true
+          },
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author",
+            "description": "Author name extracted from the source",
+            "readOnly": true
+          },
+          "site_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Site Name",
+            "description": "Name of the source website or publication",
+            "readOnly": true
+          },
+          "published_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published Date",
+            "description": "Original publication date of the source",
+            "readOnly": true
+          },
+          "language": {
+            "type": "string",
+            "title": "Language",
+            "description": "Content language code (e.g., en, zh, ja)",
+            "readOnly": true
+          },
+          "origin_files": {
+            "items": {
+              "$ref": "#/components/schemas/File"
+            },
+            "type": "array",
+            "title": "Origin Files",
+            "description": "Source files the note was created from: uploads for file notes, the generated text.md for text notes, the fetched resource for direct-URL notes; empty for scraped web pages",
+            "readOnly": true
+          },
+          "files": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/File"
+            },
+            "type": "object",
+            "title": "Files",
+            "description": "The note's files keyed by the category the pre-slot schema stored. Assembled from the slots; the promoted-download `generated` key it could once carry is gone with the label/category columns.",
+            "deprecated": true,
+            "readOnly": true
           }
         },
         "type": "object",
@@ -32759,14 +32227,23 @@
           "slug",
           "reaction",
           "user_id",
-          "article_id",
-          "source",
-          "files",
-          "article",
+          "content_file",
+          "content_tldr_file",
+          "thumbnail_file",
+          "display_file",
           "tags",
           "collections",
+          "podcast",
           "title",
-          "description"
+          "description",
+          "source",
+          "url",
+          "author",
+          "site_name",
+          "published_date",
+          "language",
+          "origin_files",
+          "files"
         ],
         "title": "Note",
         "description": "Response schema for a user's note."
@@ -32894,7 +32371,8 @@
               }
             ],
             "title": "Article Id",
-            "description": "Article identifier"
+            "description": "Article identifier (deprecated: articles are internal now)",
+            "deprecated": true
           },
           "note_id": {
             "anyOf": [
@@ -34982,18 +34460,6 @@
             "description": "Unique identifier"
           },
           "user_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "User Id",
-            "description": "Owner user ID"
-          },
-          "note_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Note Id",
-            "description": "Source note ID"
-          },
-          "file_id": {
             "anyOf": [
               {
                 "type": "string",
@@ -35003,8 +34469,14 @@
                 "type": "null"
               }
             ],
-            "title": "File Id",
-            "description": "Generated podcast audio file ID"
+            "title": "User Id",
+            "description": "Owner user ID; null when read through another user's public note"
+          },
+          "note_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Note Id",
+            "description": "Source note ID"
           },
           "title": {
             "type": "string",
@@ -35014,7 +34486,7 @@
           "transcript": {
             "type": "string",
             "title": "Transcript",
-            "description": "Formatted podcast transcript"
+            "description": "Legacy inline transcript; empty on episodes that carry a transcript_file"
           },
           "status": {
             "type": "string",
@@ -35051,6 +34523,24 @@
             "title": "Error Message",
             "description": "Safe error message when status is error"
           },
+          "target_minutes": {
+            "type": "integer",
+            "title": "Target Minutes",
+            "description": "Target episode length in minutes, snapshotted when marked ready",
+            "default": 15
+          },
+          "duration_seconds": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Seconds",
+            "description": "Measured audio length in seconds; null on legacy and unfinished rows"
+          },
           "file": {
             "anyOf": [
               {
@@ -35062,6 +34552,46 @@
             ],
             "title": "File",
             "description": "Generated podcast audio file"
+          },
+          "transcript_file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript File",
+            "description": "Timestamped transcript as a JSON file: an ordered array of PodcastSegment ({start, end, text, role}, offsets in seconds) carrying the full episode text. Fetch it via the presigned URL, signed on single-object reads only. Null while processing, on error, and for episodes generated before transcripts moved to files — those legacy rows keep the plain inline transcript string instead."
+          },
+          "file_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Id",
+            "description": "Generated podcast audio file ID",
+            "readOnly": true
+          },
+          "transcript_file_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript File Id",
+            "description": "Timestamped transcript JSON file ID",
+            "readOnly": true
           }
         },
         "type": "object",
@@ -35073,13 +34603,17 @@
           "id",
           "user_id",
           "note_id",
-          "file_id",
           "title",
           "transcript",
           "status",
           "generated_at",
           "error_message",
-          "file"
+          "target_minutes",
+          "duration_seconds",
+          "file",
+          "transcript_file",
+          "file_id",
+          "transcript_file_id"
         ],
         "title": "Podcast"
       },
@@ -35259,10 +34793,17 @@
             "description": "Owner user ID"
           },
           "collection_id": {
-            "type": "string",
-            "format": "uuid",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Collection Id",
-            "description": "Collection this recommendation belongs to"
+            "description": "Collection this recommendation belongs to; None for the cluster path"
           },
           "url": {
             "type": "string",
@@ -35310,6 +34851,18 @@
             "title": "Search Query",
             "description": "Query that found this"
           },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source",
+            "description": "Search source this recommendation came from"
+          },
           "status": {
             "type": "string",
             "enum": [
@@ -35334,6 +34887,44 @@
             "title": "Note Id",
             "description": "Note created on save action"
           },
+          "batch_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Id",
+            "description": "Nightly cluster-path generation batch"
+          },
+          "cluster_run_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cluster Run Id",
+            "description": "Soft reference to the cluster run"
+          },
+          "slot_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slot Index",
+            "description": "Slot this row filled in its batch"
+          },
           "collection": {
             "anyOf": [
               {
@@ -35344,7 +34935,7 @@
               }
             ],
             "title": "Collection",
-            "description": "The source collection"
+            "description": "The source collection; None for cluster-path rows"
           }
         },
         "type": "object",
@@ -35361,8 +34952,12 @@
           "snippet",
           "site_name",
           "search_query",
+          "source",
           "status",
           "note_id",
+          "batch_id",
+          "cluster_run_id",
+          "slot_index",
           "collection"
         ],
         "title": "Recommendation"
@@ -36533,6 +36128,137 @@
         ],
         "title": "TextTranslationRequest",
         "description": "A selection plus the language to translate it into."
+      },
+      "TrendingItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id",
+            "description": "Unique identifier"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "bilibili",
+              "douyin",
+              "kuaishou",
+              "reddit",
+              "tiktok",
+              "twitter",
+              "weibo",
+              "xiaohongshu",
+              "zhihu"
+            ],
+            "title": "Source",
+            "description": "Logical platform name"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "hot_search",
+              "hot_top"
+            ],
+            "title": "Kind",
+            "description": "Board type: hot_search or hot_top"
+          },
+          "external_id": {
+            "type": "string",
+            "title": "External Id",
+            "description": "Platform identifier, or a digest of the URL when absent"
+          },
+          "url": {
+            "type": "string",
+            "maxLength": 2083,
+            "minLength": 1,
+            "format": "uri",
+            "title": "Url",
+            "description": "Canonical URL for the item or topic"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title",
+            "description": "Normalized topic or item title"
+          },
+          "source_rank": {
+            "type": "integer",
+            "minimum": 0,
+            "title": "Source Rank",
+            "description": "Position in the hot list, zero-based"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload",
+            "description": "Remaining source metadata"
+          },
+          "fetched_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Fetched At",
+            "description": "UTC time of the successful refresh"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "kind",
+          "external_id",
+          "url",
+          "title",
+          "source_rank",
+          "payload",
+          "fetched_at"
+        ],
+        "title": "TrendingItem",
+        "description": "One normalized item from a platform trending board."
+      },
+      "TrendingPlatform": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": [
+              "bilibili",
+              "douyin",
+              "kuaishou",
+              "reddit",
+              "tiktok",
+              "twitter",
+              "weibo",
+              "xiaohongshu",
+              "zhihu"
+            ],
+            "title": "Source",
+            "description": "Logical platform name"
+          },
+          "hot_search": {
+            "items": {
+              "$ref": "#/components/schemas/TrendingItem"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Hot Search",
+            "description": "Current hot-search board ordered by source rank"
+          },
+          "hot_top": {
+            "items": {
+              "$ref": "#/components/schemas/TrendingItem"
+            },
+            "type": "array",
+            "maxItems": 50,
+            "title": "Hot Top",
+            "description": "Current hot-top board ordered by source rank"
+          }
+        },
+        "type": "object",
+        "required": [
+          "source",
+          "hot_search",
+          "hot_top"
+        ],
+        "title": "TrendingPlatform",
+        "description": "Current hot-search and hot-top boards for one platform."
       },
       "TwitterArticle": {
         "properties": {
@@ -40094,12 +39820,17 @@
             "description": "Whether the video has audio",
             "default": true
           },
-          "files": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/File"
-            },
-            "type": "object",
-            "title": "Files"
+          "source_file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source File",
+            "description": "The downloaded media file this video was analyzed from"
           }
         },
         "type": "object",
@@ -40114,10 +39845,82 @@
           "height",
           "fps",
           "has_audio",
-          "files"
+          "source_file"
         ],
         "title": "Video",
         "description": "Schema for video entity with metadata."
+      },
+      "VideoSourceFile": {
+        "properties": {
+          "created_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Created At",
+            "description": "Creation timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "created_by": {
+            "type": "string",
+            "title": "Created By",
+            "description": "Creator of the record",
+            "default": "unknown"
+          },
+          "updated_at": {
+            "type": "number",
+            "format": "unix-timestamp",
+            "title": "Updated At",
+            "description": "Last update timestamp in Unix seconds",
+            "example": 1743552000.123456
+          },
+          "updated_by": {
+            "type": "string",
+            "title": "Updated By",
+            "description": "Last updater of the record",
+            "default": "unknown"
+          },
+          "kind": {
+            "type": "string",
+            "const": "video_source",
+            "title": "Kind",
+            "default": "video_source"
+          },
+          "file_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "File Id",
+            "description": "Reference to the file"
+          },
+          "owner_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Owner Id",
+            "description": "Reference to the owning entity"
+          },
+          "file": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/File"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "created_at",
+          "created_by",
+          "updated_at",
+          "updated_by",
+          "kind",
+          "file_id",
+          "owner_id",
+          "file"
+        ],
+        "title": "VideoSourceFile",
+        "description": "The downloaded media file a video was analyzed from (lineage)."
       },
       "WebLogin": {
         "properties": {

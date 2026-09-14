@@ -1,14 +1,22 @@
 /**
- * File repository. `File` is `Schemas.FileUploadResponse` (the upload/metadata
- * shape; `Schemas.FileInfo` is assignable to it). The repository (`sdk.File`)
- * wraps the presigned upload flow, metadata fetch, and the note-scoped
- * revision list; returned data is plain `Schemas`-typed — no model class.
+ * File repository. Since v1.5.0 (VITA-1141), every file endpoint returns the
+ * generated `Schemas.File` shape; the repository exposes the compatible
+ * public file-info and upload-response contracts so clients can also consume
+ * the flat legacy API payloads.
+ * `sdk.File` wraps the presigned upload flow, metadata fetch, and note-scoped
+ * revision list; returned data is plain data — no model class.
  */
 
 import type { AncherClient } from '../api/client'
 import type { EndpointByMethod, Schemas } from '../api/generated/api.client'
 import type { UploadOptions, UploadPart } from '../api/upload'
-import type { FileRevision, FileRevisionListOptions } from '../contracts/file'
+import type {
+  BatchFileUploadResult,
+  FileInfo,
+  FileRevision,
+  FileRevisionListOptions,
+  FileUploadResponse,
+} from '../contracts/file'
 import type { Page } from './base'
 import {
   downloadPresignedUrl,
@@ -16,8 +24,6 @@ import {
   type PresignedUrlQueryOptions,
 } from './presigned-download'
 import { buildListQuery } from './query'
-
-export type File = Schemas.FileUploadResponse
 
 type FileRevisionsEndpointQuery =
   EndpointByMethod['get']['/api/v1/notes/{note_id}/files/{file_id}/revisions']['parameters']['query']
@@ -44,7 +50,7 @@ export interface UploadDirectOptions
 
 export interface FileRepository {
   /** Get a file's metadata by id. */
-  get(fileId: string): Promise<File>
+  get(fileId: string): Promise<FileInfo>
   /** Mint a presigned CDN URL for a file's content bytes. */
   presignedUrl(fileId: string, options?: FilePresignedUrlOptions): Promise<string>
   /**
@@ -53,10 +59,10 @@ export interface FileRepository {
    */
   download(fileId: string, options?: FileDownloadOptions): Promise<Response>
   /**
-   * Upload a file via the presigned S3 flow → {@link File} data.
+   * Upload a file via the presigned S3 flow → {@link FileUploadResponse} data.
    * (presigned URL → direct S3 `PUT` → finalize).
    */
-  upload(file: Blob, options?: UploadFileOptions): Promise<File>
+  upload(file: Blob, options?: UploadFileOptions): Promise<FileUploadResponse>
   /**
    * Upload a file in one direct multipart `POST /files/` request — supports
    * upload progress (`onProgress`) and aborting (`signal`). Prefer
@@ -64,7 +70,7 @@ export interface FileRepository {
    * buffers the bytes through the API. On React Native pass a
    * `NativeFilePart` (`{ uri, name, type }`) — the native layer streams it.
    */
-  uploadDirect(file: UploadPart, options?: UploadDirectOptions): Promise<File>
+  uploadDirect(file: UploadPart, options?: UploadDirectOptions): Promise<FileUploadResponse>
   /**
    * Upload several files in one multipart `POST /files/batch` request.
    * Each entry must carry its own name (wrap plain Blobs in
@@ -75,7 +81,7 @@ export interface FileRepository {
   uploadBatch(
     files: readonly UploadPart[],
     options?: UploadBatchOptions
-  ): Promise<Schemas.BatchFileUploadResult[]>
+  ): Promise<BatchFileUploadResult[]>
   /** Verify a file's DB/S3 integrity (`POST /files/{id}/verifications`). */
   verify(fileId: string): Promise<Schemas.FileVerificationResponse>
   /** Delete a file by id (`DELETE`). */
@@ -93,7 +99,11 @@ export interface FileRepository {
    * Revert a note-scoped content file to an earlier revision (records a new
    * revision with the old bytes). Returns the updated file data.
    */
-  revertRevision(noteId: string, fileId: string, revisionId: string): Promise<File>
+  revertRevision(
+    noteId: string,
+    fileId: string,
+    revisionId: string
+  ): Promise<FileUploadResponse>
 }
 
 /**
@@ -160,7 +170,7 @@ export function createFileRepository(client: AncherClient): FileRepository {
 
     async uploadDirect(file, options = {}) {
       const { public: isPublic, ...uploadOptions } = options
-      return await client.upload<Schemas.FileUploadResponse>('/api/v1/files/', file, {
+      return await client.upload<FileUploadResponse>('/api/v1/files/', file, {
         ...uploadOptions,
         ...(isPublic !== undefined ? { fields: { public: String(isPublic) } } : {}),
       })
@@ -173,7 +183,7 @@ export function createFileRepository(client: AncherClient): FileRepository {
           `Batch file at index ${unnamed} has no filename — wrap plain Blobs in \`new File([blob], name)\`.`
         )
       }
-      return await client.upload<Schemas.BatchFileUploadResult[]>('/api/v1/files/batch', files, {
+      return await client.upload<BatchFileUploadResult[]>('/api/v1/files/batch', files, {
         ...options,
         fieldName: 'files',
       })

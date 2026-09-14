@@ -38,11 +38,18 @@ export interface SlotFile {
   id: string
   mimetype?: string | null
   presigned_url?: string | null
-  /** Nested revision (API ≤ v1.5.0). */
-  revision?: { revision_number?: number | null } | null
+  /** Nested revision (API ≤ v1.4), carrying the S3 object's metadata. */
+  revision?: {
+    revision_number?: number | null
+    s3_object?: { meta?: Record<string, unknown> | null } | null
+  } | null
   /** Flattened onto the file once `revision` is hidden (api PR #530 shape). */
   revision_number?: number | null
+  /** Content metadata flattened onto the file (v1.5.0): `display_width` … */
+  metadata?: Record<string, unknown> | null
   content_hash?: string | null
+  /** The file this one was derived from (a display rendition names its origin). */
+  parent_file_id?: string | null
 }
 
 /**
@@ -223,6 +230,30 @@ export function getNoteOriginFiles<F extends SlotFile>(
 }
 
 /**
+ * The display rendition that belongs to ONE specific origin file, or
+ * `undefined` when the note's display is not that file's.
+ *
+ * A note has a single `display` slot, so with several origin files at most one
+ * of them has a rendition. `parent_file_id` says which (a PDF upload's copy
+ * and — once api VITA-1496 lands — an Office document's converted PDF both
+ * carry it). Without that link the rendition can only be attributed to the
+ * FIRST origin file: notes that predate the link were single-origin, and
+ * showing one file's bytes under another file's name is the failure to avoid.
+ * Ported from web `getOriginDisplayFile` (VITA-1214) and mobile.
+ */
+export function getNoteOriginDisplayFile<F extends SlotFile>(
+  note: NoteFileSlots<F> | null | undefined,
+  originFile: Pick<SlotFile, 'id'>
+): F | undefined {
+  const display = getNoteDisplayFile(note)
+  if (!display?.id) return undefined
+  if (display.parent_file_id) {
+    return display.parent_file_id === originFile.id ? display : undefined
+  }
+  return getNoteOriginFiles(note)[0]?.id === originFile.id ? display : undefined
+}
+
+/**
  * The transcript file of an audio/video note.
  *
  * Mirrors `Note.transcript_file` (`app/schemas/note.py:275`), which reads the
@@ -319,6 +350,32 @@ export function getFileMimetype(file: SlotFile | null | undefined): string | nul
 export function getFileRevisionNumber(file: SlotFile | null | undefined): number | undefined {
   // Flattened onto the file once `revision` is hidden (api PR #530), nested before.
   return file?.revision_number ?? file?.revision?.revision_number ?? undefined
+}
+
+function positiveNumber(value: unknown): number | undefined {
+  const n = typeof value === 'string' ? Number(value) : value
+  return typeof n === 'number' && Number.isFinite(n) && n > 0 ? n : undefined
+}
+
+/**
+ * The pixel size of an image file, or `undefined` when the payload carries
+ * none (non-images, and files whose metadata was never extracted).
+ *
+ * v1.5.0 flattens the S3 object's metadata onto the file as `File.metadata`
+ * (`app/schemas/file.py`); ≤ v1.4 nested it at `revision.s3_object.meta`.
+ * Both are read. `display_*` is the size the rendered image has after the
+ * backend's resize; older files predate it and carry only `original_*`
+ * (web `getFileImageRatio`, VITA-1210).
+ */
+export function getFileImageSize(
+  // Only the metadata carriers: a render-target stub without an `id` qualifies.
+  file: Pick<SlotFile, 'metadata' | 'revision'> | null | undefined
+): { width: number; height: number } | undefined {
+  const meta = file?.metadata ?? file?.revision?.s3_object?.meta
+  if (!meta) return undefined
+  const width = positiveNumber(meta.display_width) ?? positiveNumber(meta.original_width)
+  const height = positiveNumber(meta.display_height) ?? positiveNumber(meta.original_height)
+  return width && height ? { width, height } : undefined
 }
 
 /**

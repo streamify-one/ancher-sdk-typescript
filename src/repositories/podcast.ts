@@ -2,7 +2,7 @@
  * Podcast repository (`/notes/{id}/podcasts`, `/podcasts/{id}`).
  *
  * `sdk.Podcast` has no list surface — the API exposes neither a criteria list
- * nor a by-note lookup (VITA-1388), only "make one" and "read one by id".
+ * nor a by-note lookup (VITA-1388), only create, read, and delete operations.
  * Returned podcasts are plain `Schemas.Podcast` data via the `Podcast` contract
  * alias; no model class.
  *
@@ -35,6 +35,9 @@ export interface PodcastRepository {
    * away, rather than let it land on nothing.
    */
   get(podcastId: string, options?: PodcastGetOptions): Promise<Podcast>
+
+  /** Delete a podcast in any status, freeing its note for a new one. */
+  delete(podcastId: string): Promise<void>
 }
 
 export interface PodcastGetOptions {
@@ -53,6 +56,12 @@ export function createPodcastRepository(client: AncherClient): PodcastRepository
       return await client.api.get('/api/v1/podcasts/{podcast_id}', {
         path: { podcast_id: podcastId },
         ...(options?.signal ? { overrides: { signal: options.signal } } : {}),
+      })
+    },
+
+    async delete(podcastId) {
+      await client.api.delete('/api/v1/podcasts/{podcast_id}', {
+        path: { podcast_id: podcastId },
       })
     },
   }

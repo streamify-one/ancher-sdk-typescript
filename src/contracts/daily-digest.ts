@@ -10,6 +10,8 @@
 
 import type { Eq, Expect } from './assert'
 import type { GetEndpointQuery, Page } from './common'
+import type { File } from './file'
+import type { Note } from './note'
 import type { BranchOf, ListOptions, NoOperatorCollision, OrderByOf, Where } from './query'
 import type { Schemas } from './schemas'
 
@@ -43,7 +45,17 @@ export type _DailyDigestStatusExhaustive = Expect<
  * ------------------------------------------------------------------------- */
 
 /** A generated daily digest podcast — transcript, key points, audio, and sources. */
-export type DailyDigest = Schemas.DailyDigest
+interface CompatibleDailyDigestFields {
+  duration_seconds?: number | null
+  file: File | null
+  notes: Note[]
+  target_minutes?: number
+  transcript_file?: File | null
+  transcript_file_id?: string | null
+}
+
+export type DailyDigest = Omit<Schemas.DailyDigest, keyof CompatibleDailyDigestFields> &
+  CompatibleDailyDigestFields
 
 /** Daily-digest list response. */
 export type DailyDigestListResponse = Page<DailyDigest>

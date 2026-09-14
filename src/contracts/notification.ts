@@ -7,6 +7,7 @@
 
 import type { Eq, Expect } from './assert'
 import type { GetEndpointQuery, Page } from './common'
+import type { DailyDigest } from './daily-digest'
 import type {
   BranchOf,
   ListOptions,
@@ -15,6 +16,8 @@ import type {
   Where,
 } from './query'
 import type { Schemas } from './schemas'
+import type { Recommendation } from './recommendation'
+import type { CollectionSuggestion } from './suggestion'
 
 type NotificationListEndpointQuery = GetEndpointQuery<'/api/v1/notifications/'>
 
@@ -88,21 +91,24 @@ export type _NotificationStatusUpdateExhaustive = Expect<
 /** Notification carrying an AI collection suggestion */
 export type CollectionSuggestionNotification = Omit<
   Schemas.CollectionSuggestionEnvelope,
-  'type'
+  'suggestion' | 'type'
 > & {
+  suggestion: CollectionSuggestion
   type: 'collection_suggestion'
 }
 
 /** Notification carrying an external content recommendation */
 export type ContentRecommendationNotification = Omit<
   Schemas.ContentRecommendationEnvelope,
-  'type'
+  'recommendation' | 'type'
 > & {
+  recommendation: Recommendation
   type: 'content_recommendation'
 }
 
 /** Notification carrying a generated daily digest */
-export type DailyDigestNotification = Omit<Schemas.DailyDigestEnvelope, 'type'> & {
+export type DailyDigestNotification = Omit<Schemas.DailyDigestEnvelope, 'digest' | 'type'> & {
+  digest: DailyDigest
   type: 'daily_digest'
 }
 

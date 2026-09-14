@@ -7,6 +7,7 @@
 
 import type { Eq, Expect } from './assert'
 import type { GetEndpointQuery, Page } from './common'
+import type { File, LegacyFileInfo } from './file'
 import type {
   BranchOf,
   ListOptions,
@@ -29,12 +30,13 @@ import type { Schemas } from './schemas'
  * ------------------------------------------------------------------------- */
 
 /** Embedded file info carried on an artifact's file reference. */
-type ArtifactFileInfo = Pick<Schemas.FileInfo, 'filename' | 'id' | 'mimetype' | 'size'>
+type ArtifactFileInfo = Pick<LegacyFileInfo, 'filename' | 'id' | 'mimetype' | 'size'> &
+  Partial<Omit<File, 'filename' | 'id' | 'mimetype' | 'size'>>
 
 /** The live (post-migration) file reference embedded on an artifact. */
 interface LiveArtifactFileReference {
   category: string | null
-  file: (ArtifactFileInfo & Partial<Schemas.File>) | null
+  file: ArtifactFileInfo | null
   file_id: string
   label: string | null
   mutable: boolean
@@ -46,9 +48,13 @@ interface LiveArtifactFields {
   file_ref: LiveArtifactFileReference | null
 }
 
-/** Fields present on legacy artifact payloads (pre file_ref migration). */
+/**
+ * Fields present on legacy artifact payloads (pre file_ref migration).
+ * `content_file_id` is nullable since v1.5.0, where the typed `content_file`
+ * slot is the field to read (see {@link getArtifactContentFile}).
+ */
 interface LegacyArtifactFields {
-  content_file_id: string
+  content_file_id: string | null
   display_file_id: string | null
 }
 
@@ -57,11 +63,22 @@ interface ArtifactPinnedFields {
   pinned: boolean
 }
 
+interface CompatibleArtifactFileFields {
+  content_file?: File | null
+  display_file?: File | null
+  files: Record<string, File>
+  thumbnail_file?: File | null
+}
+
 /**
  * Artifact entity — the OpenAPI schema bridged across the legacy/live file
  * reference shapes, plus FE-only local fields.
  */
-export type Artifact = Omit<Schemas.Artifact, 'content_file_id' | 'display_file_id'> &
+export type Artifact = Omit<
+  Schemas.Artifact,
+  'content_file_id' | 'display_file_id' | keyof CompatibleArtifactFileFields
+> &
+  CompatibleArtifactFileFields &
   Partial<LegacyArtifactFields> &
   Partial<LiveArtifactFields> &
   Partial<ArtifactPinnedFields>
@@ -141,7 +158,7 @@ export type CollectionArtifactOrderBy = OrderByOf<CollectionArtifactsEndpointQue
  */
 export function getArtifactDisplayName(
   artifact: Artifact,
-  file?: Pick<Schemas.FileInfo, 'filename'> | null
+  file?: Pick<Schemas.File, 'filename'> | null
 ): string {
   const name = artifact.name?.trim()
   if (name) return name
@@ -150,9 +167,19 @@ export function getArtifactDisplayName(
   return 'Untitled artifact'
 }
 
-/** Content file id across the live (`file_ref`/`file_id`) and legacy shapes. */
+/**
+ * Content file id across every shape: the typed `content_file` slot (v1.5.0,
+ * where the id column is deprecated and nullable), then the live
+ * `file_ref` / `file_id` pair, then the legacy `content_file_id`.
+ */
 export function getArtifactFileId(artifact: Artifact | null | undefined): string | undefined {
-  return artifact?.file_ref?.file_id ?? artifact?.file_id ?? artifact?.content_file_id
+  return (
+    getArtifactContentFile(artifact)?.id ??
+    artifact?.file_ref?.file_id ??
+    artifact?.file_id ??
+    artifact?.content_file_id ??
+    undefined
+  )
 }
 
 /** Legacy display file id, when the payload carries one. */

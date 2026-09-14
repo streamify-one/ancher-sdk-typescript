@@ -1,6 +1,14 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 import type { AncherClient } from '../api/client'
-import { createFileRepository } from './file'
+import type { Schemas } from '../api/generated/api.client'
+import type {
+  BatchFileUploadResult,
+  FileInfo,
+  FileRevision,
+  FileUploadResponse,
+  LegacyFileRevision,
+} from '../contracts/file'
+import { createFileRepository, type FileRepository } from './file'
 
 function makeRepository() {
   const post = vi.fn()
@@ -16,6 +24,27 @@ function makeRepository() {
 }
 
 describe('FileRepository', () => {
+  it('exposes the version-compatible file contract', () => {
+    expectTypeOf<ReturnType<FileRepository['get']>>().toEqualTypeOf<
+      Promise<FileInfo>
+    >()
+    expectTypeOf<ReturnType<FileRepository['upload']>>().toEqualTypeOf<
+      Promise<FileUploadResponse>
+    >()
+    expectTypeOf<ReturnType<FileRepository['uploadDirect']>>().toEqualTypeOf<
+      Promise<FileUploadResponse>
+    >()
+    expectTypeOf<ReturnType<FileRepository['revertRevision']>>().toEqualTypeOf<
+      Promise<FileUploadResponse>
+    >()
+    expectTypeOf<ReturnType<FileRepository['uploadBatch']>>().toEqualTypeOf<
+      Promise<BatchFileUploadResult[]>
+    >()
+    expectTypeOf<BatchFileUploadResult['s3_id']>().toEqualTypeOf<string | null | undefined>()
+    expectTypeOf<LegacyFileRevision>().toMatchTypeOf<FileRevision>()
+    expectTypeOf<Schemas.FileRevision>().toMatchTypeOf<FileRevision>()
+  })
+
   it('mints a file content presigned URL', async () => {
     const { File, post } = makeRepository()
     post.mockResolvedValueOnce({ download_url: 'https://cdn.test/file' })

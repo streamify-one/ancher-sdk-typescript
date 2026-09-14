@@ -47,8 +47,15 @@ export type _RecommendationActionExhaustive = Expect<
  * Recommendation entity.
  * ------------------------------------------------------------------------- */
 
-/** A recommended piece of external content */
-export type Recommendation = Schemas.Recommendation
+type RecommendationCompatibilityFields =
+  | 'batch_id'
+  | 'cluster_run_id'
+  | 'slot_index'
+  | 'source'
+
+/** A recommended piece of external content across legacy and current payloads. */
+export type Recommendation = Omit<Schemas.Recommendation, RecommendationCompatibilityFields> &
+  Partial<Pick<Schemas.Recommendation, RecommendationCompatibilityFields>>
 
 /** Action request body for a recommendation (dismiss, save, or not_interested). */
 export type RecommendationActionRequest = Schemas.RecommendationAction

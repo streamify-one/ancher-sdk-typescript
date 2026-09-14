@@ -258,7 +258,7 @@ if (!put.ok) throw new Error(`S3 upload failed: ${put.status}`)
 // 3. Finalize — the API fetches the object, hashes it, and creates the record.
 const uploaded = await client.api.post('/api/v1/files/completions', {
   body: { s3_key, filename: file.name },
-}) // → Schemas.FileUploadResponse: { id, filename, size, mimetype, … }
+}) // → Schemas.File: { id, filename, size, mimetype, … }
 ```
 
 > Presigned URLs are short-lived (60–3600s, default 300), and the API sniffs the
@@ -354,6 +354,44 @@ content — fetch those through the content endpoints. The accessors are generic
 on the file type, so a client with its own generated `Note`/`File` gets its own
 `File` back. `asFileMap` remains exported but is deprecated.
 
+Two more file reads cover what the v1.5.0 payload moved:
+
+```ts
+import { getFileImageSize, getNoteOriginDisplayFile } from '@ancher-ai/sdk/contracts'
+
+const size = getFileImageSize(file)                          // { width, height } from File.metadata (≤ v1.4: revision.s3_object.meta)
+const rendition = getNoteOriginDisplayFile(note, originFile) // the display PDF that belongs to THIS origin, by parent_file_id
+```
+
+### Note source fields
+
+v1.5.0 hides the nested `article` and hoists its provenance onto the note
+(`url`, `site_name`, `author`, `published_date`, `language`, plus the
+override-resolved `title` / `description`). Read them through the source
+accessors, which fall back to the nested article on older payloads, instead
+of `note.article.*`. (`published_date` is typed `string` but arrives as Unix
+seconds, like every API datetime — normalize before `new Date`.)
+
+```ts
+import {
+  getNoteAuthor,
+  getNoteErrorMessage,
+  getNoteProcessingStatus,
+  getNoteSiteName,
+  getNoteSource,
+  getNoteSourceUrl,
+  getNoteTitle,
+} from '@ancher-ai/sdk/contracts'
+
+const title = getNoteTitle(note)               // user override → article title
+const url = getNoteSourceUrl(note)             // absent for text / file notes
+const label = getNoteSiteName(note) ?? host     // banner label
+const status = getNoteProcessingStatus(note)   // article-side queued/processing/error won on ≤ v1.4
+```
+
+`getNoteSource` is the one that reads the article first: the ≤ v1.4 note-level
+`source` could be a stale literal default.
+
 ### Listing, filtering, counting
 
 Every criteria list endpoint exposes the same typed surface:
@@ -405,7 +443,7 @@ for await (const note of sdk.Note.iterate({ where: { status: NoteStatus.Ready },
 
 **`where` semantics** (translated to the wire criteria DSL by the SDK):
 
-- **Field keys mirror the wire names** (`created_at`, `title_override`, …).
+- **Field keys mirror the wire names** (`created_at`, `site_name`, `url`, …).
   A bare scalar means *equals*; `null` means *is unset* (`isNull: true`).
 - **Operator objects** use camelCase Prisma-style names: `equals`, `not`, `in`,
   `notIn`, `lt`, `lte`, `gt`, `gte`, `contains`, `notContains`, `startsWith`,

@@ -3,10 +3,11 @@ import type { AncherClient } from '../api/client'
 import { createPodcastRepository } from './podcast'
 
 function makeRepository() {
+  const deleteRequest = vi.fn()
   const get = vi.fn()
   const post = vi.fn()
-  const client = { api: { get, post } } as unknown as AncherClient
-  return { Podcast: createPodcastRepository(client), get, post }
+  const client = { api: { delete: deleteRequest, get, post } } as unknown as AncherClient
+  return { Podcast: createPodcastRepository(client), deleteRequest, get, post }
 }
 
 describe('PodcastRepository', () => {
@@ -65,6 +66,17 @@ describe('PodcastRepository', () => {
     await Podcast.get('podcast-1', {})
 
     expect(get.mock.calls[0]?.[1]).not.toHaveProperty('overrides')
+  })
+
+  it('deletes a podcast by id so its note can generate another one', async () => {
+    const { Podcast, deleteRequest } = makeRepository()
+    deleteRequest.mockResolvedValueOnce(undefined)
+
+    await Podcast.delete('podcast-1')
+
+    expect(deleteRequest).toHaveBeenCalledWith('/api/v1/podcasts/{podcast_id}', {
+      path: { podcast_id: 'podcast-1' },
+    })
   })
 
   it('propagates a rejected request rather than swallowing it', async () => {

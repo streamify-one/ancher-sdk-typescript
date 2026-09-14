@@ -12,6 +12,8 @@ import type {
   OrderByOf,
   Where,
 } from './query'
+import type { File } from './file'
+import type { Podcast } from './podcast'
 import type { Schemas } from './schemas'
 
 /* ---------------------------------------------------------------------------
@@ -130,7 +132,7 @@ export interface CreateTagForNoteRequest {
  * ------------------------------------------------------------------------- */
 
 /** Named file map returned by the API */
-export type FileMap = Record<string, Schemas.File>
+export type FileMap = Record<string, File>
 
 /**
  * Narrow a `files` map to a typed FileMap, dropping empty maps to `undefined`.
@@ -146,8 +148,18 @@ export function asFileMap(files: Record<string, unknown> | null | undefined): Fi
   return files as FileMap
 }
 
-/** Article (parsed content from note) */
-export type Article = Schemas.Article
+interface CompatibleArticleFileFields {
+  content_file?: File | null
+  content_tldr_file?: File | null
+  display_file?: File | null
+  files: FileMap
+  origin_files: File[]
+  thumbnail_file?: File | null
+}
+
+/** Article across the legacy files-map and v1.5 typed-slot shapes. */
+export type Article = Omit<Schemas.Article, keyof CompatibleArticleFileFields> &
+  CompatibleArticleFileFields
 
 /**
  * FE-only fields that are not part of the OpenAPI `Note` schema. `pinned`
@@ -157,8 +169,42 @@ interface NoteLocalFields {
   pinned?: boolean
 }
 
-/** Note entity — the OpenAPI schema plus FE-only local fields. */
-export type Note = Schemas.Note & NoteLocalFields
+interface CompatibleNoteFileFields {
+  content_file?: File | null
+  content_tldr_file?: File | null
+  display_file?: File | null
+  files: FileMap
+  origin_files?: File[]
+  thumbnail_file?: File | null
+}
+
+interface LegacyNoteFields {
+  article?: Article | null
+  article_id?: string
+}
+
+/**
+ * Note entity across the nested-article v1.4 and flattened v1.5 payloads,
+ * plus FE-only local fields. Generated `Schemas.Note` stays v1.5-exact.
+ */
+export type Note = Omit<
+  Schemas.Note,
+  | keyof CompatibleNoteFileFields
+  | 'author'
+  | 'language'
+  | 'podcast'
+  | 'published_date'
+  | 'site_name'
+  | 'url'
+> &
+  CompatibleNoteFileFields &
+  Partial<
+    Pick<Schemas.Note, 'author' | 'language' | 'published_date' | 'site_name' | 'url'>
+  > & {
+    podcast?: Podcast | null
+  } &
+  LegacyNoteFields &
+  NoteLocalFields
 
 /**
  * Update note request. `reaction` is narrowed to {@link ReactionType}: the API
@@ -248,9 +294,12 @@ export type NoteListResponse = Page<Note>
 type NoteListEndpointQuery = GetEndpointQuery<'/api/v1/notes/'>
 
 /**
- * Typed filter for note lists. Includes the nested relation criteria
- * (`tags`, `article`, `file_refs`, …) the top-level notes endpoint supports —
- * relations are legal at the root of the `where`, not inside `AND`/`OR`/`NOT`.
+ * Typed filter for note lists. Includes the nested relation criteria (`tags`,
+ * `collections`) the top-level notes endpoint supports — relations are legal
+ * at the root of the `where`, not inside `AND`/`OR`/`NOT`. The article's
+ * provenance is filtered through the note's own hoisted keys (`url`,
+ * `site_name`, `author`, `published_date`, `language`); the nested `article`
+ * criteria left with v1.5.0.
  */
 export type NoteWhere = Where<BranchOf<NoteListEndpointQuery>>
 

@@ -9,6 +9,8 @@
 import type { AncherClient } from '../api/client'
 import type { EndpointByMethod, Schemas } from '../api/generated/api.client'
 import type { UploadOptions } from '../api/upload'
+import type { Page } from '../contracts/common'
+import type { FileInfo, FileUploadResponse } from '../contracts/file'
 import type {
   CreateNoteFromFileRequest,
   Note,
@@ -17,6 +19,7 @@ import type {
   NoteUpdate,
   NoteWhere,
 } from '../contracts/note'
+import type { CollectionSuggestion } from '../contracts/suggestion'
 import { createListSurface, type ListSurface } from './base'
 import {
   downloadPresignedUrl,
@@ -84,7 +87,7 @@ export interface NoteRepository extends ListSurface<Note, NoteWhere, NoteOrderBy
    */
   downloadFile(noteId: string, fileId: string, options?: NoteDownloadOptions): Promise<Response>
   /** Get a file's metadata through note-scoped access rules. */
-  getFile(noteId: string, fileId: string): Promise<Schemas.FileInfo>
+  getFile(noteId: string, fileId: string): Promise<FileInfo>
   /**
    * Replace a note's content file (multipart `PUT`); the server records a new
    * revision. Returns the updated file data.
@@ -94,12 +97,12 @@ export interface NoteRepository extends ListSurface<Note, NoteWhere, NoteOrderBy
     fileId: string,
     file: Blob,
     options?: NoteFileContentUpdateOptions
-  ): Promise<Schemas.FileUploadResponse>
+  ): Promise<FileUploadResponse>
   /** List the collections the classifier suggested for a note (paginated). */
   suggestedCollections(
     noteId: string,
     options?: NoteSuggestedCollectionsOptions
-  ): Promise<Schemas.Page_CollectionSuggestion_>
+  ): Promise<Page<CollectionSuggestion>>
   /** Update a note (`PATCH`); returns the updated note. */
   update(noteId: string, patch: NoteUpdate): Promise<Note>
   /** Delete a note (`DELETE`). */
@@ -181,7 +184,7 @@ export function createNoteRepository(client: AncherClient): NoteRepository {
       })
     },
     async updateFileContent(noteId, fileId, file, options = {}) {
-      return await client.upload<Schemas.FileUploadResponse>(
+      return await client.upload<FileUploadResponse>(
         `/api/v1/notes/${encodeURIComponent(noteId)}/files/${encodeURIComponent(fileId)}/content`,
         file,
         { ...options, method: 'PUT' }

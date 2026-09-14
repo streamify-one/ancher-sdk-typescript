@@ -103,93 +103,6 @@ export type ApiKeyResponse = {
   created_at: string;
 }
 /**
- * Transmuter for S3Object model (content stored in S3).
- */
-export type S3Object = {
-  /**
-   * Creation timestamp in Unix seconds
-   */
-  created_at: number;
-  /**
-   * Creator of the record
-   */
-  created_by: string;
-  /**
-   * Last update timestamp in Unix seconds
-   */
-  updated_at: number;
-  /**
-   * Last updater of the record
-   */
-  updated_by: string;
-  /**
-   * Unique identifier
-   */
-  id: string;
-  /**
-   * S3 object key
-   */
-  s3_id: string;
-  /**
-   * SHA256 hash of file content
-   */
-  content_hash: string;
-  /**
-   * MD5 hash of file content
-   */
-  content_hash_md5: string;
-  /**
-   * File size in bytes
-   */
-  size: number;
-  /**
-   * MIME type of the file content
-   */
-  mimetype: string;
-  /**
-   * Content metadata (e.g. image width/height in pixels)
-   */
-  meta: Record<string, unknown>;
-}
-/**
- * Transmuter for FileRevision model (file-to-S3Object association).
- */
-export type FileRevision = {
-  /**
-   * Creation timestamp in Unix seconds
-   */
-  created_at: number;
-  /**
-   * Creator of the record
-   */
-  created_by: string;
-  /**
-   * Last update timestamp in Unix seconds
-   */
-  updated_at: number;
-  /**
-   * Last updater of the record
-   */
-  updated_by: string;
-  /**
-   * Unique identifier
-   */
-  id: string;
-  /**
-   * File this revision belongs to
-   */
-  file_id: string;
-  /**
-   * S3 content object for this revision
-   */
-  s3_object_id: string;
-  /**
-   * Revision number within the file
-   */
-  revision_number: number;
-  s3_object: (S3Object | null);
-}
-/**
  * Transmuter for File model.
  */
 export type File = {
@@ -218,17 +131,9 @@ export type File = {
    */
   parent_file_id: (string | null);
   /**
-   * User who uploaded this file
-   */
-  user_id: (string | null);
-  /**
    * file name
    */
   filename: string;
-  /**
-   * Currently active revision
-   */
-  current_revision_id: (string | null);
   /**
    * Whether file is publicly accessible
    */
@@ -237,11 +142,6 @@ export type File = {
    * When this file expires and should be cleaned up
    */
   expires_at: (string | null);
-  revision: (FileRevision | null);
-  /**
-   * S3 object key
-   */
-  s3_id: string;
   /**
    * SHA256 hash of file content
    */
@@ -258,6 +158,14 @@ export type File = {
    * MIME type of the file
    */
   mimetype: string;
+  /**
+   * Revision number of the active content revision
+   */
+  revision_number: number;
+  /**
+   * Content metadata (e.g. display_width/display_height in pixels for images)
+   */
+  metadata: Record<string, unknown>;
   /**
    * Presigned CDN download URL. Populated by an active presign context; null in non-router contexts (worker / agent paths).
    */
@@ -339,11 +247,30 @@ export type Article = {
    * Combined MD5 hash of origin file content hashes for redundant deduplication
    */
   origin_files_hash_md5: (string | null);
-  files: Record<string, File>;
   /**
-   * User-uploaded source files (not present for URL/text-sourced notes)
+   * Generated content markdown file
+   */
+  content_file: (File | null);
+  /**
+   * Generated TLDR markdown file
+   */
+  content_tldr_file: (File | null);
+  /**
+   * Preview image file
+   */
+  thumbnail_file: (File | null);
+  /**
+   * Rendered display file
+   */
+  display_file: (File | null);
+  /**
+   * User-uploaded source files (not present for URL/text notes)
    */
   origin_files: Array<File>;
+  /**
+   * The article's files keyed by the category the pre-slot schema stored, assembled from the slots.
+   */
+  files: Record<string, File>;
 }
 /**
  * Request schema for creating one note from one or more uploaded files.
@@ -382,6 +309,103 @@ export type ArticleCreateFromUrl = {
    * Request schema for creating note from a URL or share text containing a URL.
    */
   force?: boolean | undefined;
+}
+/**
+ * Fetched media retained for processing; the only visibility-bearing edge.
+ */
+export type ArticleDownloadedFile = {
+  /**
+   * Creation timestamp in Unix seconds
+   */
+  created_at: number;
+  /**
+   * Creator of the record
+   */
+  created_by: string;
+  /**
+   * Last update timestamp in Unix seconds
+   */
+  updated_at: number;
+  /**
+   * Last updater of the record
+   */
+  updated_by: string;
+  kind: string;
+  /**
+   * Reference to the file
+   */
+  file_id: string;
+  /**
+   * Reference to the owning entity
+   */
+  owner_id: string;
+  file: (File | null);
+  /**
+   * Fetcher per-source policy: may this be surfaced to readers?
+   */
+  can_show: boolean;
+}
+/**
+ * Generated supporting images for the article.
+ */
+export type ArticleGeneratedFile = {
+  /**
+   * Creation timestamp in Unix seconds
+   */
+  created_at: number;
+  /**
+   * Creator of the record
+   */
+  created_by: string;
+  /**
+   * Last update timestamp in Unix seconds
+   */
+  updated_at: number;
+  /**
+   * Last updater of the record
+   */
+  updated_by: string;
+  kind: string;
+  /**
+   * Reference to the file
+   */
+  file_id: string;
+  /**
+   * Reference to the owning entity
+   */
+  owner_id: string;
+  file: (File | null);
+}
+/**
+ * Transcript/subtitle files derived for the article.
+ */
+export type ArticleTranscriptFile = {
+  /**
+   * Creation timestamp in Unix seconds
+   */
+  created_at: number;
+  /**
+   * Creator of the record
+   */
+  created_by: string;
+  /**
+   * Last update timestamp in Unix seconds
+   */
+  updated_at: number;
+  /**
+   * Last updater of the record
+   */
+  updated_by: string;
+  kind: string;
+  /**
+   * Reference to the file
+   */
+  file_id: string;
+  /**
+   * Reference to the owning entity
+   */
+  owner_id: string;
+  file: (File | null);
 }
 /**
  * Schema for tag data.
@@ -470,9 +494,17 @@ export type Artifact = {
    */
   tags: Array<Tag>;
   /**
-   * Files attached to this artifact, keyed by category.
+   * Artifact content body
    */
-  files: Record<string, File>;
+  content_file: (File | null);
+  /**
+   * Rendered display file
+   */
+  display_file: (File | null);
+  /**
+   * Preview image
+   */
+  thumbnail_file: (File | null);
   /**
    * MIME type of the active content file
    */
@@ -482,9 +514,21 @@ export type Artifact = {
    */
   size: (number | null);
   /**
-   * Primary (content) file ID
+   * Whether the content file is an HTML page, derived from its MIME type (the same check the public resolver gates on). Gates share_url. Null when the content file is not loaded.
    */
-  content_file_id: string;
+  is_html: (boolean | null);
+  /**
+   * Public page URL (https://<slug>.<share-domain>) when the artifact is public and its content is HTML; null otherwise. Non-HTML content is rejected by the public resolver (404), so no URL is advertised. Revoking is_public drops this and makes the page itself 404.
+   */
+  share_url: (string | null);
+  /**
+   * The artifact's files keyed by the category the pre-slot schema stored, assembled from the slots.
+   */
+  files: Record<string, File>;
+  /**
+   * Primary (content) file ID. Null when the slot is empty — the pre-slot schema raised instead, but an empty content slot is representable now, and a response is no place to discover that.
+   */
+  content_file_id: (string | null);
   /**
    * Display file ID if a renderable sibling exists
    */
@@ -493,14 +537,6 @@ export type Artifact = {
    * Thumbnail file ID if a thumbnail sibling exists
    */
   thumbnail_file_id: (string | null);
-  /**
-   * Whether the content file is an HTML page, derived from its MIME type (the same check the public resolver gates on). Gates share_url. Null when the content file is not loaded.
-   */
-  is_html: (boolean | null);
-  /**
-   * Public page URL (https://<slug>.<share-domain>) when the artifact is public and its content is HTML; null otherwise. Non-HTML content is rejected by the public resolver (404), so no URL is advertised. Revoking is_public drops this and makes the page itself 404.
-   */
-  share_url: (string | null);
 }
 export type ArtifactCreate = {
   /**
@@ -590,10 +626,6 @@ export type BatchFileUploadResult = {
    * file name
    */
   filename: (string | null);
-  /**
-   * S3 object key
-   */
-  s3_id: (string | null);
   /**
    * SHA256 hash of file content
    */
@@ -800,51 +832,17 @@ export type CheckoutSessionStatusResponse = {
   credits_granted: boolean;
 }
 /**
- * Transmuter for FileReference model.
+ * A matched chunk, flat, with the score that matched it.
+ * 
+ * Flat rather than nested so the chunk's fields stay where callers already
+ * read them, and built from the same mixins as ``Chunk`` (id, audit columns,
+ * Unix-second timestamps) rather than by extending it: ``Chunk.file_ref`` is
+ * a ``Relation`` whose serializer reaches through the ORM provider, which a
+ * schema rebuilt for a response does not carry. Without ``score`` a caller
+ * cannot tell a strong match from rank-fusion noise, which is how nonsense
+ * queries came back looking confident (VITA-1203).
  */
-export type FileReference = {
-  /**
-   * Creation timestamp in Unix seconds
-   */
-  created_at: number;
-  /**
-   * Creator of the record
-   */
-  created_by: string;
-  /**
-   * Last update timestamp in Unix seconds
-   */
-  updated_at: number;
-  /**
-   * Last updater of the record
-   */
-  updated_by: string;
-  /**
-   * Reference to the file
-   */
-  file_id: string;
-  /**
-   * Reference to the owning entity
-   */
-  owner_id: string;
-  /**
-   * Whether this owner holds mutation rights
-   */
-  mutable: boolean;
-  /**
-   * Collection group discriminator
-   */
-  label: (string | null);
-  /**
-   * Semantic category
-   */
-  category: (string | null);
-  file: (File | null);
-}
-/**
- * Schema for embedded text chunks.
- */
-export type Chunk = {
+export type ChunkRetrievalResult = {
   /**
    * Creation timestamp in Unix seconds
    */
@@ -866,11 +864,11 @@ export type Chunk = {
    */
   id: string;
   /**
-   * The embedded text content of this chunk
+   * The embedded text of this chunk
    */
   embedded_text: string;
   /**
-   * Reference to the source article
+   * Reference to the source article (null for artifact chunks)
    */
   article_id: (string | null);
   /**
@@ -878,14 +876,17 @@ export type Chunk = {
    */
   note_id: (string | null);
   /**
-   * Reference to the artifact
+   * Reference to the artifact (null for note chunks)
    */
   artifact_id: (string | null);
   /**
-   * Chunk role: 'content' (source-derived text), 'markdown' (split from the note's content file) or 'metadata' (title+tags row)
+   * Chunk role
    */
   kind: ("content" | "markdown" | "metadata");
-  file_ref: (FileReference | null);
+  /**
+   * Relevance score from vector retrieval
+   */
+  score: number;
 }
 /**
  * Body for POST /external-connections — redeem a staged connection.
@@ -1016,6 +1017,80 @@ export type CollectionNotesUpdate = {
    */
   note_ids: Array<string>;
 }
+export type Podcast = {
+  /**
+   * Creation timestamp in Unix seconds
+   */
+  created_at: number;
+  /**
+   * Creator of the record
+   */
+  created_by: string;
+  /**
+   * Last update timestamp in Unix seconds
+   */
+  updated_at: number;
+  /**
+   * Last updater of the record
+   */
+  updated_by: string;
+  /**
+   * Unique identifier
+   */
+  id: string;
+  /**
+   * Owner user ID; null when read through another user's public note
+   */
+  user_id: (string | null);
+  /**
+   * Source note ID
+   */
+  note_id: string;
+  /**
+   * Podcast episode title
+   */
+  title: string;
+  /**
+   * Legacy inline transcript; empty on episodes that carry a transcript_file
+   */
+  transcript: string;
+  /**
+   * Podcast generation status
+   */
+  status: ("processing" | "ready" | "error");
+  /**
+   * Timestamp when generation completed
+   */
+  generated_at: (string | null);
+  /**
+   * Safe error message when status is error
+   */
+  error_message: (string | null);
+  /**
+   * Target episode length in minutes, snapshotted when marked ready
+   */
+  target_minutes: number;
+  /**
+   * Measured audio length in seconds; null on legacy and unfinished rows
+   */
+  duration_seconds: (number | null);
+  /**
+   * Generated podcast audio file
+   */
+  file: (File | null);
+  /**
+   * Timestamped transcript as a JSON file: an ordered array of PodcastSegment ({start, end, text, role}, offsets in seconds) carrying the full episode text. Fetch it via the presigned URL, signed on single-object reads only. Null while processing, on error, and for episodes generated before transcripts moved to files — those legacy rows keep the plain inline transcript string instead.
+   */
+  transcript_file: (File | null);
+  /**
+   * Generated podcast audio file ID
+   */
+  file_id: (string | null);
+  /**
+   * Timestamped transcript JSON file ID
+   */
+  transcript_file_id: (string | null);
+}
 /**
  * Response schema for a user's note.
  */
@@ -1073,18 +1148,21 @@ export type Note = {
    */
   user_id: string;
   /**
-   * Referenced article ID
+   * The note's own content markdown file
    */
-  article_id: string;
+  content_file: (File | null);
   /**
-   * Source: file, text, URL, conversation, message, or artifact
+   * The note's own TLDR markdown file
    */
-  source: string;
-  files: Record<string, File>;
+  content_tldr_file: (File | null);
   /**
-   * Article data
+   * Preview image file
    */
-  article: (Article | null);
+  thumbnail_file: (File | null);
+  /**
+   * Rendered display file
+   */
+  display_file: (File | null);
   /**
    * Tags for this note
    */
@@ -1094,6 +1172,10 @@ export type Note = {
    */
   collections: Array<Collection>;
   /**
+   * The podcast generated from this note (at most one)
+   */
+  podcast: (Podcast | null);
+  /**
    * Effective title: the user-edited override when set, otherwise article.title; writes set the override
    */
   title: (string | null);
@@ -1101,6 +1183,38 @@ export type Note = {
    * Effective description: the user-edited override when set, otherwise article.description; writes set the override
    */
   description: (string | null);
+  /**
+   * Source: file, text, URL, conversation, message, or artifact
+   */
+  source: string;
+  /**
+   * Normalized source URL (absent for text/file notes)
+   */
+  url: (string | null);
+  /**
+   * Author name extracted from the source
+   */
+  author: (string | null);
+  /**
+   * Name of the source website or publication
+   */
+  site_name: (string | null);
+  /**
+   * Original publication date of the source
+   */
+  published_date: (string | null);
+  /**
+   * Content language code (e.g., en, zh, ja)
+   */
+  language: string;
+  /**
+   * Source files the note was created from: uploads for file notes, the generated text.md for text notes, the fetched resource for direct-URL notes; empty for scraped web pages
+   */
+  origin_files: Array<File>;
+  /**
+   * The note's files keyed by the category the pre-slot schema stored. Assembled from the slots; the promoted-download `generated` key it could once carry is gone with the label/category columns.
+   */
+  files: Record<string, File>;
 }
 /**
  * Schema for collection suggestion data.
@@ -1248,9 +1362,9 @@ export type Recommendation = {
    */
   user_id: string;
   /**
-   * Collection this recommendation belongs to
+   * Collection this recommendation belongs to; None for the cluster path
    */
-  collection_id: string;
+  collection_id: (string | null);
   /**
    * Recommended URL
    */
@@ -1272,6 +1386,10 @@ export type Recommendation = {
    */
   search_query: (string | null);
   /**
+   * Search source this recommendation came from
+   */
+  source: (string | null);
+  /**
    * Recommendation status
    */
   status: ("active" | "dismissed" | "saved" | "not_interested");
@@ -1280,7 +1398,19 @@ export type Recommendation = {
    */
   note_id: (string | null);
   /**
-   * The source collection
+   * Nightly cluster-path generation batch
+   */
+  batch_id: (string | null);
+  /**
+   * Soft reference to the cluster run
+   */
+  cluster_run_id: (string | null);
+  /**
+   * Slot this row filled in its batch
+   */
+  slot_index: (number | null);
+  /**
+   * The source collection; None for cluster-path rows
    */
   collection: (Collection | null);
 }
@@ -1407,12 +1537,10 @@ export type ConversationUpdateRequest = Partial<{ name: (string | null), pinned:
 export type NumericCriteria_datetime_ = Partial<{ eq: (string | null), is_null: (boolean | null), ne: (string | null), in: (Array<string> | null), not_in: (Array<string> | null), lt: (string | null), le: (string | null), gt: (string | null), ge: (string | null) }>
 export type TextCriteria_str_ = Partial<{ eq: (string | null), is_null: (boolean | null), ne: (string | null), in: (Array<string> | null), not_in: (Array<string> | null), lt: (string | null), le: (string | null), gt: (string | null), ge: (string | null), contains: (string | null), not_contains: (string | null), starts_with: (string | null), ends_with: (string | null), like: (string | null), ilike: (string | null), not_like: (string | null) }>
 export type NumericCriteria_UUID_ = Partial<{ eq: (string | null), is_null: (boolean | null), ne: (string | null), in: (Array<string> | null), not_in: (Array<string> | null), lt: (string | null), le: (string | null), gt: (string | null), ge: (string | null) }>
-export type ExactCriteria_Literal__queued____processing____ready____error___ = Partial<{ eq: (("queued" | "processing" | "ready" | "error") | null), is_null: (boolean | null), ne: (("queued" | "processing" | "ready" | "error") | null), in: (Array<("queued" | "processing" | "ready" | "error")> | null), not_in: (Array<("queued" | "processing" | "ready" | "error")> | null) }>
-export type Criteria_Article_ = Partial<{ and: (Array<Criteria_Article_> | null), or: (Array<Criteria_Article_> | null), not: (Criteria_Article_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), status: (ExactCriteria_Literal__queued____processing____ready____error___ | null), error_message: (TextCriteria_str_ | null), title: (TextCriteria_str_ | null), description: (TextCriteria_str_ | null), author: (TextCriteria_str_ | null), published_date: (NumericCriteria_datetime_ | null), site_name: (TextCriteria_str_ | null), language: (TextCriteria_str_ | null), url: (TextCriteria_str_ | null), source: (TextCriteria_str_ | null), origin_files_hash: (TextCriteria_str_ | null), origin_files_hash_md5: (TextCriteria_str_ | null) }>
 export type NumericCriteria_bool_ = Partial<{ eq: (boolean | null), is_null: (boolean | null), ne: (boolean | null), in: (Array<boolean> | null), not_in: (Array<boolean> | null), lt: (boolean | null), le: (boolean | null), gt: (boolean | null), ge: (boolean | null) }>
 export type ExactCriteria_Literal__like____dislike____neutral___ = Partial<{ eq: (("like" | "dislike" | "neutral") | null), is_null: (boolean | null), ne: (("like" | "dislike" | "neutral") | null), in: (Array<("like" | "dislike" | "neutral")> | null), not_in: (Array<("like" | "dislike" | "neutral")> | null) }>
 export type NumericCriteria_int_ = Partial<{ eq: (number | null), is_null: (boolean | null), ne: (number | null), in: (Array<number> | null), not_in: (Array<number> | null), lt: (number | null), le: (number | null), gt: (number | null), ge: (number | null) }>
-export type Criteria_Artifact_ = Partial<{ and: (Array<Criteria_Artifact_> | null), or: (Array<Criteria_Artifact_> | null), not: (Criteria_Artifact_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), name: (TextCriteria_str_ | null), description: (TextCriteria_str_ | null), is_public: (NumericCriteria_bool_ | null), slug: (TextCriteria_str_ | null), reaction: (ExactCriteria_Literal__like____dislike____neutral___ | null), reindex_requested_at: (NumericCriteria_datetime_ | null), mimetype: (TextCriteria_str_ | null), size: (NumericCriteria_int_ | null) }>
+export type Criteria_Artifact_ = Partial<{ and: (Array<Criteria_Artifact_> | null), or: (Array<Criteria_Artifact_> | null), not: (Criteria_Artifact_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), name: (TextCriteria_str_ | null), description: (TextCriteria_str_ | null), is_public: (NumericCriteria_bool_ | null), slug: (TextCriteria_str_ | null), reaction: (ExactCriteria_Literal__like____dislike____neutral___ | null), mimetype: (TextCriteria_str_ | null), size: (NumericCriteria_int_ | null) }>
 export type NumericCriteria_float_ = Partial<{ eq: (number | null), is_null: (boolean | null), ne: (number | null), in: (Array<number> | null), not_in: (Array<number> | null), lt: (number | null), le: (number | null), gt: (number | null), ge: (number | null) }>
 export type ExactCriteria_Literal__pending____accepted____dismissed___ = Partial<{ eq: (("pending" | "accepted" | "dismissed") | null), is_null: (boolean | null), ne: (("pending" | "accepted" | "dismissed") | null), in: (Array<("pending" | "accepted" | "dismissed")> | null), not_in: (Array<("pending" | "accepted" | "dismissed")> | null) }>
 export type Criteria_CollectionSuggestion_ = Partial<{ and: (Array<Criteria_CollectionSuggestion_> | null), or: (Array<Criteria_CollectionSuggestion_> | null), not: (Criteria_CollectionSuggestion_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), note_id: (NumericCriteria_UUID_ | null), collection_id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), confidence: (NumericCriteria_float_ | null), reason: (TextCriteria_str_ | null), status: (ExactCriteria_Literal__pending____accepted____dismissed___ | null) }>
@@ -1421,21 +1549,19 @@ export type ExactCriteria_Literal__active____archived___ = Partial<{ eq: (("acti
 export type Criteria_Collection_ = Partial<{ and: (Array<Criteria_Collection_> | null), or: (Array<Criteria_Collection_> | null), not: (Criteria_Collection_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), name: (TextCriteria_str_ | null), description: (TextCriteria_str_ | null), color: (ExactCriteria_Literal__neutral____slate____gray____zinc____stone____red____orange____amber____yellow____lime____green____emerald____teal____cyan____sky____blue____indigo____violet____purple____fuchsia____pink____rose___ | null), user_id: (NumericCriteria_UUID_ | null), status: (ExactCriteria_Literal__active____archived___ | null) }>
 export type Criteria_Conversation_ = Partial<{ and: (Array<Criteria_Conversation_> | null), or: (Array<Criteria_Conversation_> | null), not: (Criteria_Conversation_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), name: (TextCriteria_str_ | null), last_interacted_at: (NumericCriteria_datetime_ | null), pinned: (NumericCriteria_bool_ | null) }>
 export type ExactCriteria_Literal__processing____ready____error___ = Partial<{ eq: (("processing" | "ready" | "error") | null), is_null: (boolean | null), ne: (("processing" | "ready" | "error") | null), in: (Array<("processing" | "ready" | "error")> | null), not_in: (Array<("processing" | "ready" | "error")> | null) }>
-export type Criteria_DailyDigest_ = Partial<{ and: (Array<Criteria_DailyDigest_> | null), or: (Array<Criteria_DailyDigest_> | null), not: (Criteria_DailyDigest_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), file_id: (NumericCriteria_UUID_ | null), title: (TextCriteria_str_ | null), summary: (TextCriteria_str_ | null), status: (ExactCriteria_Literal__processing____ready____error___ | null), generated_at: (NumericCriteria_datetime_ | null), error_message: (TextCriteria_str_ | null) }>
-export type Criteria_FileReference_ = Partial<{ and: (Array<Criteria_FileReference_> | null), or: (Array<Criteria_FileReference_> | null), not: (Criteria_FileReference_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), file_id: (NumericCriteria_UUID_ | null), owner_id: (NumericCriteria_UUID_ | null), mutable: (NumericCriteria_bool_ | null), label: (TextCriteria_str_ | null), category: (TextCriteria_str_ | null) }>
+export type Criteria_DailyDigest_ = Partial<{ and: (Array<Criteria_DailyDigest_> | null), or: (Array<Criteria_DailyDigest_> | null), not: (Criteria_DailyDigest_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), title: (TextCriteria_str_ | null), summary: (TextCriteria_str_ | null), status: (ExactCriteria_Literal__processing____ready____error___ | null), generated_at: (NumericCriteria_datetime_ | null), error_message: (TextCriteria_str_ | null), target_minutes: (NumericCriteria_int_ | null), duration_seconds: (NumericCriteria_int_ | null) }>
 export type Criteria_FileRevision_ = Partial<{ and: (Array<Criteria_FileRevision_> | null), or: (Array<Criteria_FileRevision_> | null), not: (Criteria_FileRevision_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), file_id: (NumericCriteria_UUID_ | null), s3_object_id: (NumericCriteria_UUID_ | null), revision_number: (NumericCriteria_int_ | null) }>
-export type Criteria_File_ = Partial<{ and: (Array<Criteria_File_> | null), or: (Array<Criteria_File_> | null), not: (Criteria_File_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), parent_file_id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), filename: (TextCriteria_str_ | null), current_revision_id: (NumericCriteria_UUID_ | null), is_public: (NumericCriteria_bool_ | null), expires_at: (NumericCriteria_datetime_ | null), size: (NumericCriteria_int_ | null), mimetype: (TextCriteria_str_ | null) }>
-export type Criteria_KeyFrame_ = Partial<{ and: (Array<Criteria_KeyFrame_> | null), or: (Array<Criteria_KeyFrame_> | null), not: (Criteria_KeyFrame_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), milliseconds: (NumericCriteria_int_ | null), description: (TextCriteria_str_ | null), video_id: (NumericCriteria_UUID_ | null) }>
 export type ExactCriteria_Literal__user____assistant___ = Partial<{ eq: (("user" | "assistant") | null), is_null: (boolean | null), ne: (("user" | "assistant") | null), in: (Array<("user" | "assistant")> | null), not_in: (Array<("user" | "assistant")> | null) }>
 export type Criteria_Message_ = Partial<{ and: (Array<Criteria_Message_> | null), or: (Array<Criteria_Message_> | null), not: (Criteria_Message_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), conversation_id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), role: (ExactCriteria_Literal__user____assistant___ | null), content: (TextCriteria_str_ | null), enable_kb_search: (NumericCriteria_bool_ | null), enable_web_search: (NumericCriteria_bool_ | null), reaction: (ExactCriteria_Literal__like____dislike____neutral___ | null), agent_run_id: (NumericCriteria_UUID_ | null), clarification_request_id: (NumericCriteria_UUID_ | null) }>
-export type Criteria_Note_ = Partial<{ and: (Array<Criteria_Note_> | null), or: (Array<Criteria_Note_> | null), not: (Criteria_Note_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), status: (ExactCriteria_Literal__queued____processing____ready____error___ | null), error_message: (TextCriteria_str_ | null), last_accessed_at: (NumericCriteria_datetime_ | null), reindex_requested_at: (NumericCriteria_datetime_ | null), comment: (TextCriteria_str_ | null), title_override: (TextCriteria_str_ | null), description_override: (TextCriteria_str_ | null), is_public: (NumericCriteria_bool_ | null), slug: (TextCriteria_str_ | null), reaction: (ExactCriteria_Literal__like____dislike____neutral___ | null), user_id: (NumericCriteria_UUID_ | null), article_id: (NumericCriteria_UUID_ | null), source: (TextCriteria_str_ | null), title: (TextCriteria_str_ | null), description: (TextCriteria_str_ | null) }>
+export type ExactCriteria_Literal__queued____processing____ready____error___ = Partial<{ eq: (("queued" | "processing" | "ready" | "error") | null), is_null: (boolean | null), ne: (("queued" | "processing" | "ready" | "error") | null), in: (Array<("queued" | "processing" | "ready" | "error")> | null), not_in: (Array<("queued" | "processing" | "ready" | "error")> | null) }>
+export type Criteria_Note_ = Partial<{ and: (Array<Criteria_Note_> | null), or: (Array<Criteria_Note_> | null), not: (Criteria_Note_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), status: (ExactCriteria_Literal__queued____processing____ready____error___ | null), error_message: (TextCriteria_str_ | null), last_accessed_at: (NumericCriteria_datetime_ | null), comment: (TextCriteria_str_ | null), is_public: (NumericCriteria_bool_ | null), slug: (TextCriteria_str_ | null), reaction: (ExactCriteria_Literal__like____dislike____neutral___ | null), user_id: (NumericCriteria_UUID_ | null), title: (TextCriteria_str_ | null), description: (TextCriteria_str_ | null), source: (TextCriteria_str_ | null), url: (TextCriteria_str_ | null), author: (TextCriteria_str_ | null), site_name: (TextCriteria_str_ | null), published_date: (NumericCriteria_datetime_ | null), language: (TextCriteria_str_ | null) }>
 export type ExactCriteria_Literal__collection_suggestion____content_recommendation____daily_digest____system___ = Partial<{ eq: (("collection_suggestion" | "content_recommendation" | "daily_digest" | "system") | null), is_null: (boolean | null), ne: (("collection_suggestion" | "content_recommendation" | "daily_digest" | "system") | null), in: (Array<("collection_suggestion" | "content_recommendation" | "daily_digest" | "system")> | null), not_in: (Array<("collection_suggestion" | "content_recommendation" | "daily_digest" | "system")> | null) }>
 export type ExactCriteria_Literal__unread____read____dismissed___ = Partial<{ eq: (("unread" | "read" | "dismissed") | null), is_null: (boolean | null), ne: (("unread" | "read" | "dismissed") | null), in: (Array<("unread" | "read" | "dismissed")> | null), not_in: (Array<("unread" | "read" | "dismissed")> | null) }>
 export type Criteria_Notification_ = Partial<{ and: (Array<Criteria_Notification_> | null), or: (Array<Criteria_Notification_> | null), not: (Criteria_Notification_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), type: (ExactCriteria_Literal__collection_suggestion____content_recommendation____daily_digest____system___ | null), title: (TextCriteria_str_ | null), subtitle: (TextCriteria_str_ | null), body: (TextCriteria_str_ | null), status: (ExactCriteria_Literal__unread____read____dismissed___ | null), read_at: (NumericCriteria_datetime_ | null) }>
 export type ExactCriteria_Literal__note____collection____artifact___ = Partial<{ eq: (("note" | "collection" | "artifact") | null), is_null: (boolean | null), ne: (("note" | "collection" | "artifact") | null), in: (Array<("note" | "collection" | "artifact")> | null), not_in: (Array<("note" | "collection" | "artifact")> | null) }>
 export type Criteria_PinnedItem_ = Partial<{ and: (Array<Criteria_PinnedItem_> | null), or: (Array<Criteria_PinnedItem_> | null), not: (Criteria_PinnedItem_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), entity_id: (NumericCriteria_UUID_ | null), type: (ExactCriteria_Literal__note____collection____artifact___ | null), index: (NumericCriteria_int_ | null) }>
 export type ExactCriteria_Literal__active____dismissed____saved____not_interested___ = Partial<{ eq: (("active" | "dismissed" | "saved" | "not_interested") | null), is_null: (boolean | null), ne: (("active" | "dismissed" | "saved" | "not_interested") | null), in: (Array<("active" | "dismissed" | "saved" | "not_interested")> | null), not_in: (Array<("active" | "dismissed" | "saved" | "not_interested")> | null) }>
-export type Criteria_Recommendation_ = Partial<{ and: (Array<Criteria_Recommendation_> | null), or: (Array<Criteria_Recommendation_> | null), not: (Criteria_Recommendation_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), collection_id: (NumericCriteria_UUID_ | null), url: (TextCriteria_str_ | null), title: (TextCriteria_str_ | null), snippet: (TextCriteria_str_ | null), site_name: (TextCriteria_str_ | null), search_query: (TextCriteria_str_ | null), status: (ExactCriteria_Literal__active____dismissed____saved____not_interested___ | null), note_id: (NumericCriteria_UUID_ | null) }>
+export type Criteria_Recommendation_ = Partial<{ and: (Array<Criteria_Recommendation_> | null), or: (Array<Criteria_Recommendation_> | null), not: (Criteria_Recommendation_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), collection_id: (NumericCriteria_UUID_ | null), url: (TextCriteria_str_ | null), title: (TextCriteria_str_ | null), snippet: (TextCriteria_str_ | null), site_name: (TextCriteria_str_ | null), search_query: (TextCriteria_str_ | null), source: (TextCriteria_str_ | null), status: (ExactCriteria_Literal__active____dismissed____saved____not_interested___ | null), note_id: (NumericCriteria_UUID_ | null), batch_id: (NumericCriteria_UUID_ | null), cluster_run_id: (NumericCriteria_UUID_ | null), slot_index: (NumericCriteria_int_ | null) }>
 export type Criteria_Tag_ = Partial<{ and: (Array<Criteria_Tag_> | null), or: (Array<Criteria_Tag_> | null), not: (Criteria_Tag_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), name: (TextCriteria_str_ | null), color: (ExactCriteria_Literal__neutral____slate____gray____zinc____stone____red____orange____amber____yellow____lime____green____emerald____teal____cyan____sky____blue____indigo____violet____purple____fuchsia____pink____rose___ | null), user_id: (NumericCriteria_UUID_ | null) }>
 export type Criteria_UserSession_ = Partial<{ and: (Array<Criteria_UserSession_> | null), or: (Array<Criteria_UserSession_> | null), not: (Criteria_UserSession_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), user_id: (NumericCriteria_UUID_ | null), access_token_hash: (TextCriteria_str_ | null), refresh_token_hash: (TextCriteria_str_ | null), source: (TextCriteria_str_ | null), device_id: (NumericCriteria_UUID_ | null), app_version: (TextCriteria_str_ | null), user_agent: (TextCriteria_str_ | null), timezone: (TextCriteria_str_ | null), last_used_at: (NumericCriteria_datetime_ | null), is_active: (NumericCriteria_bool_ | null), access_token_expires_at: (NumericCriteria_datetime_ | null), refresh_token_expires_at: (NumericCriteria_datetime_ | null), remember_me: (NumericCriteria_bool_ | null) }>
 export type Cursor_Artifact_ = string
@@ -1477,15 +1603,11 @@ export type DailyDigest = {
    */
   user_id: string;
   /**
-   * Generated podcast audio file ID
-   */
-  file_id: (string | null);
-  /**
    * Digest title
    */
   title: string;
   /**
-   * Formatted podcast transcript
+   * Legacy inline transcript; empty on digests that carry a transcript_file
    */
   summary: string;
   /**
@@ -1509,13 +1631,33 @@ export type DailyDigest = {
    */
   error_message: (string | null);
   /**
+   * Target episode length in minutes, snapshotted when marked ready
+   */
+  target_minutes: number;
+  /**
+   * Measured audio length in seconds; null on legacy and unfinished rows
+   */
+  duration_seconds: (number | null);
+  /**
    * Generated podcast audio file
    */
   file: (File | null);
   /**
+   * Timestamped transcript as a JSON file: an ordered array of PodcastSegment ({start, end, text, role}, offsets in seconds) carrying the full episode text. Fetch it via the presigned URL, signed on single-object reads only. Null while processing, on error, and for episodes generated before transcripts moved to files — those legacy rows keep the plain inline transcript string instead.
+   */
+  transcript_file: (File | null);
+  /**
    * Notes referenced by the digest
    */
   notes: Array<Note>;
+  /**
+   * Generated podcast audio file ID
+   */
+  file_id: (string | null);
+  /**
+   * Timestamped transcript JSON file ID
+   */
+  transcript_file_id: (string | null);
 }
 export type DailyDigestEnvelope = {
   /**
@@ -1820,102 +1962,53 @@ export type FeedbackCreate = {
   context?: Record<string, unknown> | undefined;
 }
 /**
- * Schema for file information.
+ * Transmuter for FileRevision model (file-to-S3Object association).
  */
-export type FileInfo = {
+export type FileRevision = {
+  /**
+   * Creation timestamp in Unix seconds
+   */
+  created_at: number;
+  /**
+   * Creator of the record
+   */
+  created_by: string;
+  /**
+   * Last update timestamp in Unix seconds
+   */
+  updated_at: number;
+  /**
+   * Last updater of the record
+   */
+  updated_by: string;
   /**
    * Unique identifier
    */
   id: string;
   /**
-   * Parent file id
+   * File this revision belongs to
    */
-  parent_file_id: (string | null);
+  file_id: string;
   /**
-   * file name
+   * S3 content object for this revision
    */
-  filename: string;
+  s3_object_id: string;
   /**
-   * Currently active revision
+   * Revision number within the file
    */
-  current_revision_id: (string | null);
-  /**
-   * Whether file is publicly accessible
-   */
-  is_public: boolean;
-  /**
-   * When this file expires and should be cleaned up
-   */
-  expires_at: (string | null);
-  /**
-   * S3 object key
-   */
-  s3_id: (string | null);
-  /**
-   * SHA256 hash of file content
-   */
-  content_hash: (string | null);
-  /**
-   * MD5 hash of file content
-   */
-  content_hash_md5: (string | null);
+  revision_number: number;
   /**
    * File size in bytes
    */
-  size: (number | null);
+  size: number;
   /**
    * MIME type of the file
    */
   mimetype: string;
-}
-/**
- * Flat response schema for file upload endpoints.
- */
-export type FileUploadResponse = {
   /**
-   * Unique identifier
+   * Content metadata (e.g. display_width/display_height in pixels for images)
    */
-  id: string;
-  /**
-   * Parent file id
-   */
-  parent_file_id: (string | null);
-  /**
-   * file name
-   */
-  filename: string;
-  /**
-   * Currently active revision
-   */
-  current_revision_id: (string | null);
-  /**
-   * Whether file is publicly accessible
-   */
-  is_public: boolean;
-  /**
-   * When this file expires and should be cleaned up
-   */
-  expires_at: (string | null);
-  /**
-   * S3 object key
-   */
-  s3_id: (string | null);
-  /**
-   * SHA256 hash of file content
-   */
-  content_hash: (string | null);
-  /**
-   * MD5 hash of file content
-   */
-  content_hash_md5: (string | null);
-  /**
-   * File size in bytes
-   */
-  size: (number | null);
-  /**
-   * MIME type of the file
-   */
-  mimetype: (string | null);
+  metadata: Record<string, unknown>;
 }
 /**
  * Schema for file integrity verification response - only returned on success.
@@ -2028,7 +2121,10 @@ export type Video = {
    * Whether the video has audio
    */
   has_audio: boolean;
-  files: Record<string, File>;
+  /**
+   * The downloaded media file this video was analyzed from
+   */
+  source_file: (File | null);
 }
 /**
  * Schema for video key frame data.
@@ -2066,8 +2162,97 @@ export type KeyFrame = {
    * Source video this key frame was extracted from
    */
   video_id: (string | null);
-  files: Record<string, File>;
+  /**
+   * Extracted key frame image
+   */
+  image_file: (File | null);
   video: (Video | null);
+}
+/**
+ * A pre-slot ``file_references`` row, rebuilt from the slot that replaced it.
+ * 
+ * ``label``, ``category`` and ``mutable`` name columns that no longer exist:
+ * ``kind`` subsumed the first two and the third was never finished. Each call
+ * site passes the constants its edge used to store.
+ */
+export type LegacyFileReference = {
+  /**
+   * Creation timestamp in Unix seconds
+   */
+  created_at: number;
+  /**
+   * Creator of the record
+   */
+  created_by: string;
+  /**
+   * Last update timestamp in Unix seconds
+   */
+  updated_at: number;
+  /**
+   * Last updater of the record
+   */
+  updated_by: string;
+  /**
+   * Reference to the file
+   */
+  file_id: string;
+  /**
+   * Reference to the owning entity
+   */
+  owner_id: string;
+  /**
+   * Whether this owner holds mutation rights. Always false: mutation is entity ownership plus the fork-on-shared guard now.
+   */
+  mutable: boolean;
+  /**
+   * Collection group discriminator
+   */
+  label: (string | null);
+  /**
+   * Semantic category
+   */
+  category: (string | null);
+  /**
+   * The referenced file
+   */
+  file: File;
+}
+/**
+ * A row of the message attachment junction as it was before the slots.
+ */
+export type LegacyMessageFileReference = {
+  /**
+   * Creation timestamp in Unix seconds
+   */
+  created_at: number;
+  /**
+   * Creator of the record
+   */
+  created_by: string;
+  /**
+   * Last update timestamp in Unix seconds
+   */
+  updated_at: number;
+  /**
+   * Last updater of the record
+   */
+  updated_by: string;
+  /**
+   * Synthesized from the message and file ids
+   */
+  id: string;
+  /**
+   * Reference to the owning message
+   */
+  message_id: string;
+  /**
+   * Position of the file in the message
+   */
+  index: number;
+  /**
+   * The underlying reference
+   */
+  file_ref: LegacyFileReference;
 }
 /**
  * Transmuter for MessageNote junction table.
@@ -2275,43 +2460,6 @@ export type MessageWebPage = {
   content_hash: (string | null);
 }
 /**
- * Transmuter for MessageFileReference — an Inventory subclass that owns a FileReference.
- */
-export type MessageFileReference = {
-  /**
-   * Creation timestamp in Unix seconds
-   */
-  created_at: number;
-  /**
-   * Creator of the record
-   */
-  created_by: string;
-  /**
-   * Last update timestamp in Unix seconds
-   */
-  updated_at: number;
-  /**
-   * Last updater of the record
-   */
-  updated_by: string;
-  /**
-   * Unique identifier
-   */
-  id: string;
-  /**
-   * Reference to the owning message
-   */
-  message_id: string;
-  /**
-   * Position of the file in the message
-   */
-  index: number;
-  /**
-   * The attached file reference
-   */
-  file_ref: (FileReference | null);
-}
-/**
  * Transmuter for MessageArtifact junction table.
  */
 export type MessageArtifact = {
@@ -2435,15 +2583,62 @@ export type Message = {
   /**
    * Ordered file attachments for this message
    */
-  message_file_references: Array<MessageFileReference>;
+  files: Array<File>;
   /**
-   * Original voice input file reference
+   * Original voice input recording
    */
-  voice_file_reference: (FileReference | null);
+  voice_file: (File | null);
   /**
    * Artifacts attached to this message
    */
   message_artifacts: Array<MessageArtifact>;
+  /**
+   * Attachments in the shape the pre-slot schema served. Each `id` is synthesized from the message and file ids, deterministically, because the junction no longer has a key of its own.
+   */
+  message_file_references: Array<LegacyMessageFileReference>;
+  /**
+   * Voice recording in the shape the pre-slot schema served.
+   */
+  voice_file_reference: (LegacyFileReference | null);
+}
+/**
+ * Ordered file attachment on a message (creation-ownership chained).
+ */
+export type MessageFile = {
+  /**
+   * Creation timestamp in Unix seconds
+   */
+  created_at: number;
+  /**
+   * Creator of the record
+   */
+  created_by: string;
+  /**
+   * Last update timestamp in Unix seconds
+   */
+  updated_at: number;
+  /**
+   * Last updater of the record
+   */
+  updated_by: string;
+  kind: string;
+  /**
+   * Reference to the file
+   */
+  file_id: string;
+  /**
+   * Reference to the owning entity
+   */
+  owner_id: string;
+  file: (File | null);
+  /**
+   * Owner of both message and file
+   */
+  user_id: string;
+  /**
+   * Position of the attachment
+   */
+  index: number;
 }
 /**
  * Schema for updating a message (request).
@@ -2453,7 +2648,42 @@ export type Message = {
  * previous like/dislike.
  */
 export type MessageUpdateRequest = Partial<{ reaction: (("like" | "dislike" | "neutral") | null) }>
-export type NestedCriteriaBranch_Note_ = Partial<{ and: (Array<Criteria_Note_> | null), or: (Array<Criteria_Note_> | null), not: (Criteria_Note_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), status: (ExactCriteria_Literal__queued____processing____ready____error___ | null), error_message: (TextCriteria_str_ | null), last_accessed_at: (NumericCriteria_datetime_ | null), reindex_requested_at: (NumericCriteria_datetime_ | null), comment: (TextCriteria_str_ | null), title_override: (TextCriteria_str_ | null), description_override: (TextCriteria_str_ | null), is_public: (NumericCriteria_bool_ | null), slug: (TextCriteria_str_ | null), reaction: (ExactCriteria_Literal__like____dislike____neutral___ | null), user_id: (NumericCriteria_UUID_ | null), article_id: (NumericCriteria_UUID_ | null), source: (TextCriteria_str_ | null), title: (TextCriteria_str_ | null), description: (TextCriteria_str_ | null), file_refs: (Criteria_FileReference_ | null), files: (Criteria_File_ | null), key_frames: (Criteria_KeyFrame_ | null), article: (Criteria_Article_ | null), tags: (Criteria_Tag_ | null), collections: (Criteria_Collection_ | null) }>
+/**
+ * User voice recording attached to a message.
+ */
+export type MessageVoiceFile = {
+  /**
+   * Creation timestamp in Unix seconds
+   */
+  created_at: number;
+  /**
+   * Creator of the record
+   */
+  created_by: string;
+  /**
+   * Last update timestamp in Unix seconds
+   */
+  updated_at: number;
+  /**
+   * Last updater of the record
+   */
+  updated_by: string;
+  kind: string;
+  /**
+   * Reference to the file
+   */
+  file_id: string;
+  /**
+   * Reference to the owning entity
+   */
+  owner_id: string;
+  file: (File | null);
+  /**
+   * Owner of both message and file
+   */
+  user_id: string;
+}
+export type NestedCriteriaBranch_Note_ = Partial<{ and: (Array<Criteria_Note_> | null), or: (Array<Criteria_Note_> | null), not: (Criteria_Note_ | null), created_at: (NumericCriteria_datetime_ | null), created_by: (TextCriteria_str_ | null), updated_at: (NumericCriteria_datetime_ | null), updated_by: (TextCriteria_str_ | null), id: (NumericCriteria_UUID_ | null), status: (ExactCriteria_Literal__queued____processing____ready____error___ | null), error_message: (TextCriteria_str_ | null), last_accessed_at: (NumericCriteria_datetime_ | null), comment: (TextCriteria_str_ | null), is_public: (NumericCriteria_bool_ | null), slug: (TextCriteria_str_ | null), reaction: (ExactCriteria_Literal__like____dislike____neutral___ | null), user_id: (NumericCriteria_UUID_ | null), title: (TextCriteria_str_ | null), description: (TextCriteria_str_ | null), source: (TextCriteria_str_ | null), url: (TextCriteria_str_ | null), author: (TextCriteria_str_ | null), site_name: (TextCriteria_str_ | null), published_date: (NumericCriteria_datetime_ | null), language: (TextCriteria_str_ | null), tags: (Criteria_Tag_ | null), collections: (Criteria_Collection_ | null) }>
 export type NestedCursor_Note_ = string
 /**
  * Schema for login response - tokens only, no user info for security.
@@ -3062,64 +3292,6 @@ export type PlanListResponse = {
    */
   plans: Array<PlanWithListings>;
 }
-export type Podcast = {
-  /**
-   * Creation timestamp in Unix seconds
-   */
-  created_at: number;
-  /**
-   * Creator of the record
-   */
-  created_by: string;
-  /**
-   * Last update timestamp in Unix seconds
-   */
-  updated_at: number;
-  /**
-   * Last updater of the record
-   */
-  updated_by: string;
-  /**
-   * Unique identifier
-   */
-  id: string;
-  /**
-   * Owner user ID
-   */
-  user_id: string;
-  /**
-   * Source note ID
-   */
-  note_id: string;
-  /**
-   * Generated podcast audio file ID
-   */
-  file_id: (string | null);
-  /**
-   * Podcast episode title
-   */
-  title: string;
-  /**
-   * Formatted podcast transcript
-   */
-  transcript: string;
-  /**
-   * Podcast generation status
-   */
-  status: ("processing" | "ready" | "error");
-  /**
-   * Timestamp when generation completed
-   */
-  generated_at: (string | null);
-  /**
-   * Safe error message when status is error
-   */
-  error_message: (string | null);
-  /**
-   * Generated podcast audio file
-   */
-  file: (File | null);
-}
 /**
  * Schema for presigned download URL response.
  */
@@ -3279,6 +3451,55 @@ export type RetrievalRequest = {
    * Retrieval query text
    */
   query: string;
+}
+/**
+ * Transmuter for S3Object model (content stored in S3).
+ */
+export type S3Object = {
+  /**
+   * Creation timestamp in Unix seconds
+   */
+  created_at: number;
+  /**
+   * Creator of the record
+   */
+  created_by: string;
+  /**
+   * Last update timestamp in Unix seconds
+   */
+  updated_at: number;
+  /**
+   * Last updater of the record
+   */
+  updated_by: string;
+  /**
+   * Unique identifier
+   */
+  id: string;
+  /**
+   * S3 object key
+   */
+  s3_id: string;
+  /**
+   * SHA256 hash of file content
+   */
+  content_hash: string;
+  /**
+   * MD5 hash of file content
+   */
+  content_hash_md5: string;
+  /**
+   * File size in bytes
+   */
+  size: number;
+  /**
+   * MIME type of the file content
+   */
+  mimetype: string;
+  /**
+   * Content metadata (e.g. image width/height in pixels)
+   */
+  meta: Record<string, unknown>;
 }
 /**
  * Request body for ``POST /me/billing/stripe/portal-session``.
@@ -3458,6 +3679,64 @@ export type TextTranslationRequest = {
    * Target language as a name or BCP-47 tag, e.g. 'zh-TW', 'Traditional Chinese', 'Spanish'
    */
   target_language: string;
+}
+/**
+ * One normalized item from a platform trending board.
+ */
+export type TrendingItem = {
+  /**
+   * Unique identifier
+   */
+  id: string;
+  /**
+   * Logical platform name
+   */
+  source: ("bilibili" | "douyin" | "kuaishou" | "reddit" | "tiktok" | "twitter" | "weibo" | "xiaohongshu" | "zhihu");
+  /**
+   * Board type: hot_search or hot_top
+   */
+  kind: ("hot_search" | "hot_top");
+  /**
+   * Platform identifier, or a digest of the URL when absent
+   */
+  external_id: string;
+  /**
+   * Canonical URL for the item or topic
+   */
+  url: string;
+  /**
+   * Normalized topic or item title
+   */
+  title: string;
+  /**
+   * Position in the hot list, zero-based
+   */
+  source_rank: number;
+  /**
+   * Remaining source metadata
+   */
+  payload: Record<string, unknown>;
+  /**
+   * UTC time of the successful refresh
+   */
+  fetched_at: string;
+}
+/**
+ * Current hot-search and hot-top boards for one platform.
+ */
+export type TrendingPlatform = {
+  /**
+   * Logical platform name
+   */
+  source: ("bilibili" | "douyin" | "kuaishou" | "reddit" | "tiktok" | "twitter" | "weibo" | "xiaohongshu" | "zhihu");
+  /**
+   * Current hot-search board ordered by source rank
+   */
+  hot_search: Array<TrendingItem>;
+  /**
+   * Current hot-top board ordered by source rank
+   */
+  hot_top: Array<TrendingItem>;
 }
 export type TwitterArticle = Partial<({ title: (string | null), plain_text: (string | null), preview_text: (string | null), cover_media: (string | null), media_entities: (Array<string> | null) } & Record<string, any>)>
 export type TwitterTweetAttachments = Partial<({ media_keys: (Array<string> | null), poll_ids: (Array<string> | null) } & Record<string, any>)>
@@ -3990,6 +4269,37 @@ export type VerifyResetCodeResponse = {
   reset_token: string;
 }
 /**
+ * The downloaded media file a video was analyzed from (lineage).
+ */
+export type VideoSourceFile = {
+  /**
+   * Creation timestamp in Unix seconds
+   */
+  created_at: number;
+  /**
+   * Creator of the record
+   */
+  created_by: string;
+  /**
+   * Last update timestamp in Unix seconds
+   */
+  updated_at: number;
+  /**
+   * Last updater of the record
+   */
+  updated_by: string;
+  kind: string;
+  /**
+   * Reference to the file
+   */
+  file_id: string;
+  /**
+   * Reference to the owning entity
+   */
+  owner_id: string;
+  file: (File | null);
+}
+/**
  * Schema for web client login with remember_me support.
  */
 export type WebLogin = {
@@ -4079,7 +4389,7 @@ export type get_List_artifacts_api_v1_artifacts__get = {
       path: "/api/v1/artifacts/",
       requestFormat: "json",
       parameters: {
-            query:  Partial<{ and: (Array<Schemas.Criteria_Artifact_> | null), or: (Array<Schemas.Criteria_Artifact_> | null), not: (Schemas.Criteria_Artifact_ | null), cursor: (Schemas.Cursor_Artifact_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+user_id" | "-user_id" | "+name" | "-name" | "+description" | "-description" | "+is_public" | "-is_public" | "+slug" | "-slug" | "+reaction" | "-reaction" | "+reindex_requested_at" | "-reindex_requested_at" | "+mimetype" | "-mimetype" | "+size" | "-size")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), name: (Schemas.TextCriteria_str_ | null), description: (Schemas.TextCriteria_str_ | null), is_public: (Schemas.NumericCriteria_bool_ | null), slug: (Schemas.TextCriteria_str_ | null), reaction: (Schemas.ExactCriteria_Literal__like____dislike____neutral___ | null), reindex_requested_at: (Schemas.NumericCriteria_datetime_ | null), mimetype: (Schemas.TextCriteria_str_ | null), size: (Schemas.NumericCriteria_int_ | null) }>,
+            query:  Partial<{ and: (Array<Schemas.Criteria_Artifact_> | null), or: (Array<Schemas.Criteria_Artifact_> | null), not: (Schemas.Criteria_Artifact_ | null), cursor: (Schemas.Cursor_Artifact_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+user_id" | "-user_id" | "+name" | "-name" | "+description" | "-description" | "+is_public" | "-is_public" | "+slug" | "-slug" | "+reaction" | "-reaction" | "+mimetype" | "-mimetype" | "+size" | "-size")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), name: (Schemas.TextCriteria_str_ | null), description: (Schemas.TextCriteria_str_ | null), is_public: (Schemas.NumericCriteria_bool_ | null), slug: (Schemas.TextCriteria_str_ | null), reaction: (Schemas.ExactCriteria_Literal__like____dislike____neutral___ | null), mimetype: (Schemas.TextCriteria_str_ | null), size: (Schemas.NumericCriteria_int_ | null) }>,
         
         
         
@@ -4202,7 +4512,7 @@ export type put_Update_artifact_content_api_v1_artifacts__artifact_id__content_p
         
         body:  Schemas.Body_update_artifact_content_api_v1_artifacts__artifact_id__content_put,
           }
-      responses: {200: Schemas.FileUploadResponse,
+      responses: {200: Schemas.File,
 422: Schemas.HTTPValidationError,
 },
       
@@ -4751,7 +5061,7 @@ export type get_List_notes_api_v1_notes__get = {
       path: "/api/v1/notes/",
       requestFormat: "json",
       parameters: {
-            query:  Partial<{ and: (Array<Schemas.NestedCriteriaBranch_Note_> | null), or: (Array<Schemas.NestedCriteriaBranch_Note_> | null), not: (Schemas.NestedCriteriaBranch_Note_ | null), cursor: (Schemas.NestedCursor_Note_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+status" | "-status" | "+error_message" | "-error_message" | "+last_accessed_at" | "-last_accessed_at" | "+reindex_requested_at" | "-reindex_requested_at" | "+comment" | "-comment" | "+title_override" | "-title_override" | "+description_override" | "-description_override" | "+is_public" | "-is_public" | "+slug" | "-slug" | "+reaction" | "-reaction" | "+user_id" | "-user_id" | "+article_id" | "-article_id" | "+source" | "-source" | "+title" | "-title" | "+description" | "-description")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), status: (Schemas.ExactCriteria_Literal__queued____processing____ready____error___ | null), error_message: (Schemas.TextCriteria_str_ | null), last_accessed_at: (Schemas.NumericCriteria_datetime_ | null), reindex_requested_at: (Schemas.NumericCriteria_datetime_ | null), comment: (Schemas.TextCriteria_str_ | null), title_override: (Schemas.TextCriteria_str_ | null), description_override: (Schemas.TextCriteria_str_ | null), is_public: (Schemas.NumericCriteria_bool_ | null), slug: (Schemas.TextCriteria_str_ | null), reaction: (Schemas.ExactCriteria_Literal__like____dislike____neutral___ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), article_id: (Schemas.NumericCriteria_UUID_ | null), source: (Schemas.TextCriteria_str_ | null), title: (Schemas.TextCriteria_str_ | null), description: (Schemas.TextCriteria_str_ | null), file_refs: (Schemas.Criteria_FileReference_ | null), files: (Schemas.Criteria_File_ | null), key_frames: (Schemas.Criteria_KeyFrame_ | null), article: (Schemas.Criteria_Article_ | null), tags: (Schemas.Criteria_Tag_ | null), collections: (Schemas.Criteria_Collection_ | null) }>,
+            query:  Partial<{ and: (Array<Schemas.NestedCriteriaBranch_Note_> | null), or: (Array<Schemas.NestedCriteriaBranch_Note_> | null), not: (Schemas.NestedCriteriaBranch_Note_ | null), cursor: (Schemas.NestedCursor_Note_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+status" | "-status" | "+error_message" | "-error_message" | "+last_accessed_at" | "-last_accessed_at" | "+comment" | "-comment" | "+is_public" | "-is_public" | "+slug" | "-slug" | "+reaction" | "-reaction" | "+user_id" | "-user_id" | "+title" | "-title" | "+description" | "-description" | "+source" | "-source" | "+url" | "-url" | "+author" | "-author" | "+site_name" | "-site_name" | "+published_date" | "-published_date" | "+language" | "-language")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), status: (Schemas.ExactCriteria_Literal__queued____processing____ready____error___ | null), error_message: (Schemas.TextCriteria_str_ | null), last_accessed_at: (Schemas.NumericCriteria_datetime_ | null), comment: (Schemas.TextCriteria_str_ | null), is_public: (Schemas.NumericCriteria_bool_ | null), slug: (Schemas.TextCriteria_str_ | null), reaction: (Schemas.ExactCriteria_Literal__like____dislike____neutral___ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), title: (Schemas.TextCriteria_str_ | null), description: (Schemas.TextCriteria_str_ | null), source: (Schemas.TextCriteria_str_ | null), url: (Schemas.TextCriteria_str_ | null), author: (Schemas.TextCriteria_str_ | null), site_name: (Schemas.TextCriteria_str_ | null), published_date: (Schemas.NumericCriteria_datetime_ | null), language: (Schemas.TextCriteria_str_ | null), tags: (Schemas.Criteria_Tag_ | null), collections: (Schemas.Criteria_Collection_ | null) }>,
         
         
         
@@ -4826,7 +5136,7 @@ file_id: string,
         
         
           }
-      responses: {200: Schemas.FileInfo,
+      responses: {200: Schemas.File,
 422: Schemas.HTTPValidationError,
 },
       
@@ -4962,7 +5272,7 @@ file_id: string,
         
         body:  Schemas.Body_update_note_content_file_api_v1_notes__note_id__files__file_id__content_put,
           }
-      responses: {200: Schemas.FileUploadResponse,
+      responses: {200: Schemas.File,
 422: Schemas.HTTPValidationError,
 },
       
@@ -5003,7 +5313,7 @@ revision_id: string,
         
         
           }
-      responses: {200: Schemas.FileUploadResponse,
+      responses: {200: Schemas.File,
 422: Schemas.HTTPValidationError,
 },
       
@@ -5123,7 +5433,7 @@ export type post_Create_file_api_v1_files__post = {
         
         body:  Schemas.Body_create_file_api_v1_files__post,
           }
-      responses: {200: Schemas.FileUploadResponse,
+      responses: {200: Schemas.File,
 422: Schemas.HTTPValidationError,
 },
       
@@ -5145,7 +5455,7 @@ export type get_Get_file_metadata_api_v1_files__file_id__get = {
         
         
           }
-      responses: {200: Schemas.FileInfo,
+      responses: {200: Schemas.File,
 422: Schemas.HTTPValidationError,
 },
       
@@ -5274,7 +5584,7 @@ export type post_Complete_upload_api_v1_files_completions_post = {
         
         body:  Schemas.CompleteUploadRequest,
           }
-      responses: {200: Schemas.FileUploadResponse,
+      responses: {200: Schemas.File,
 422: Schemas.HTTPValidationError,
 },
       
@@ -6308,7 +6618,7 @@ export type get_List_daily_digests_api_v1_daily_digests__get = {
       path: "/api/v1/daily-digests/",
       requestFormat: "json",
       parameters: {
-            query:  Partial<{ and: (Array<Schemas.Criteria_DailyDigest_> | null), or: (Array<Schemas.Criteria_DailyDigest_> | null), not: (Schemas.Criteria_DailyDigest_ | null), cursor: (Schemas.Cursor_DailyDigest_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+user_id" | "-user_id" | "+file_id" | "-file_id" | "+title" | "-title" | "+summary" | "-summary" | "+status" | "-status" | "+generated_at" | "-generated_at" | "+error_message" | "-error_message")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), file_id: (Schemas.NumericCriteria_UUID_ | null), title: (Schemas.TextCriteria_str_ | null), summary: (Schemas.TextCriteria_str_ | null), status: (Schemas.ExactCriteria_Literal__processing____ready____error___ | null), generated_at: (Schemas.NumericCriteria_datetime_ | null), error_message: (Schemas.TextCriteria_str_ | null) }>,
+            query:  Partial<{ and: (Array<Schemas.Criteria_DailyDigest_> | null), or: (Array<Schemas.Criteria_DailyDigest_> | null), not: (Schemas.Criteria_DailyDigest_ | null), cursor: (Schemas.Cursor_DailyDigest_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+user_id" | "-user_id" | "+title" | "-title" | "+summary" | "-summary" | "+status" | "-status" | "+generated_at" | "-generated_at" | "+error_message" | "-error_message" | "+target_minutes" | "-target_minutes" | "+duration_seconds" | "-duration_seconds")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), title: (Schemas.TextCriteria_str_ | null), summary: (Schemas.TextCriteria_str_ | null), status: (Schemas.ExactCriteria_Literal__processing____ready____error___ | null), generated_at: (Schemas.NumericCriteria_datetime_ | null), error_message: (Schemas.TextCriteria_str_ | null), target_minutes: (Schemas.NumericCriteria_int_ | null), duration_seconds: (Schemas.NumericCriteria_int_ | null) }>,
         
         
         
@@ -6346,6 +6656,25 @@ export type get_Get_podcast_api_v1_podcasts__podcast_id__get = {
         
           }
       responses: {200: Schemas.Podcast,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
+/**
+ * Delete a podcast in any status, freeing its note for a new one.
+ */
+export type delete_Delete_podcast_api_v1_podcasts__podcast_id__delete = {
+      method: "DELETE",
+      path: "/api/v1/podcasts/{podcast_id}",
+      requestFormat: "json",
+      parameters: {
+            
+        path:  {podcast_id: string,
+},
+        
+        
+          }
+      responses: {204: unknown,
 422: Schemas.HTTPValidationError,
 },
       
@@ -6452,7 +6781,7 @@ export type post_Retrieve_chunks_api_v1_retrievals_chunks_post = {
         
         body:  Schemas.RetrievalRequest,
           }
-      responses: {200: Array<Schemas.Chunk>,
+      responses: {200: Array<Schemas.ChunkRetrievalResult>,
 422: Schemas.HTTPValidationError,
 },
       
@@ -6556,7 +6885,7 @@ export type get_List_collection_notes_api_v1_collections__collection_id__notes_g
       path: "/api/v1/collections/{collection_id}/notes",
       requestFormat: "json",
       parameters: {
-            query:  Partial<{ and: (Array<Schemas.Criteria_Note_> | null), or: (Array<Schemas.Criteria_Note_> | null), not: (Schemas.Criteria_Note_ | null), cursor: (Schemas.Cursor_Note_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+status" | "-status" | "+error_message" | "-error_message" | "+last_accessed_at" | "-last_accessed_at" | "+reindex_requested_at" | "-reindex_requested_at" | "+comment" | "-comment" | "+title_override" | "-title_override" | "+description_override" | "-description_override" | "+is_public" | "-is_public" | "+slug" | "-slug" | "+reaction" | "-reaction" | "+user_id" | "-user_id" | "+article_id" | "-article_id" | "+source" | "-source" | "+title" | "-title" | "+description" | "-description")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), status: (Schemas.ExactCriteria_Literal__queued____processing____ready____error___ | null), error_message: (Schemas.TextCriteria_str_ | null), last_accessed_at: (Schemas.NumericCriteria_datetime_ | null), reindex_requested_at: (Schemas.NumericCriteria_datetime_ | null), comment: (Schemas.TextCriteria_str_ | null), title_override: (Schemas.TextCriteria_str_ | null), description_override: (Schemas.TextCriteria_str_ | null), is_public: (Schemas.NumericCriteria_bool_ | null), slug: (Schemas.TextCriteria_str_ | null), reaction: (Schemas.ExactCriteria_Literal__like____dislike____neutral___ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), article_id: (Schemas.NumericCriteria_UUID_ | null), source: (Schemas.TextCriteria_str_ | null), title: (Schemas.TextCriteria_str_ | null), description: (Schemas.TextCriteria_str_ | null) }>,
+            query:  Partial<{ and: (Array<Schemas.Criteria_Note_> | null), or: (Array<Schemas.Criteria_Note_> | null), not: (Schemas.Criteria_Note_ | null), cursor: (Schemas.Cursor_Note_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+status" | "-status" | "+error_message" | "-error_message" | "+last_accessed_at" | "-last_accessed_at" | "+comment" | "-comment" | "+is_public" | "-is_public" | "+slug" | "-slug" | "+reaction" | "-reaction" | "+user_id" | "-user_id" | "+title" | "-title" | "+description" | "-description" | "+source" | "-source" | "+url" | "-url" | "+author" | "-author" | "+site_name" | "-site_name" | "+published_date" | "-published_date" | "+language" | "-language")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), status: (Schemas.ExactCriteria_Literal__queued____processing____ready____error___ | null), error_message: (Schemas.TextCriteria_str_ | null), last_accessed_at: (Schemas.NumericCriteria_datetime_ | null), comment: (Schemas.TextCriteria_str_ | null), is_public: (Schemas.NumericCriteria_bool_ | null), slug: (Schemas.TextCriteria_str_ | null), reaction: (Schemas.ExactCriteria_Literal__like____dislike____neutral___ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), title: (Schemas.TextCriteria_str_ | null), description: (Schemas.TextCriteria_str_ | null), source: (Schemas.TextCriteria_str_ | null), url: (Schemas.TextCriteria_str_ | null), author: (Schemas.TextCriteria_str_ | null), site_name: (Schemas.TextCriteria_str_ | null), published_date: (Schemas.NumericCriteria_datetime_ | null), language: (Schemas.TextCriteria_str_ | null) }>,
         path:  {collection_id: string,
 },
         
@@ -6621,7 +6950,7 @@ export type get_List_collection_artifacts_api_v1_collections__collection_id__art
       path: "/api/v1/collections/{collection_id}/artifacts",
       requestFormat: "json",
       parameters: {
-            query:  Partial<{ and: (Array<Schemas.Criteria_Artifact_> | null), or: (Array<Schemas.Criteria_Artifact_> | null), not: (Schemas.Criteria_Artifact_ | null), cursor: (Schemas.Cursor_Artifact_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+user_id" | "-user_id" | "+name" | "-name" | "+description" | "-description" | "+is_public" | "-is_public" | "+slug" | "-slug" | "+reaction" | "-reaction" | "+reindex_requested_at" | "-reindex_requested_at" | "+mimetype" | "-mimetype" | "+size" | "-size")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), name: (Schemas.TextCriteria_str_ | null), description: (Schemas.TextCriteria_str_ | null), is_public: (Schemas.NumericCriteria_bool_ | null), slug: (Schemas.TextCriteria_str_ | null), reaction: (Schemas.ExactCriteria_Literal__like____dislike____neutral___ | null), reindex_requested_at: (Schemas.NumericCriteria_datetime_ | null), mimetype: (Schemas.TextCriteria_str_ | null), size: (Schemas.NumericCriteria_int_ | null) }>,
+            query:  Partial<{ and: (Array<Schemas.Criteria_Artifact_> | null), or: (Array<Schemas.Criteria_Artifact_> | null), not: (Schemas.Criteria_Artifact_ | null), cursor: (Schemas.Cursor_Artifact_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+user_id" | "-user_id" | "+name" | "-name" | "+description" | "-description" | "+is_public" | "-is_public" | "+slug" | "-slug" | "+reaction" | "-reaction" | "+mimetype" | "-mimetype" | "+size" | "-size")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), name: (Schemas.TextCriteria_str_ | null), description: (Schemas.TextCriteria_str_ | null), is_public: (Schemas.NumericCriteria_bool_ | null), slug: (Schemas.TextCriteria_str_ | null), reaction: (Schemas.ExactCriteria_Literal__like____dislike____neutral___ | null), mimetype: (Schemas.TextCriteria_str_ | null), size: (Schemas.NumericCriteria_int_ | null) }>,
         path:  {collection_id: string,
 },
         
@@ -6888,7 +7217,7 @@ export type get_List_recommendations_api_v1_recommendations__get = {
       path: "/api/v1/recommendations/",
       requestFormat: "json",
       parameters: {
-            query:  Partial<{ and: (Array<Schemas.Criteria_Recommendation_> | null), or: (Array<Schemas.Criteria_Recommendation_> | null), not: (Schemas.Criteria_Recommendation_ | null), cursor: (Schemas.Cursor_Recommendation_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+user_id" | "-user_id" | "+collection_id" | "-collection_id" | "+url" | "-url" | "+title" | "-title" | "+snippet" | "-snippet" | "+site_name" | "-site_name" | "+search_query" | "-search_query" | "+status" | "-status" | "+note_id" | "-note_id")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), collection_id: (Schemas.NumericCriteria_UUID_ | null), url: (Schemas.TextCriteria_str_ | null), title: (Schemas.TextCriteria_str_ | null), snippet: (Schemas.TextCriteria_str_ | null), site_name: (Schemas.TextCriteria_str_ | null), search_query: (Schemas.TextCriteria_str_ | null), status: (Schemas.ExactCriteria_Literal__active____dismissed____saved____not_interested___ | null), note_id: (Schemas.NumericCriteria_UUID_ | null) }>,
+            query:  Partial<{ and: (Array<Schemas.Criteria_Recommendation_> | null), or: (Array<Schemas.Criteria_Recommendation_> | null), not: (Schemas.Criteria_Recommendation_ | null), cursor: (Schemas.Cursor_Recommendation_ | null), limit: (number | null), offset: (number | null), order_by: (Array<("+created_at" | "-created_at" | "+created_by" | "-created_by" | "+updated_at" | "-updated_at" | "+updated_by" | "-updated_by" | "+id" | "-id" | "+user_id" | "-user_id" | "+collection_id" | "-collection_id" | "+url" | "-url" | "+title" | "-title" | "+snippet" | "-snippet" | "+site_name" | "-site_name" | "+search_query" | "-search_query" | "+source" | "-source" | "+status" | "-status" | "+note_id" | "-note_id" | "+batch_id" | "-batch_id" | "+cluster_run_id" | "-cluster_run_id" | "+slot_index" | "-slot_index")> | null), created_at: (Schemas.NumericCriteria_datetime_ | null), created_by: (Schemas.TextCriteria_str_ | null), updated_at: (Schemas.NumericCriteria_datetime_ | null), updated_by: (Schemas.TextCriteria_str_ | null), id: (Schemas.NumericCriteria_UUID_ | null), user_id: (Schemas.NumericCriteria_UUID_ | null), collection_id: (Schemas.NumericCriteria_UUID_ | null), url: (Schemas.TextCriteria_str_ | null), title: (Schemas.TextCriteria_str_ | null), snippet: (Schemas.TextCriteria_str_ | null), site_name: (Schemas.TextCriteria_str_ | null), search_query: (Schemas.TextCriteria_str_ | null), source: (Schemas.TextCriteria_str_ | null), status: (Schemas.ExactCriteria_Literal__active____dismissed____saved____not_interested___ | null), note_id: (Schemas.NumericCriteria_UUID_ | null), batch_id: (Schemas.NumericCriteria_UUID_ | null), cluster_run_id: (Schemas.NumericCriteria_UUID_ | null), slot_index: (Schemas.NumericCriteria_int_ | null) }>,
         
         
         
@@ -7087,6 +7416,21 @@ export type post_Sync_bookmark_tweets_api_v1_twitter_syncs_post = {
 },
       
     }
+export type get_List_trending_api_v1_trending_get = {
+      method: "GET",
+      path: "/api/v1/trending",
+      requestFormat: "json",
+      parameters: {
+            
+        
+        
+        
+          }
+      responses: {200: Array<Schemas.TrendingPlatform>,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
 export type get_Health_health_get = {
       method: "GET",
       path: "/health",
@@ -7154,6 +7498,7 @@ export type get_Health_health_get = {
 "/api/v1/external-connections": Endpoints.get_List_connections_api_v1_external_connections_get,
 "/api/v1/callbacks/{provider}": Endpoints.get_Oauth_callback_api_v1_callbacks__provider__get,
 "/api/v1/twitter/bookmarks": Endpoints.get_List_twitter_bookmarks_api_v1_twitter_bookmarks_get,
+"/api/v1/trending": Endpoints.get_List_trending_api_v1_trending_get,
 "/health": Endpoints.get_Health_health_get
          },
 post: {
@@ -7239,6 +7584,7 @@ delete: {
 "/api/v1/users/me": Endpoints.delete_Delete_current_user_api_v1_users_me_delete,
 "/api/v1/users/me/api-keys/{api_key_id}": Endpoints.delete_Revoke_api_key_api_v1_users_me_api_keys__api_key_id__delete,
 "/api/v1/conversations/{conversation_id}": Endpoints.delete_Delete_conversation_api_v1_conversations__conversation_id__delete,
+"/api/v1/podcasts/{podcast_id}": Endpoints.delete_Delete_podcast_api_v1_podcasts__podcast_id__delete,
 "/api/v1/collections/{collection_id}": Endpoints.delete_Delete_collection_api_v1_collections__collection_id__delete,
 "/api/v1/collections/{collection_id}/notes/{note_id}": Endpoints.delete_Remove_collection_note_api_v1_collections__collection_id__notes__note_id__delete,
 "/api/v1/collections/{collection_id}/artifacts/{artifact_id}": Endpoints.delete_Remove_collection_artifact_api_v1_collections__collection_id__artifacts__artifact_id__delete,

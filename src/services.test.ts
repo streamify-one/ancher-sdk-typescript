@@ -1,11 +1,24 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 import type { AncherClient } from './api/client'
+import type { ChunkRetrievalResult, NoteRetrievalResult } from './contracts/search'
 import {
   createActivityRepository,
   createImagePromptRepository,
   createOnboardingRepository,
   createTextSelectionRepository,
+  type RetrievalRepository,
 } from './services'
+
+describe('RetrievalRepository', () => {
+  it('exposes version-compatible chunk and embedded-note results', () => {
+    expectTypeOf<ReturnType<RetrievalRepository['chunks']>>().toEqualTypeOf<
+      Promise<ChunkRetrievalResult[]>
+    >()
+    expectTypeOf<ReturnType<RetrievalRepository['notes']>>().toEqualTypeOf<
+      Promise<NoteRetrievalResult[]>
+    >()
+  })
+})
 
 function makeRepository() {
   const get = vi.fn()

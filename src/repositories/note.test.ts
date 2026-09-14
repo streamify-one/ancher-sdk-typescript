@@ -1,6 +1,9 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 import type { AncherClient } from '../api/client'
-import { createNoteRepository } from './note'
+import type { Page } from '../contracts/common'
+import type { FileInfo, FileUploadResponse } from '../contracts/file'
+import type { CollectionSuggestion } from '../contracts/suggestion'
+import { createNoteRepository, type NoteRepository } from './note'
 
 function makeRepository() {
   const get = vi.fn()
@@ -19,6 +22,22 @@ function makeRepository() {
 }
 
 describe('NoteRepository', () => {
+  it('returns the version-compatible file contract from note-scoped metadata reads', () => {
+    expectTypeOf<ReturnType<NoteRepository['getFile']>>().toEqualTypeOf<Promise<FileInfo>>()
+  })
+
+  it('returns the version-compatible file contract after content updates', () => {
+    expectTypeOf<ReturnType<NoteRepository['updateFileContent']>>().toEqualTypeOf<
+      Promise<FileUploadResponse>
+    >()
+  })
+
+  it('returns suggestions with version-compatible embedded notes', () => {
+    expectTypeOf<ReturnType<NoteRepository['suggestedCollections']>>().toEqualTypeOf<
+      Promise<Page<CollectionSuggestion>>
+    >()
+  })
+
   it('forwards multiple file ids when creating a combined note', async () => {
     const { Note, post } = makeRepository()
     const createdNote = { id: 'note-1' }

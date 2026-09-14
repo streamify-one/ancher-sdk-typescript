@@ -1,6 +1,7 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 import type { AncherClient } from '../api/client'
-import { createArtifactRepository } from './artifact'
+import type { FileUploadResponse } from '../contracts/file'
+import { createArtifactRepository, type ArtifactRepository } from './artifact'
 
 function makeRepository() {
   const get = vi.fn()
@@ -19,6 +20,12 @@ function makeRepository() {
 }
 
 describe('ArtifactRepository', () => {
+  it('returns the version-compatible file contract after content updates', () => {
+    expectTypeOf<ReturnType<ArtifactRepository['updateContent']>>().toEqualTypeOf<
+      Promise<FileUploadResponse>
+    >()
+  })
+
   describe('presignedUrl', () => {
     it('mints a content presigned URL by default', async () => {
       const { Artifact, post } = makeRepository()

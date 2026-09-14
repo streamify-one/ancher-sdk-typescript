@@ -13,6 +13,7 @@ import type {
   Where,
 } from './query'
 import type { Schemas } from './schemas'
+import type { Note } from './note'
 
 /* ---------------------------------------------------------------------------
  * Enums.
@@ -45,7 +46,12 @@ export type _SuggestionResolutionExhaustive = Expect<
  * ------------------------------------------------------------------------- */
 
 /** A suggested note↔collection pairing */
-export type CollectionSuggestion = Schemas.CollectionSuggestion
+export type CollectionSuggestion = Omit<Schemas.CollectionSuggestion, 'note'> & { note: Note | null }
+
+/** Per-id result of the batch accept/dismiss endpoints, with the version-compatible suggestion. */
+export type SuggestionBatchResult = Omit<Schemas.SuggestionBatchResult, 'suggestion'> & {
+  suggestion: CollectionSuggestion | null
+}
 
 /** Suggestion list response */
 export type SuggestionListResponse = Page<CollectionSuggestion>

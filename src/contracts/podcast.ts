@@ -14,6 +14,7 @@
  */
 
 import type { Eq, Expect } from './assert'
+import type { File } from './file'
 import type { Schemas } from './schemas'
 
 /* ---------------------------------------------------------------------------
@@ -47,4 +48,13 @@ export type _PodcastStatusExhaustive = Expect<Eq<PodcastStatus, Schemas.Podcast[
  * `unix-timestamp` schema override, unlike `created_at`/`updated_at`, so
  * normalize it rather than passing it to `new Date`.
  */
-export type Podcast = Schemas.Podcast
+interface CompatiblePodcastFields {
+  duration_seconds?: number | null
+  file: File | null
+  target_minutes?: number
+  transcript_file?: File | null
+  transcript_file_id?: string | null
+}
+
+export type Podcast = Omit<Schemas.Podcast, keyof CompatiblePodcastFields> &
+  CompatiblePodcastFields

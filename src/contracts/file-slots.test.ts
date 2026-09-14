@@ -4,11 +4,13 @@ import {
   getArtifactDisplayFile,
   getArtifactThumbnailFile,
   getFileContentKey,
+  getFileImageSize,
   getFileMimetype,
   getFileRevisionNumber,
   getFileUrl,
   getNoteContentFile,
   getNoteDisplayFile,
+  getNoteOriginDisplayFile,
   getNoteOriginFiles,
   getNoteOwnContentFile,
   getNoteThumbnailFile,
@@ -235,5 +237,52 @@ describe('file-level reads', () => {
     expect(getFileContentKey(file('f'))).toBeUndefined()
     expect(getFileContentKey({ id: '', content_hash: 'aaa' })).toBeUndefined()
     expect(getFileContentKey(null)).toBeUndefined()
+  })
+})
+
+describe('getNoteOriginDisplayFile', () => {
+  const first = file('origin-1', { mimetype: 'application/pdf' })
+  const second = file('origin-2', { mimetype: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' })
+
+  it('attributes the display by parent_file_id when the rendition carries it', () => {
+    const display = file('display', { mimetype: 'application/pdf', parent_file_id: 'origin-2' })
+    const note = { display_file: display, origin_files: [first, second] }
+    expect(getNoteOriginDisplayFile(note, second)).toBe(display)
+    expect(getNoteOriginDisplayFile(note, first)).toBeUndefined()
+  })
+
+  it('attributes an unlinked display only to the first origin file', () => {
+    const display = file('display', { mimetype: 'application/pdf' })
+    const note = { display_file: display, origin_files: [first, second] }
+    expect(getNoteOriginDisplayFile(note, first)).toBe(display)
+    expect(getNoteOriginDisplayFile(note, second)).toBeUndefined()
+  })
+
+  it('reads the display through the article on the nested shapes', () => {
+    const display = file('display')
+    expect(getNoteOriginDisplayFile({ article: { files: { display }, origin_files: [first] } }, first)).toBe(display)
+  })
+
+  it('is undefined without a display file', () => {
+    expect(getNoteOriginDisplayFile({ origin_files: [first] }, first)).toBeUndefined()
+    expect(getNoteOriginDisplayFile(null, first)).toBeUndefined()
+  })
+})
+
+describe('getFileImageSize', () => {
+  it('reads the flattened metadata (v1.5.0) and the nested S3 meta (≤ v1.4)', () => {
+    expect(getFileImageSize(file('a', { metadata: { display_width: 800, display_height: 600 } }))).toEqual({ width: 800, height: 600 })
+    expect(getFileImageSize(file('b', { revision: { s3_object: { meta: { display_width: '400', display_height: '300' } } } }))).toEqual({ width: 400, height: 300 })
+  })
+
+  it('falls back to the original size for files that predate display metadata', () => {
+    expect(getFileImageSize(file('c', { metadata: { original_width: 1000, original_height: 500 } }))).toEqual({ width: 1000, height: 500 })
+  })
+
+  it('is undefined for non-images and malformed sizes', () => {
+    expect(getFileImageSize(file('d', { metadata: {} }))).toBeUndefined()
+    expect(getFileImageSize(file('e', { metadata: { display_width: 0, display_height: 10 } }))).toBeUndefined()
+    expect(getFileImageSize(file('f'))).toBeUndefined()
+    expect(getFileImageSize(null)).toBeUndefined()
   })
 })

@@ -2,12 +2,12 @@
  * Collection repository (`/collections`), including the note/artifact
  * membership sub-resources. Lists take the TypeScript-native
  * `{ where, orderBy, … }` options (see `../contracts/query`); list
- * sub-resources return plain paged data (`Schemas.Page_Note_`,
- * `Schemas.Page_Artifact_`, `Schemas.Page_CollectionSuggestion_`).
+ * sub-resources return plain paged data over the SDK's compatible contracts.
  */
 
 import type { AncherClient } from '../api/client'
 import type { EndpointByMethod, Schemas } from '../api/generated/api.client'
+import type { Artifact } from '../contracts/artifact'
 import type {
   Collection,
   CollectionArtifactsOptions,
@@ -16,6 +16,9 @@ import type {
   CollectionSuggestedNotesOptions,
   CollectionWhere,
 } from '../contracts/collection'
+import type { Page } from '../contracts/common'
+import type { Note } from '../contracts/note'
+import type { CollectionSuggestion } from '../contracts/suggestion'
 import { createListSurface, type ListSurface } from './base'
 import { buildListQuery } from './query'
 
@@ -45,7 +48,7 @@ export interface CollectionRepository
   /** Remove a note from a collection. */
   removeNote(collectionId: string, noteId: string): Promise<void>
   /** List the notes in a collection (paginated). */
-  notes(collectionId: string, options?: CollectionNotesOptions): Promise<Schemas.Page_Note_>
+  notes(collectionId: string, options?: CollectionNotesOptions): Promise<Page<Note>>
   /** Add an artifact to a collection. */
   addArtifact(collectionId: string, artifactId: string): Promise<Collection>
   /** Replace the full set of artifacts in a collection. */
@@ -56,12 +59,12 @@ export interface CollectionRepository
   artifacts(
     collectionId: string,
     options?: CollectionArtifactsOptions
-  ): Promise<Schemas.Page_Artifact_>
+  ): Promise<Page<Artifact>>
   /** List suggested notes for a collection (paginated). */
   suggestedNotes(
     collectionId: string,
     options?: CollectionSuggestedNotesOptions
-  ): Promise<Schemas.Page_CollectionSuggestion_>
+  ): Promise<Page<CollectionSuggestion>>
 }
 
 export function createCollectionRepository(client: AncherClient): CollectionRepository {

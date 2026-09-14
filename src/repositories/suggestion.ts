@@ -12,6 +12,7 @@ import type { AncherClient } from '../api/client'
 import type { EndpointByMethod, Schemas } from '../api/generated/api.client'
 import type {
   CollectionSuggestion,
+  SuggestionBatchResult,
   SuggestionOrderBy,
   SuggestionWhere,
 } from '../contracts/suggestion'
@@ -26,9 +27,9 @@ type SuggestionListEndpointQuery =
 export interface SuggestionRepository
   extends ListSurface<Suggestion, SuggestionWhere, SuggestionOrderBy> {
   /** Accept many suggestions by id (batch). Returns the per-id result map. */
-  acceptMany(ids: string[]): Promise<Record<string, Schemas.SuggestionBatchResult>>
+  acceptMany(ids: string[]): Promise<Record<string, SuggestionBatchResult>>
   /** Dismiss many suggestions by id (batch). Returns the per-id result map. */
-  dismissMany(ids: string[]): Promise<Record<string, Schemas.SuggestionBatchResult>>
+  dismissMany(ids: string[]): Promise<Record<string, SuggestionBatchResult>>
   /** Update a suggestion's status (`PATCH`); returns the updated suggestion. */
   update(suggestionId: string, body: Schemas.SuggestionUpdate): Promise<Suggestion>
   /** Accept a suggestion (`PATCH` status → accepted); returns the updated suggestion. */

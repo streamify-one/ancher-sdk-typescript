@@ -16,6 +16,7 @@ import type {
   ArtifactUpdate,
   ArtifactWhere,
 } from '../contracts/artifact'
+import type { FileUploadResponse } from '../contracts/file'
 import { createListSurface, type ListSurface } from './base'
 import {
   downloadPresignedUrl,
@@ -78,7 +79,7 @@ export interface ArtifactRepository extends ListSurface<Artifact, ArtifactWhere,
     artifactId: string,
     file: Blob,
     options?: ArtifactContentUpdateOptions
-  ): Promise<Schemas.FileUploadResponse>
+  ): Promise<FileUploadResponse>
 }
 
 export function createArtifactRepository(client: AncherClient): ArtifactRepository {
@@ -153,7 +154,7 @@ export function createArtifactRepository(client: AncherClient): ArtifactReposito
       )
     },
     async updateContent(artifactId, file, options = {}) {
-      return await client.upload<Schemas.FileUploadResponse>(
+      return await client.upload<FileUploadResponse>(
         `/api/v1/artifacts/${encodeURIComponent(artifactId)}/content`,
         file,
         { ...options, method: 'PUT' }

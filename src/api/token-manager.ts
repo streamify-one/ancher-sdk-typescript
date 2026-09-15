@@ -15,7 +15,7 @@
  */
 
 import { DEFAULT_REFRESH_LEEWAY_SECONDS } from './auth'
-import type { AncherClientConfig, MaybePromise } from './config'
+import type { AncherClientConfig, MaybePromise, SessionRefreshResult } from './config'
 
 /** A managed token set. */
 export interface ManagedTokens {
@@ -38,6 +38,8 @@ export interface TokenStore {
 }
 
 export interface TokenManagerOptions {
+  /** Classify a refresh exception when the auth scheme can distinguish denial from outage. */
+  classifyRefreshError?: (error: unknown) => Exclude<SessionRefreshResult, boolean>
   /**
    * Treat the access token as stale this many seconds *before* its actual
    * expiry, so renewal happens proactively instead of mid-request. Defaults to
@@ -82,6 +84,8 @@ export interface TokenManager {
   getTokens(): Promise<ManagedTokens | null>
   /** Force a refresh now. Returns `true` on success. De-duplicates concurrent calls. */
   refresh(): Promise<boolean>
+  /** Classified refresh result for transports that distinguish denial from an outage. */
+  refreshSession(): Promise<SessionRefreshResult>
   /** Store a token set (or `null` to clear). */
   setTokens(tokens: ManagedTokens | null): Promise<void>
 }
@@ -103,39 +107,62 @@ export function createTokenManager(options: TokenManagerOptions): TokenManager {
   const leewaySeconds = options.expiryLeewaySeconds ?? DEFAULT_REFRESH_LEEWAY_SECONDS
   const leewayMs = leewaySeconds * 1000
 
-  let refreshInFlight: Promise<boolean> | null = null
+  let refreshInFlight: Promise<SessionRefreshResult> | null = null
+  let tokenGeneration = 0
+  let storeWriteInFlight = Promise.resolve()
+
+  function writeTokens(tokens: ManagedTokens | null): Promise<void> {
+    // Preserve call order even for asynchronous stores. In particular, a
+    // logout queued after a refresh write must be the final persisted value.
+    storeWriteInFlight = storeWriteInFlight
+      .catch(() => undefined)
+      .then(() => Promise.resolve(store.set(tokens)))
+    return storeWriteInFlight
+  }
 
   function isStale(tokens: ManagedTokens): boolean {
     if (tokens.expiresAt == null) return false
     return Date.now() >= tokens.expiresAt - leewayMs
   }
 
-  async function refresh(): Promise<boolean> {
+  async function refreshSession(): Promise<SessionRefreshResult> {
     // De-duplicate concurrent refreshes: a burst of requests triggers one
     // refresh, and all of them await the same promise.
     if (refreshInFlight) return refreshInFlight
-    refreshInFlight = (async () => {
+    const generation = tokenGeneration
+    let inFlight!: Promise<SessionRefreshResult>
+    inFlight = (async () => {
       try {
+        await storeWriteInFlight
+        if (generation !== tokenGeneration) return false
         const current = await store.get()
+        if (generation !== tokenGeneration) return false
         if (!current) return false
         const next = await options.refresh(current)
+        if (generation !== tokenGeneration) return false
         if (!next) return false
-        await store.set(next)
+        await writeTokens(next)
         return true
-      } catch {
-        return false
+      } catch (error) {
+        if (generation !== tokenGeneration) return false
+        return options.classifyRefreshError?.(error) ?? false
       } finally {
-        refreshInFlight = null
+        if (refreshInFlight === inFlight) refreshInFlight = null
       }
     })()
-    return refreshInFlight
+    refreshInFlight = inFlight
+    return inFlight
+  }
+
+  async function refresh(): Promise<boolean> {
+    return (await refreshSession()) === true
   }
 
   async function getAccessToken(): Promise<string | null> {
     const tokens = await store.get()
     if (!tokens) return null
     if (isStale(tokens)) {
-      await refresh()
+      await refreshSession()
       const fresh = await store.get()
       // If refresh failed we still return the (stale) token; the transport's
       // 401 path will trigger one more refresh attempt before surfacing.
@@ -153,7 +180,7 @@ export function createTokenManager(options: TokenManagerOptions): TokenManager {
       // whenever the token is stale and refreshes are failing — exactly what
       // the cooldown exists to prevent.
       getAccessToken: async () => (await store.get())?.accessToken ?? null,
-      refreshSession: refresh,
+      refreshSession,
       // The transport's proactive scheduler reads expiry straight off the
       // store, so every token-manager client refreshes ahead of expiry with
       // no host wiring — on the manager's leeway, so a custom
@@ -164,7 +191,15 @@ export function createTokenManager(options: TokenManagerOptions): TokenManager {
     },
     getAccessToken,
     getTokens: () => Promise.resolve(store.get()),
-    setTokens: tokens => Promise.resolve(store.set(tokens)),
+    setTokens: tokens => {
+      // An explicit session change is authoritative over any refresh that
+      // started against the previous credentials. Detach the shared promise
+      // immediately so logout cannot be undone by its eventual response.
+      tokenGeneration += 1
+      refreshInFlight = null
+      return writeTokens(tokens)
+    },
     refresh,
+    refreshSession,
   }
 }

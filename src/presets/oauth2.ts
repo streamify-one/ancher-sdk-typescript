@@ -23,7 +23,7 @@
  * `react-native-get-random-values`).
  */
 
-import type { AncherClientConfig } from '../api/config'
+import type { AncherClientConfig, SessionRefreshResult } from '../api/config'
 import { createTokenManager, type ManagedTokens, type TokenStore } from '../api/token-manager'
 
 /** A set of OAuth2 tokens as persisted by the preset (alias of {@link ManagedTokens}). */
@@ -116,8 +116,10 @@ export interface OAuth2Auth {
   getTokens(): Promise<OAuth2Tokens | null>
   /** Clear stored tokens (and revoke the refresh token if {@link OAuth2Options.revocationEndpoint} is set). */
   logout(): Promise<void>
-  /** Force a refresh-token exchange now. Returns `true` on success. */
+  /** Force a refresh-token exchange now, distinguishing rejection from an outage. */
   refresh(): Promise<boolean>
+  /** Classified refresh result for transport/session lifecycle decisions. */
+  refreshSession(): Promise<SessionRefreshResult>
   /** Store tokens obtained out-of-band (e.g. native sign-in). Pass `null` to clear. */
   setTokens(tokens: OAuth2Tokens | null): Promise<void>
 }
@@ -139,6 +141,16 @@ function toTokens(res: OAuth2TokenResponse, previous?: OAuth2Tokens | null): OAu
     expiresAt: res.expires_in != null ? Date.now() + res.expires_in * 1000 : undefined,
     tokenType: res.token_type ?? previous?.tokenType,
     scope: res.scope ?? previous?.scope,
+  }
+}
+
+class OAuth2TokenRequestError extends Error {
+  constructor(
+    readonly status: number,
+    readonly oauthError?: string
+  ) {
+    super(`OAuth2 token request failed (${status})`)
+    this.name = 'OAuth2TokenRequestError'
   }
 }
 
@@ -186,8 +198,11 @@ export function createOAuth2Auth(options: OAuth2Options): OAuth2Auth {
       body: params.toString(),
     })
     if (!response.ok) {
-      const text = await response.text().catch(() => '')
-      throw new Error(`OAuth2 token request failed (${response.status}): ${text}`)
+      const payload = (await response.json().catch(() => null)) as { error?: unknown } | null
+      throw new OAuth2TokenRequestError(
+        response.status,
+        typeof payload?.error === 'string' ? payload.error : undefined
+      )
     }
     const json = (await response.json()) as OAuth2TokenResponse
     return toTokens(json, previous)
@@ -197,6 +212,11 @@ export function createOAuth2Auth(options: OAuth2Options): OAuth2Auth {
   // delegated to `createTokenManager`; OAuth2 only injects *how* a refresh
   // happens (the refresh_token grant against the token endpoint).
   const manager = createTokenManager({
+    classifyRefreshError: error =>
+      error instanceof OAuth2TokenRequestError &&
+      (error.oauthError === 'invalid_grant' || error.status === 401 || error.status === 403)
+        ? 'denied'
+        : 'unreachable',
     store: options.store,
     expiryLeewaySeconds: options.expiryLeewaySeconds,
     refresh: async current => {
@@ -255,24 +275,27 @@ export function createOAuth2Auth(options: OAuth2Options): OAuth2Auth {
 
   async function logout(): Promise<void> {
     const current = await manager.getTokens()
+    // Local credential removal is the logout boundary. Persist it before any
+    // best-effort revocation request so a stalled/offline endpoint cannot keep
+    // the caller signed in.
+    await manager.setTokens(null)
     if (options.revocationEndpoint && current?.refreshToken) {
-      try {
+      const refreshToken = current.refreshToken
+      const revocationEndpoint = options.revocationEndpoint
+      void (async () => {
         const params = new URLSearchParams({
-          token: current.refreshToken,
+          token: refreshToken,
           token_type_hint: 'refresh_token',
         })
         params.set('client_id', options.clientId)
         if (options.clientSecret) params.set('client_secret', options.clientSecret)
-        await doFetch(options.revocationEndpoint, {
+        await doFetch(revocationEndpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: params.toString(),
         })
-      } catch {
-        // Best-effort: still clear local tokens below.
-      }
+      })().catch(() => undefined)
     }
-    await manager.setTokens(null)
   }
 
   return {
@@ -283,6 +306,7 @@ export function createOAuth2Auth(options: OAuth2Options): OAuth2Auth {
     getTokens: manager.getTokens,
     getAccessToken: manager.getAccessToken,
     refresh: manager.refresh,
+    refreshSession: manager.refreshSession,
     logout,
   }
 }

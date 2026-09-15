@@ -250,7 +250,7 @@ describe('createTokenManager', () => {
       expect(manager.authConfig.credentials).toBe('omit')
       expect(await manager.authConfig.getAccessToken?.()).toBe('tok')
       // refreshSession is the same de-duplicating refresh used reactively on 401.
-      expect(manager.authConfig.refreshSession).toBe(manager.refresh)
+      expect(manager.authConfig.refreshSession).toBe(manager.refreshSession)
     })
 
     it('supplies getSessionExpiresAt from the store for the transport scheduler', async () => {
@@ -319,6 +319,61 @@ describe('createTokenManager', () => {
       expect(await manager.getTokens()).toBeNull()
       await manager.setTokens({ accessToken: 'seed' })
       expect(await manager.getAccessToken()).toBe('seed')
+    })
+
+    it('does not restore tokens when an old refresh resolves after logout', async () => {
+      const store = fakeStore({ accessToken: 'old', refreshToken: 'refresh' })
+      const gate = deferred<ManagedTokens | null>()
+      const manager = createTokenManager({ store, refresh: () => gate.promise })
+
+      const refreshing = manager.refresh()
+      await flush()
+      await manager.setTokens(null)
+      gate.resolve({ accessToken: 'stale-renewal', refreshToken: 'refresh-2' })
+
+      expect(await refreshing).toBe(false)
+      expect(store.current).toBeNull()
+    })
+
+    it('discards a classified failure from a refresh superseded by a new session', async () => {
+      const store = fakeStore({ accessToken: 'old', refreshToken: 'old-refresh' })
+      const gate = deferred<ManagedTokens | null>()
+      const manager = createTokenManager({
+        classifyRefreshError: () => 'denied',
+        store,
+        refresh: () => gate.promise,
+      })
+
+      const refreshing = manager.refreshSession()
+      await flush()
+      await manager.setTokens({ accessToken: 'new', refreshToken: 'new-refresh' })
+      gate.reject(new Error('old refresh token rejected'))
+
+      expect(await refreshing).toBe(false)
+      expect(store.current).toEqual({ accessToken: 'new', refreshToken: 'new-refresh' })
+    })
+
+    it('does not start a new refresh while logout persistence is pending', async () => {
+      const logoutWrite = deferred<void>()
+      let current: ManagedTokens | null = { accessToken: 'old', refreshToken: 'refresh' }
+      const store: TokenStore = {
+        get: () => current,
+        set: async next => {
+          if (next === null) await logoutWrite.promise
+          current = next
+        },
+      }
+      const refresh = vi.fn(async () => ({ accessToken: 'should-not-be-written' }))
+      const manager = createTokenManager({ store, refresh })
+
+      const loggingOut = manager.setTokens(null)
+      const refreshing = manager.refresh()
+      logoutWrite.resolve()
+
+      await loggingOut
+      expect(await refreshing).toBe(false)
+      expect(refresh).not.toHaveBeenCalled()
+      expect(current).toBeNull()
     })
   })
 

@@ -22,8 +22,8 @@ export interface PodcastRepository {
    * until it reaches `ready` or `error`. Billing-gated: an exhausted balance
    * rejects with `API-BIS002`. The note must be owned by the caller and ready.
    *
-   * Every call creates a **new** podcast and bills again; there is no re-run
-   * endpoint, so a retry is another `createForNote`.
+   * At most one row exists per note, even if it failed. A second call rejects
+   * with `API-POS003`; reread the note instead of deleting automatically.
    */
   createForNote(noteId: string): Promise<Podcast>
 
@@ -36,7 +36,7 @@ export interface PodcastRepository {
    */
   get(podcastId: string, options?: PodcastGetOptions): Promise<Podcast>
 
-  /** Delete a podcast in any status, freeing its note for a new one. */
+  /** Delete a podcast in any status (empty HTTP 204), freeing its note. */
   delete(podcastId: string): Promise<void>
 }
 

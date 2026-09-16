@@ -541,7 +541,7 @@ request-body unions: `SuggestionResolution` (`SuggestionStatus` minus
 | `File` | `upload` (presigned 3-step), `uploadDirect(file, options?)` (one-shot multipart with `onProgress`/`signal`), `uploadBatch(files, options?)` (multipart), `get`, `verify(id)`, `presignedUrl(id, options?)`, `download(id, options?)`, `delete(id)`, `revisions(noteId, fileId, options?)`, `revertRevision(noteId, fileId, revisionId)` |
 | `User` | `me`, `update`, `preferences`/`updatePreferences`, `demographic`/`updateDemographic`, `featureFlags`, `completeTutorial`, `changePassword`, `submitActivationCode`, `regenerateInvitationCode`, `delete` |
 | `ApiKey` | `list()` (no params → `ApiKey[]`), `create`¹, `delete(id)` (revoke) |
-| `Artifact` | `list`/`count`/`iterate`, `get`, `getBySlug`, `getContent(id, options?)` (raw `Response`), `create`, `update(id, patch)`, `updateContent(id, file, options?)`, `delete(id)`, `presignedUrl(id, options?)`, `download(id, options?)` |
+| `Artifact` | `list`/`count`/`iterate`, `get`, `getBySlug`, `getContent(id, options?)` (raw `Response`), `create`, `update(id, patch)`, `updateContent(id, file, options?)`, `delete(id)`, `presignedUrl(id, options?)`, `filePresignedUrl(artifactId, fileId, options?)`, `download(id, options?)` |
 | `Tag` | `list`/`count`/`iterate`, `create`, `update(id, patch)`, `delete(id)` |
 | `Collection` | `list`/`count`/`iterate`, `get`, `create`, `update(id, patch)`, `delete(id)`, `notes(id, options?)` + `addNote`/`setNotes`/`removeNote`, `artifacts(id, options?)` + `addArtifact`/`setArtifacts`/`removeArtifact`, `suggestedNotes(id, options?)` |
 | `Conversation` | `list`/`count`/`iterate`, `get`, `start`²/`send`², `startChat`²/`chat`²/`stream`², `interrupt(id)`, `update(id, patch)`, `delete(id)` |

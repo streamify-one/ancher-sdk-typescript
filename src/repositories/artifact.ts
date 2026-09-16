@@ -8,6 +8,7 @@
  */
 
 import type { AncherClient } from '../api/client'
+import { buildApiError } from '../api/errors'
 import type { EndpointByMethod, Schemas } from '../api/generated/api.client'
 import type { UploadOptions } from '../api/upload'
 import type {
@@ -65,12 +66,32 @@ export interface ArtifactRepository extends ListSurface<Artifact, ArtifactWhere,
    */
   download(artifactId: string, options?: ArtifactDownloadOptions): Promise<Response>
   /**
-   * Fetch an artifact's content straight from the API (an authenticated
-   * alternative to the presigned-CDN `download`). The body is the content
-   * itself — markdown/HTML text or binary — so this returns the raw
-   * `Response`. Throws `AncherApiError` on a non-2xx status.
+   * Fetch an artifact's content **as stored**. The body is the content itself
+   * — markdown/HTML text or binary — so this returns the raw `Response`.
+   * Throws `AncherApiError` on a non-2xx status.
+   *
+   * Embedded `streamify-file://<id>` markers arrive **unresolved**; mint each
+   * referenced file via `filePresignedUrl` to render them, and never persist
+   * the resolved form.
    */
   getContent(artifactId: string, options?: ArtifactContentOptions): Promise<Response>
+  /**
+   * Mint a presigned CDN URL for a file embedded in the artifact's body,
+   * gated by artifact access rather than the file's own.
+   *
+   * This is how a `streamify-file://<id>` marker in a markdown/HTML body is
+   * resolved for display. Artifact ownership (or its public flag) gates the
+   * mint, so a share viewer reading a public artifact can load its images
+   * without those files being public in their own right.
+   *
+   * There is no `revision`: a marker names a file, not a revision, and the API
+   * signs only the current one on this route.
+   */
+  filePresignedUrl(
+    artifactId: string,
+    fileId: string,
+    options?: Omit<PresignedUrlQueryOptions, 'revision'>
+  ): Promise<string>
   /**
    * Replace an artifact's content file (multipart `PUT`); the server records
    * a new revision. Returns the updated file data.
@@ -89,6 +110,29 @@ export function createArtifactRepository(client: AncherClient): ArtifactReposito
     })
   )
   const doFetch = client.config.fetch ?? globalThis.fetch
+  const filePresignedUrl: ArtifactRepository['filePresignedUrl'] = async (
+    artifactId,
+    fileId,
+    options = {}
+  ) => {
+    // Raw `request`: this endpoint postdates the committed OpenAPI snapshot,
+    // so it has no generated path type yet. Swap for `client.api.post` once
+    // codegen catches up.
+    const query = new URLSearchParams(
+      Object.entries(options).flatMap(([key, value]) =>
+        value == null ? [] : [[key, String(value)] as [string, string]]
+      )
+    ).toString()
+    const response = await client.request(
+      `/api/v1/artifacts/${encodeURIComponent(artifactId)}/files/${encodeURIComponent(fileId)}/content/presigned-urls${query ? `?${query}` : ''}`,
+      { method: 'POST' }
+    )
+    if (!response.ok) {
+      throw await buildApiError(response, 'Artifact file presign failed')
+    }
+    const { download_url: downloadUrl } = (await response.json()) as { download_url: string }
+    return downloadUrl
+  }
   const presignedUrl: ArtifactRepository['presignedUrl'] = async (artifactId, options = {}) => {
     const { kind = 'content', ...query } = options
     const body =
@@ -111,6 +155,7 @@ export function createArtifactRepository(client: AncherClient): ArtifactReposito
 
   return {
     ...listSurface,
+    filePresignedUrl,
     async get(artifactId) {
       return await client.api.get('/api/v1/artifacts/{artifact_id}', {
         path: { artifact_id: artifactId },

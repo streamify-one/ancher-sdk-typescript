@@ -19,6 +19,13 @@ function makeRepository() {
   return { Artifact: createArtifactRepository(client), fetchMock, get, post, request, upload }
 }
 
+function mintResponse(downloadUrl = 'https://cdn.test/body.md') {
+  return new Response(JSON.stringify({ download_url: downloadUrl, expires_in: 300 }), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  })
+}
+
 describe('ArtifactRepository', () => {
   it('returns the version-compatible file contract after content updates', () => {
     expectTypeOf<ReturnType<ArtifactRepository['updateContent']>>().toEqualTypeOf<
@@ -106,16 +113,19 @@ describe('ArtifactRepository', () => {
   })
 
   describe('getContent', () => {
-    it('fetches the raw content response with an optional revision', async () => {
-      const { Artifact, request } = makeRepository()
-      const response = new Response('<html/>')
-      request.mockResolvedValueOnce(response)
+    it('mints a presigned URL then reads the CDN, forwarding the revision', async () => {
+      const { Artifact, request, fetchMock } = makeRepository()
+      const response = new Response('# doc')
+      request.mockResolvedValueOnce(mintResponse('https://cdn.test/doc.md'))
+      fetchMock.mockResolvedValueOnce(response)
 
       const result = await Artifact.getContent('artifact-1', { revision: 2 })
 
-      expect(request).toHaveBeenCalledWith('/api/v1/artifacts/artifact-1/content?revision=2', {
-        signal: null,
-      })
+      expect(request).toHaveBeenCalledWith(
+        '/api/v1/artifacts/artifact-1/content/presigned-urls?revision=2',
+        { method: 'POST', signal: null }
+      )
+      expect(fetchMock).toHaveBeenCalledWith('https://cdn.test/doc.md', { signal: null })
       expect(result).toBe(response)
     })
 
@@ -142,4 +152,43 @@ describe('ArtifactRepository', () => {
     })
     expect(result).toBe(updated)
   })
+
+  describe('filePresignedUrl', () => {
+    it('mints through the artifact-scoped route so share viewers can load body images', async () => {
+      const { Artifact, request } = makeRepository()
+      request.mockResolvedValueOnce(
+        new Response(JSON.stringify({ download_url: 'https://cdn.test/img.png', expires_in: 300 }))
+      )
+
+      const url = await Artifact.filePresignedUrl('artifact-1', 'file-9')
+
+      expect(request).toHaveBeenCalledWith(
+        '/api/v1/artifacts/artifact-1/files/file-9/content/presigned-urls',
+        { method: 'POST' }
+      )
+      expect(url).toBe('https://cdn.test/img.png')
+    })
+
+    it('forwards resize params and drops unset ones', async () => {
+      const { Artifact, request } = makeRepository()
+      request.mockResolvedValueOnce(
+        new Response(JSON.stringify({ download_url: 'https://cdn.test/i.png', expires_in: 300 }))
+      )
+
+      await Artifact.filePresignedUrl('artifact-1', 'file-9', { w: 320 })
+
+      expect(request).toHaveBeenCalledWith(
+        '/api/v1/artifacts/artifact-1/files/file-9/content/presigned-urls?w=320',
+        { method: 'POST' }
+      )
+    })
+
+    it('throws an API error on a non-2xx status', async () => {
+      const { Artifact, request } = makeRepository()
+      request.mockResolvedValueOnce(new Response(null, { status: 404 }))
+
+      await expect(Artifact.filePresignedUrl('artifact-1', 'file-9')).rejects.toThrow()
+    })
+  })
+
 })

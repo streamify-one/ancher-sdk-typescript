@@ -21,6 +21,13 @@ function makeRepository() {
   return { Note: createNoteRepository(client), fetchMock, get, post, request, upload }
 }
 
+function mintResponse(downloadUrl = 'https://cdn.test/body.md') {
+  return new Response(JSON.stringify({ download_url: downloadUrl, expires_in: 300 }), {
+    status: 200,
+    headers: { 'content-type': 'application/json' },
+  })
+}
+
 describe('NoteRepository', () => {
   it('returns the version-compatible file contract from note-scoped metadata reads', () => {
     expectTypeOf<ReturnType<NoteRepository['getFile']>>().toEqualTypeOf<Promise<FileInfo>>()
@@ -111,26 +118,44 @@ describe('NoteRepository', () => {
   })
 
   describe('getContent', () => {
-    it('fetches the raw content response through the request escape hatch', async () => {
-      const { Note, request } = makeRepository()
+    it('mints a presigned URL then reads the CDN through the configured fetch', async () => {
+      const { Note, request, fetchMock } = makeRepository()
       const response = new Response('# markdown')
-      request.mockResolvedValueOnce(response)
+      request.mockResolvedValueOnce(mintResponse())
+      fetchMock.mockResolvedValueOnce(response)
 
       const result = await Note.getContent('note-1')
 
-      expect(request).toHaveBeenCalledWith('/api/v1/notes/note-1/content', { signal: null })
+      // The mint carries credentials and records the open...
+      expect(request).toHaveBeenCalledWith('/api/v1/notes/note-1/content/presigned-urls', {
+        method: 'POST',
+        signal: null,
+      })
+      // ...the CDN hop goes through the host app's transport, so desktop can
+      // route it natively and web can proxy it in dev.
+      expect(fetchMock).toHaveBeenCalledWith('https://cdn.test/body.md', { signal: null })
       expect(result).toBe(response)
     })
 
-    it('forwards the revision as a query param', async () => {
-      const { Note, request } = makeRepository()
-      request.mockResolvedValueOnce(new Response('old'))
+    it('forwards the revision as a query param on the mint', async () => {
+      const { Note, request, fetchMock } = makeRepository()
+      request.mockResolvedValueOnce(mintResponse())
+      fetchMock.mockResolvedValueOnce(new Response('old'))
 
       await Note.getContent('note-1', { revision: 3 })
 
-      expect(request).toHaveBeenCalledWith('/api/v1/notes/note-1/content?revision=3', {
-        signal: null,
-      })
+      expect(request).toHaveBeenCalledWith(
+        '/api/v1/notes/note-1/content/presigned-urls?revision=3',
+        { method: 'POST', signal: null }
+      )
+    })
+
+    it('throws when the CDN read fails, without masking it as an API error', async () => {
+      const { Note, request, fetchMock } = makeRepository()
+      request.mockResolvedValueOnce(mintResponse())
+      fetchMock.mockResolvedValueOnce(new Response(null, { status: 403 }))
+
+      await expect(Note.getContent('note-1')).rejects.toThrow(/403/)
     })
 
     it('throws an API error on a non-2xx status', async () => {

@@ -62,10 +62,16 @@ export interface NoteRepository extends ListSurface<Note, NoteWhere, NoteOrderBy
   /** Get a public note by its share slug. */
   getBySlug(slug: string): Promise<Note>
   /**
-   * Fetch a note's resolved content. The body is the content itself —
+   * Fetch a note's content **as stored**. The body is the content itself —
    * markdown/HTML text, or the image bytes for image notes — so this returns
    * the raw `Response` (branch on its `Content-Type`, then `text()`/`blob()`).
    * Throws `AncherApiError` on a non-2xx status.
+   *
+   * Embedded `streamify-file://<id>` markers arrive **unresolved**: the API
+   * stopped rewriting them, so a caller rendering the body must mint each
+   * referenced file itself via `filePresignedUrl`. Callers that persist the
+   * body must write back these markers, never resolved URLs — a signed URL
+   * expires in ~300s and overwriting the marker destroys the reference.
    */
   getContent(noteId: string, options?: NoteContentOptions): Promise<Response>
   /** Mint a presigned CDN URL for a note's display file. */

@@ -24,7 +24,7 @@ function makeFetcher(overrides: Partial<AncherClientConfig> = {}) {
 describe('createFetcher', () => {
   it('throws when no fetch implementation is available', () => {
     const originalFetch = globalThis.fetch
-    // biome-ignore lint/performance/noDelete: restoring the global after the test
+    // restoring the global after the test
     ;(globalThis as { fetch?: typeof fetch }).fetch = undefined
     try {
       expect(() => createFetcher({})).toThrow(/No `fetch` implementation available/)

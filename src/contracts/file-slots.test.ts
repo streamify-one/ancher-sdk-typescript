@@ -133,8 +133,9 @@ describe('note slots across API shapes', () => {
     expect(result).not.toBe(hoisted)
   })
 
-  it('reads the transcript slot when a payload carries one (no version does yet)', () => {
+  it('reads the explicit transcript slot from current and legacy payloads', () => {
     expect(getNoteTranscriptFile(shapeA)).toBeUndefined()
+    expect(getNoteTranscriptFile({ transcript_file: file('current') })?.id).toBe('current')
     expect(getNoteTranscriptFile({ article: { transcript_file: file('tr') } })?.id).toBe('tr')
   })
 

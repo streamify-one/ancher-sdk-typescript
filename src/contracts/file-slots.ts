@@ -235,7 +235,7 @@ export function getNoteOriginFiles<F extends SlotFile>(
  * Files available in the Original viewer: origins followed by visible downloads.
  * Only the note-level downloaded_files is authoritative: recovering files from
  * an article or a different slot could bypass the server's visibility filter.
- * Keep getNoteOriginFiles for upload provenance and public-share availability.
+ * Keep getNoteOriginFiles for upload provenance; visibility is decided by the API.
  */
 export function getNoteOriginalFiles<F extends SlotFile>(
   note: NoteFileSlots<F> | null | undefined
@@ -275,11 +275,9 @@ export function getNoteOriginDisplayFile<F extends SlotFile>(
 /**
  * The transcript file of an audio/video note.
  *
- * Mirrors `Note.transcript_file` (`app/schemas/note.py:275`), which reads the
- * article's transcript. **No API version serializes this field yet** — it is a
- * plain property on both `main` and `releases/v1.5.0` — so this returns
- * `undefined` until the backend exposes `transcript_file`; it is here so that
- * exposing it needs no client change.
+ * API PR #623 exposes the first persisted track as UTF-8 SubRip, WebVTT or
+ * plain text, signed on detail reads and readable through note-scoped routes.
+ * Older deployments and notes without a transcript have no usable slot.
  */
 export function getNoteTranscriptFile<F extends SlotFile>(
   note: NoteFileSlots<F> | null | undefined

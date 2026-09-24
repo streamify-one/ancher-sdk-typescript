@@ -172,7 +172,9 @@ interface NoteLocalFields {
 }
 
 interface CompatibleNoteFileFields {
-  /** Visible downloads on owner detail reads; empty for lists and other readers. */
+  /** API PR #623; optional until deployed OpenAPI snapshots include the slot. */
+  transcript_file?: File | null
+  /** Source downloads exposed by the server; detail visibility follows its blocklist. */
   downloaded_files?: File[]
   content_file?: File | null
   content_tldr_file?: File | null

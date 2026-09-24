@@ -74,6 +74,8 @@ export interface NoteFileSlots<F extends SlotFile = SlotFile> extends FileSlotHo
   article?: (FileSlotHolder<F> & { origin_files?: readonly F[] | null }) | null
   /** Hoisted onto the note by VITA-1065. */
   origin_files?: readonly F[] | null
+  /** Server-filtered downloads, exposed only on owner detail reads. */
+  downloaded_files?: readonly F[] | null
 }
 
 /**
@@ -227,6 +229,23 @@ export function getNoteOriginFiles<F extends SlotFile>(
   note: NoteFileSlots<F> | null | undefined
 ): F[] {
   return [...(note?.origin_files ?? note?.article?.origin_files ?? [])]
+}
+
+/**
+ * Files available in the Original viewer: origins followed by visible downloads.
+ * Only the note-level downloaded_files is authoritative: recovering files from
+ * an article or a different slot could bypass the server's visibility filter.
+ * Keep getNoteOriginFiles for upload provenance and public-share availability.
+ */
+export function getNoteOriginalFiles<F extends SlotFile>(
+  note: NoteFileSlots<F> | null | undefined
+): F[] {
+  const seen = new Set<string>()
+  return [...getNoteOriginFiles(note), ...(note?.downloaded_files ?? [])].filter(file => {
+    if (seen.has(file.id)) return false
+    seen.add(file.id)
+    return true
+  })
 }
 
 /**

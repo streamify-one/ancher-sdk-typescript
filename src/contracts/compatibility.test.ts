@@ -28,7 +28,7 @@ type LegacyFile = Omit<Schemas.File, 'metadata' | 'revision_number'> & {
 
 type LegacyArticle = Omit<
   Schemas.Article,
-  'content_file' | 'content_tldr_file' | 'display_file' | 'files' | 'origin_files' | 'thumbnail_file'
+  'content_file' | 'content_tldr_file' | 'display_file' | 'downloaded_files' | 'files' | 'origin_files' | 'thumbnail_file'
 > & {
   files: Record<string, LegacyFile>
   origin_files: LegacyFile[]
@@ -40,6 +40,7 @@ type LegacyNote = Omit<
   | 'content_file'
   | 'content_tldr_file'
   | 'display_file'
+  | 'downloaded_files'
   | 'files'
   | 'language'
   | 'origin_files'

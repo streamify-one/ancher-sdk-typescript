@@ -32,6 +32,7 @@ export type {
 export type { MessageRepository } from './message'
 export type {
   NoteContentOptions,
+  NoteContentPresignedUrlOptions,
   NoteDownloadOptions,
   NoteFileContentUpdateOptions,
   NotePresignedUrlOptions,

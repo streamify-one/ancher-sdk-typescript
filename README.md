@@ -331,6 +331,7 @@ import {
   getFileUrl,
   getNoteContentFile,
   getNoteOriginFiles,
+  getNoteOriginalFiles,
   getNoteOwnContentFile,
   getNoteThumbnailFile,
   getArtifactThumbnailFile,
@@ -338,11 +339,22 @@ import {
 
 const thumbnailUrl = getFileUrl(getNoteThumbnailFile(note))   // note → article → signed image content
 const origins = getNoteOriginFiles(note)                       // N files, API order
+const originals = getNoteOriginalFiles(note)                   // origins + visible owner downloads
 const editTarget = getNoteOwnContentFile(note)                 // the PUT-able, note-owned copy only
 const revision = getFileRevisionNumber(editTarget)             // save-preflight snapshot
 const cardImage = getFileUrl(getArtifactThumbnailFile(artifact)) // thumbnail → display (check the mimetype before <img>)
 const cacheKey = getFileContentKey(file)                       // `id:content_hash` — changes with the bytes, not the URL
 ```
+
+`getNoteOriginalFiles` includes the note's `downloaded_files` for the Original
+viewer, deduplicated by file id. Those files are supplied only on owner detail
+reads; absent or empty arrays stay empty. Use `getNoteOriginFiles` for upload
+provenance and public-share availability.
+
+`sdk.Note.contentPresignedUrl(id, { revision, expiration })` mints a URL for the
+raw note body. `sdk.Note.getContent(id, { revision, signal })` also fetches the
+bytes and returns a `Response`. Both preserve embedded `streamify-file://`
+markers; resolve them through `filePresignedUrl` for display only.
 
 Each accessor documents the `app/schemas/*.py` property it mirrors. Two
 deliberate steps beyond the backend: note accessors fall back to the article's

@@ -149,6 +149,8 @@ export function asFileMap(files: Record<string, unknown> | null | undefined): Fi
 }
 
 interface CompatibleArticleFileFields {
+  /** Absent on API versions before downloaded source files were exposed. */
+  downloaded_files?: File[]
   content_file?: File | null
   content_tldr_file?: File | null
   display_file?: File | null
@@ -170,6 +172,8 @@ interface NoteLocalFields {
 }
 
 interface CompatibleNoteFileFields {
+  /** Visible downloads on owner detail reads; empty for lists and other readers. */
+  downloaded_files?: File[]
   content_file?: File | null
   content_tldr_file?: File | null
   display_file?: File | null

@@ -29,6 +29,17 @@ function mintResponse(downloadUrl = 'https://cdn.test/body.md') {
 }
 
 describe('NoteRepository', () => {
+  it('mints the note body URL with revision and expiration through the generated API', async () => {
+    const { Note, post } = makeRepository()
+    post.mockResolvedValueOnce({ download_url: 'https://cdn.test/body.md' })
+    expect(await Note.contentPresignedUrl('note-1', { revision: 2, expiration: 60 }))
+      .toBe('https://cdn.test/body.md')
+    expect(post).toHaveBeenCalledWith('/api/v1/notes/{note_id}/content/presigned-urls', {
+      path: { note_id: 'note-1' },
+      query: { revision: 2, expiration: 60 },
+    })
+  })
+
   it('returns the version-compatible file contract from note-scoped metadata reads', () => {
     expectTypeOf<ReturnType<NoteRepository['getFile']>>().toEqualTypeOf<Promise<FileInfo>>()
   })

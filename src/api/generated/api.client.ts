@@ -268,6 +268,10 @@ export type Article = {
    */
   origin_files: Array<File>;
   /**
+   * Fetched source files exposed through owned notes
+   */
+  downloaded_files: Array<File>;
+  /**
    * The article's files keyed by the category the pre-slot schema stored, assembled from the slots.
    */
   files: Record<string, File>;
@@ -592,6 +596,10 @@ export type BalanceResponse = {
    * Purchased top-up credits (never expire)
    */
   topup: BucketUsage;
+  /**
+   * Signup trial credits (expire at the trial's end). Spent before the other buckets, because they are the soonest to lapse.
+   */
+  trial: BucketUsage;
 }
 /**
  * Schema for error detail information.
@@ -1211,6 +1219,10 @@ export type Note = {
    * Source files the note was created from: uploads for file notes, the generated text.md for text notes, the fetched resource for direct-URL notes; empty for scraped web pages
    */
   origin_files: Array<File>;
+  /**
+   * Downloaded source files with can_show=True and signed URLs on owner detail reads; empty for other readers and list responses
+   */
+  downloaded_files: Array<File>;
   /**
    * The note's files keyed by the category the pre-slot schema stored. Assembled from the slots; the promoted-download `generated` key it could once carry is gone with the label/category columns.
    */
@@ -3179,6 +3191,10 @@ export type Plan = {
    */
   trial_days: number;
   /**
+   * Credits granted for the trial period instead of credit_grant; null falls back to credit_grant
+   */
+  trial_credit_grant: (string | null);
+  /**
    * Plan is currently buyable
    */
   is_active: boolean;
@@ -3573,6 +3589,14 @@ export type Subscription = {
    * End of current billing period
    */
   current_period_end: (string | null);
+  /**
+   * When the free trial began; null if the subscription never had one. Unrecoverable after conversion, so captured while the trial is live.
+   */
+  trial_start: (string | null);
+  /**
+   * When the free trial ends; null if the subscription never had one
+   */
+  trial_end: (string | null);
   /**
    * Scheduled cancellation time
    */
@@ -3999,6 +4023,36 @@ export type UserLogin = {
    * User password
    */
   password: string;
+}
+/**
+ * A memory file's content and compare-and-set version.
+ */
+export type UserMemoryFile = {
+  /**
+   * Normalised file name, e.g. "MEMORY.md"
+   */
+  file: string;
+  /**
+   * File content
+   */
+  content: string;
+  /**
+   * Opaque version for compare-and-set writes
+   */
+  version: string;
+}
+/**
+ * Request body for creating or updating a memory file.
+ */
+export type UserMemoryWrite = {
+  /**
+   * New file content
+   */
+  content: string;
+  /**
+   * Request body for creating or updating a memory file.
+   */
+  version?: (string | null) | undefined;
 }
 /**
  * Schema for user preferences response.
@@ -4518,55 +4572,23 @@ export type put_Update_artifact_content_api_v1_artifacts__artifact_id__content_p
       
     }
 /**
- * Return the artifact's content with embedded references resolved.
- * 
- * For markdown and HTML bodies, ``streamify-file://{UUID}`` references are
- * rewritten to presigned URLs so embedded images/media render inline —
- * mirroring the note content endpoint. Only files linked to this artifact
- * are resolved; unauthorized references keep the raw marker. Other MIME
- * types are served verbatim.
- * 
- * Auth is lenient so the public share viewer (``/s/a/{slug}``) can fetch a
- * public markdown/HTML artifact's resolved body without a session — the
- * ``files.content.presigned_url`` is deliberately null for resolvable text, so
- * this endpoint is the only way an anonymous viewer reads it. A valid token
- * still lets owners read their own private artifacts; a missing or invalid
- * token degrades to anonymous (public-only), and a private artifact then
- * returns 404 rather than 401.
- */
-export type get_Get_artifact_content_api_v1_artifacts__artifact_id__content_get = {
-      method: "GET",
-      path: "/api/v1/artifacts/{artifact_id}/content",
-      requestFormat: "json",
-      parameters: {
-            query:  Partial<{
-  /**
-   * Revision number to retrieve
-   */
-  revision: (number | null);
-}>,
-        path:  {artifact_id: string,
-},
-        
-        
-          }
-      responses: {200: unknown,
-422: Schemas.HTTPValidationError,
-},
-      
-    }
-/**
  * Mint a presigned URL for the artifact's content file.
  * 
- * A direct link to the raw content file, used to *display* image/binary
- * artifacts and for downloads — distinct from ``GET …/content``, which
- * serves resolved markdown/HTML text. References inside the body are NOT
- * resolved here; the bytes are served as stored.
+ * A direct link to the raw content file: used to *display* image/binary
+ * artifacts, for downloads, and as the way clients read a markdown body.
+ * The bytes are served as stored, so embedded ``streamify-file://`` markers
+ * stay unresolved and clients mint each referenced file through
+ * ``POST /artifacts/{artifact_id}/files/{file_id}/content/presigned-urls``.
  * 
- * Accessible to the artifact owner or any authenticated caller when the
- * artifact is marked public. ``w`` / ``h`` are baked into the signed URL
- * so the CloudFront image behavior's Lambda@Edge resizer serves a cached
- * variant; ignored for non-image MIMEs.
+ * This route records the artifact being opened.
+ * 
+ * Uses lenient auth: a valid token resolves the owner (so private artifacts
+ * they own are reachable), while a missing or stale token degrades to
+ * anonymous (public-only) instead of a 401 — that is what lets the public
+ * share viewer (``/s/a/{slug}``) read a public artifact's body without a
+ * session. ``w`` / ``h`` are baked into the signed URL so the CloudFront
+ * image behavior's Lambda@Edge resizer serves a cached variant; ignored for
+ * non-image MIMEs.
  */
 export type post_Create_artifact_content_presigned_download_url_api_v1_artifacts__artifact_id__content_presigned_urls_post = {
       method: "POST",
@@ -4589,6 +4611,47 @@ export type post_Create_artifact_content_presigned_download_url_api_v1_artifacts
   h: (number | null);
 }>,
         path:  {artifact_id: string,
+},
+        
+        
+          }
+      responses: {200: Schemas.PresignedDownloadResponse,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
+/**
+ * Mint a URL for a file linked to a readable artifact.
+ * 
+ * This is the authorization-preserving primitive clients use when resolving
+ * ``streamify-file://`` markers. Artifact ownership/public access gates the
+ * request, and only files linked to that artifact are signable.
+ * 
+ * Deliberately signs the CURRENT revision only, with no way to ask for an
+ * older one. The membership check authorizes a file *id*, not a revision, so
+ * an anonymous reader of a public artifact could otherwise mint any
+ * historical revision of a linked private file — bytes that may predate the
+ * content ever being shared. A marker names a file, not a revision, so this
+ * also matches what the former server-side resolver signed.
+ */
+export type post_Create_artifact_file_content_presigned_download_url_api_v1_artifacts__artifact_id__files__file_id__content_presigned_urls_post = {
+      method: "POST",
+      path: "/api/v1/artifacts/{artifact_id}/files/{file_id}/content/presigned-urls",
+      requestFormat: "json",
+      parameters: {
+            query:  Partial<{
+  expiration: number;
+  /**
+   * Image resize width (ignored for non-images)
+   */
+  w: (number | null);
+  /**
+   * Image resize height (ignored for non-images)
+   */
+  h: (number | null);
+}>,
+        path:  {artifact_id: string,
+file_id: string,
 },
         
         
@@ -5122,7 +5185,7 @@ export type post_Copy_note_api_v1_notes__note_id__copy_post = {
 /**
  * Get file metadata through a note.
  * 
- * Accessible if the parent note is public or owned by the caller.
+ * Downloaded files require can_show=True for every reader, including owners.
  */
 export type get_Get_note_file_metadata_api_v1_notes__note_id__files__file_id__get = {
       method: "GET",
@@ -5142,19 +5205,29 @@ file_id: string,
       
     }
 /**
- * Get the resolved text content for a note.
+ * Mint a presigned URL for the note's raw content file.
  * 
- * Returns the note's content file (or falls back to the article's content
- * file). For markdown and HTML, ``streamify-file://`` references are
- * resolved to real HTTP URLs. Accessible if the parent note is public or
- * owned by the caller.
+ * Signs the note's content file, or the article's when the note has none.
+ * The bytes are served as stored: clients resolve any embedded
+ * ``streamify-file://`` markers themselves, minting each referenced file
+ * through ``POST /notes/{note_id}/files/{file_id}/content/presigned-urls``.
+ * 
+ * This route — not the per-file one below — is what records a note being
+ * opened, so resolving a body full of images costs one open, not one per
+ * image.
+ * 
+ * Uses lenient auth: a valid token resolves the owner (so private notes they
+ * own are reachable), while a missing or stale token degrades to anonymous
+ * (public-only) instead of a 401, and CSRF is not enforced. That is what
+ * lets an anonymous share recipient read a public note's body.
  */
-export type get_Get_note_content_api_v1_notes__note_id__content_get = {
-      method: "GET",
-      path: "/api/v1/notes/{note_id}/content",
+export type post_Create_note_content_presigned_download_url_api_v1_notes__note_id__content_presigned_urls_post = {
+      method: "POST",
+      path: "/api/v1/notes/{note_id}/content/presigned-urls",
       requestFormat: "json",
       parameters: {
             query:  Partial<{
+  expiration: number;
   /**
    * Revision number to retrieve
    */
@@ -5165,7 +5238,7 @@ export type get_Get_note_content_api_v1_notes__note_id__content_get = {
         
         
           }
-      responses: {200: unknown,
+      responses: {200: Schemas.PresignedDownloadResponse,
 422: Schemas.HTTPValidationError,
 },
       
@@ -5175,7 +5248,8 @@ export type get_Get_note_content_api_v1_notes__note_id__content_get = {
  * 
  * Accessible to the note owner or any caller when the note is marked
  * public. Returns 404 when the note has no display file — callers can
- * fall back to ``GET /notes/{note_id}/content`` for the markdown body.
+ * fall back to ``POST /notes/{note_id}/content/presigned-urls`` for the
+ * markdown body.
  * ``w`` / ``h`` are baked into the signed URL for the image-resize
  * Lambda@Edge; ignored for non-image MIMEs.
  * 
@@ -5216,9 +5290,8 @@ export type post_Create_note_display_presigned_download_url_api_v1_notes__note_i
 /**
  * Create a presigned download URL for a file linked to a note.
  * 
- * Note ownership/public access gates URL minting — a caller who can read
- * the note can read its referenced files. Mirrors the access check the
- * legacy ``GET /notes/{id}/files/{id}/content`` redirect enforced.
+ * Callers must be able to read the note. Downloaded files additionally require
+ * ``can_show=True`` for every reader, including the note owner.
  * ``w`` / ``h`` are baked into the signed URL for the image-resize
  * Lambda@Edge; ignored for non-image MIMEs.
  * 
@@ -5513,6 +5586,10 @@ export type post_Create_files_batch_api_v1_files_batch_post = {
  * 
  * ``w`` / ``h`` are baked into the signed URL so the CloudFront image
  * behavior's Lambda@Edge resizer serves a cached variant.
+ * 
+ * The bytes are served as stored, so any embedded ``streamify-file://``
+ * markers stay unresolved and clients resolve them themselves. This route
+ * records the file being opened.
  * 
  * Uses lenient auth: a valid token resolves the owner (so private files they
  * own are reachable), while a missing or stale token degrades to anonymous
@@ -6312,6 +6389,63 @@ export type put_Update_preferences_api_v1_users_me_preferences_put = {
         body:  Schemas.UserPreferencesUpdate,
           }
       responses: {200: Schemas.UserPreferencesResponse,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
+/**
+ * Get a memory file from the current user's memory store
+ */
+export type get_Get_memory_file_api_v1_users_me_memories__file__get = {
+      method: "GET",
+      path: "/api/v1/users/me/memories/{file}",
+      requestFormat: "json",
+      parameters: {
+            
+        path:  {file: string,
+},
+        
+        
+          }
+      responses: {200: Schemas.UserMemoryFile,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
+/**
+ * Create or update a memory file. Omit `version` to create a new file; pass the version from the last read to update it.
+ */
+export type put_Write_memory_file_api_v1_users_me_memories__file__put = {
+      method: "PUT",
+      path: "/api/v1/users/me/memories/{file}",
+      requestFormat: "json",
+      parameters: {
+            
+        path:  {file: string,
+},
+        
+        body:  Schemas.UserMemoryWrite,
+          }
+      responses: {200: Schemas.UserMemoryFile,
+422: Schemas.HTTPValidationError,
+},
+      
+    }
+/**
+ * Delete a memory file. The main notebook (MEMORY.md) cannot be deleted.
+ */
+export type delete_Delete_memory_file_api_v1_users_me_memories__file__delete = {
+      method: "DELETE",
+      path: "/api/v1/users/me/memories/{file}",
+      requestFormat: "json",
+      parameters: {
+            
+        path:  {file: string,
+},
+        
+        
+          }
+      responses: {204: unknown,
 422: Schemas.HTTPValidationError,
 },
       
@@ -7454,7 +7588,6 @@ export type get_Health_health_get = {
 "/api/v1/artifacts/": Endpoints.get_List_artifacts_api_v1_artifacts__get,
 "/api/v1/artifacts/by-slug/{slug}": Endpoints.get_Get_artifact_by_slug_api_v1_artifacts_by_slug__slug__get,
 "/api/v1/artifacts/{artifact_id}": Endpoints.get_Get_artifact_api_v1_artifacts__artifact_id__get,
-"/api/v1/artifacts/{artifact_id}/content": Endpoints.get_Get_artifact_content_api_v1_artifacts__artifact_id__content_get,
 "/api/v1/me/billing/credits": Endpoints.get_Get_credits_api_v1_me_billing_credits_get,
 "/api/v1/me/billing/subscription": Endpoints.get_Get_my_subscription_api_v1_me_billing_subscription_get,
 "/api/v1/me/billing/checkout-session/{session_id}": Endpoints.get_Get_checkout_session_api_v1_me_billing_checkout_session__session_id__get,
@@ -7463,7 +7596,6 @@ export type get_Health_health_get = {
 "/api/v1/notes/{note_id}": Endpoints.get_Get_note_api_v1_notes__note_id__get,
 "/api/v1/notes/": Endpoints.get_List_notes_api_v1_notes__get,
 "/api/v1/notes/{note_id}/files/{file_id}": Endpoints.get_Get_note_file_metadata_api_v1_notes__note_id__files__file_id__get,
-"/api/v1/notes/{note_id}/content": Endpoints.get_Get_note_content_api_v1_notes__note_id__content_get,
 "/api/v1/notes/{note_id}/files/{file_id}/revisions": Endpoints.get_List_note_content_file_revisions_api_v1_notes__note_id__files__file_id__revisions_get,
 "/api/v1/notes/{note_id}/suggested-collections": Endpoints.get_List_suggested_collections_for_note_api_v1_notes__note_id__suggested_collections_get,
 "/api/v1/tags/": Endpoints.get_List_tags_api_v1_tags__get,
@@ -7476,6 +7608,7 @@ export type get_Health_health_get = {
 "/api/v1/users/me/api-keys": Endpoints.get_List_api_keys_api_v1_users_me_api_keys_get,
 "/api/v1/users/me/demographic": Endpoints.get_Get_demographic_api_v1_users_me_demographic_get,
 "/api/v1/users/me/preferences": Endpoints.get_Get_preferences_api_v1_users_me_preferences_get,
+"/api/v1/users/me/memories/{file}": Endpoints.get_Get_memory_file_api_v1_users_me_memories__file__get,
 "/api/v1/conversations": Endpoints.get_List_conversations_api_v1_conversations_get,
 "/api/v1/conversations/{conversation_id}/stream": Endpoints.get_Stream_conversation_run_api_v1_conversations__conversation_id__stream_get,
 "/api/v1/conversations/{conversation_id}/stream-text": Endpoints.get_Stream_conversation_run_text_api_v1_conversations__conversation_id__stream_text_get,
@@ -7504,6 +7637,7 @@ export type get_Health_health_get = {
 post: {
            "/api/v1/artifacts/": Endpoints.post_Create_artifact_api_v1_artifacts__post,
 "/api/v1/artifacts/{artifact_id}/content/presigned-urls": Endpoints.post_Create_artifact_content_presigned_download_url_api_v1_artifacts__artifact_id__content_presigned_urls_post,
+"/api/v1/artifacts/{artifact_id}/files/{file_id}/content/presigned-urls": Endpoints.post_Create_artifact_file_content_presigned_download_url_api_v1_artifacts__artifact_id__files__file_id__content_presigned_urls_post,
 "/api/v1/artifacts/{artifact_id}/display/presigned-urls": Endpoints.post_Create_artifact_display_presigned_download_url_api_v1_artifacts__artifact_id__display_presigned_urls_post,
 "/api/v1/artifacts/{artifact_id}/thumbnail/presigned-urls": Endpoints.post_Create_artifact_thumbnail_presigned_download_url_api_v1_artifacts__artifact_id__thumbnail_presigned_urls_post,
 "/api/v1/me/billing/discount-codes/redeem": Endpoints.post_Redeem_discount_code_api_v1_me_billing_discount_codes_redeem_post,
@@ -7520,6 +7654,7 @@ post: {
 "/api/v1/notes/{note_id}/podcasts": Endpoints.post_Create_note_podcast_api_v1_notes__note_id__podcasts_post,
 "/api/v1/notes/{note_id}/retry": Endpoints.post_Retry_note_api_v1_notes__note_id__retry_post,
 "/api/v1/notes/{note_id}/copy": Endpoints.post_Copy_note_api_v1_notes__note_id__copy_post,
+"/api/v1/notes/{note_id}/content/presigned-urls": Endpoints.post_Create_note_content_presigned_download_url_api_v1_notes__note_id__content_presigned_urls_post,
 "/api/v1/notes/{note_id}/display/presigned-urls": Endpoints.post_Create_note_display_presigned_download_url_api_v1_notes__note_id__display_presigned_urls_post,
 "/api/v1/notes/{note_id}/files/{file_id}/content/presigned-urls": Endpoints.post_Create_note_file_content_presigned_download_url_api_v1_notes__note_id__files__file_id__content_presigned_urls_post,
 "/api/v1/notes/{note_id}/files/{file_id}/revisions/{revision_id}/revert": Endpoints.post_Revert_note_content_file_revision_api_v1_notes__note_id__files__file_id__revisions__revision_id__revert_post,
@@ -7583,6 +7718,7 @@ delete: {
 "/api/v1/web-session": Endpoints.delete_Delete_web_session_api_v1_web_session_delete,
 "/api/v1/users/me": Endpoints.delete_Delete_current_user_api_v1_users_me_delete,
 "/api/v1/users/me/api-keys/{api_key_id}": Endpoints.delete_Revoke_api_key_api_v1_users_me_api_keys__api_key_id__delete,
+"/api/v1/users/me/memories/{file}": Endpoints.delete_Delete_memory_file_api_v1_users_me_memories__file__delete,
 "/api/v1/conversations/{conversation_id}": Endpoints.delete_Delete_conversation_api_v1_conversations__conversation_id__delete,
 "/api/v1/podcasts/{podcast_id}": Endpoints.delete_Delete_podcast_api_v1_podcasts__podcast_id__delete,
 "/api/v1/collections/{collection_id}": Endpoints.delete_Delete_collection_api_v1_collections__collection_id__delete,
@@ -7605,6 +7741,7 @@ put: {
 "/api/v1/users/me/invitation-code": Endpoints.put_Regenerate_invitation_code_api_v1_users_me_invitation_code_put,
 "/api/v1/users/me/demographic": Endpoints.put_Update_demographic_api_v1_users_me_demographic_put,
 "/api/v1/users/me/preferences": Endpoints.put_Update_preferences_api_v1_users_me_preferences_put,
+"/api/v1/users/me/memories/{file}": Endpoints.put_Write_memory_file_api_v1_users_me_memories__file__put,
 "/api/v1/devices/current/notification-token": Endpoints.put_Set_notification_token_api_v1_devices_current_notification_token_put,
 "/api/v1/collections/{collection_id}/notes": Endpoints.put_Set_collection_notes_api_v1_collections__collection_id__notes_put,
 "/api/v1/collections/{collection_id}/artifacts": Endpoints.put_Set_collection_artifacts_api_v1_collections__collection_id__artifacts_put,

@@ -97,6 +97,7 @@ export type {
 export type { MessageRepository } from './repositories/message'
 export type {
   NoteContentOptions,
+  NoteContentPresignedUrlOptions,
   NoteDownloadOptions,
   NoteFileContentUpdateOptions,
   NotePresignedUrlOptions,

@@ -12,6 +12,7 @@ import {
   getNoteDisplayFile,
   getNoteOriginDisplayFile,
   getNoteOriginFiles,
+  getNoteOriginalFiles,
   getNoteOwnContentFile,
   getNoteThumbnailFile,
   getNoteTldrFile,
@@ -60,6 +61,25 @@ const shapeC = {
 }
 
 describe('note slots across API shapes', () => {
+  it('combines origins and visible downloads without changing upload provenance', () => {
+    const downloaded = file('downloaded', { mimetype: 'video/mp4' })
+    const note = { origin_files: [origin], downloaded_files: [downloaded, origin] }
+    expect(getNoteOriginalFiles(note)).toEqual([origin, downloaded])
+    expect(getNoteOriginFiles(note)).toEqual([origin])
+    expect(getNoteOriginalFiles({ downloaded_files: [downloaded] })).toEqual([downloaded])
+  })
+
+  it('never recovers owner-only downloads from an article or other file slots', () => {
+    const note = {
+      origin_files: [],
+      downloaded_files: [],
+      article: { downloaded_files: [origin], files: { content: articleContent } },
+    }
+    expect(getNoteOriginalFiles(note)).toEqual([])
+    expect(getNoteOriginalFiles(shapeA)).toEqual([origin])
+    expect(getNoteOriginalFiles(undefined)).toEqual([])
+  })
+
   it.each([
     ['A', shapeA],
     ['B', shapeB],

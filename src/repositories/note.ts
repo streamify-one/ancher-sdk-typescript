@@ -39,6 +39,8 @@ type NoteSuggestedCollectionsEndpointQuery =
 export type NotePresignedUrlOptions = PresignedUrlQueryOptions
 export type NoteDownloadOptions = PresignedDownloadOptions
 export type NoteContentOptions = RawContentOptions
+export type NoteContentPresignedUrlOptions =
+  EndpointByMethod['post']['/api/v1/notes/{note_id}/content/presigned-urls']['parameters']['query']
 export type NoteFileContentUpdateOptions = Pick<UploadOptions, 'filename' | 'onProgress' | 'signal'>
 
 export interface NoteRepository extends ListSurface<Note, NoteWhere, NoteOrderBy> {
@@ -74,6 +76,8 @@ export interface NoteRepository extends ListSurface<Note, NoteWhere, NoteOrderBy
    * expires in ~300s and overwriting the marker destroys the reference.
    */
   getContent(noteId: string, options?: NoteContentOptions): Promise<Response>
+  /** Mint the raw body URL through note-scoped access; records the note being opened. */
+  contentPresignedUrl(noteId: string, options?: NoteContentPresignedUrlOptions): Promise<string>
   /** Mint a presigned CDN URL for a note's display file. */
   displayPresignedUrl(noteId: string, options?: NotePresignedUrlOptions): Promise<string>
   /**
@@ -173,6 +177,13 @@ export function createNoteRepository(client: AncherClient): NoteRepository {
       )
     },
     displayPresignedUrl,
+    async contentPresignedUrl(noteId, options = {}) {
+      const { download_url } = await client.api.post(
+        '/api/v1/notes/{note_id}/content/presigned-urls',
+        { path: { note_id: noteId }, query: options }
+      )
+      return download_url
+    },
     async downloadDisplay(noteId, options = {}) {
       const { signal, ...presignedOptions } = options
       const url = await displayPresignedUrl(noteId, presignedOptions)

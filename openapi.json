@@ -1848,102 +1848,6 @@
             }
           }
         }
-      },
-      "get": {
-        "tags": [
-          "Artifacts"
-        ],
-        "summary": "Get Artifact Content",
-        "description": "Return the artifact's content with embedded references resolved.\n\nFor markdown and HTML bodies, ``streamify-file://{UUID}`` references are\nrewritten to presigned URLs so embedded images/media render inline —\nmirroring the note content endpoint. Only files linked to this artifact\nare resolved; unauthorized references keep the raw marker. Other MIME\ntypes are served verbatim.\n\nAuth is lenient so the public share viewer (``/s/a/{slug}``) can fetch a\npublic markdown/HTML artifact's resolved body without a session — the\n``files.content.presigned_url`` is deliberately null for resolvable text, so\nthis endpoint is the only way an anonymous viewer reads it. A valid token\nstill lets owners read their own private artifacts; a missing or invalid\ntoken degrades to anonymous (public-only), and a private artifact then\nreturns 404 rather than 401.",
-        "operationId": "get_artifact_content_api_v1_artifacts__artifact_id__content_get",
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "artifact_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "title": "Artifact Id"
-            }
-          },
-          {
-            "name": "revision",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "minimum": 1
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Revision number to retrieve",
-              "title": "Revision"
-            },
-            "description": "Revision number to retrieve"
-          },
-          {
-            "name": "streamify_csrf_token",
-            "in": "cookie",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Streamify Csrf Token"
-            }
-          },
-          {
-            "name": "streamify_access_token",
-            "in": "cookie",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Streamify Access Token"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/api/v1/artifacts/{artifact_id}/content/presigned-urls": {
@@ -1952,7 +1856,7 @@
           "Artifacts"
         ],
         "summary": "Create Artifact Content Presigned Download Url",
-        "description": "Mint a presigned URL for the artifact's content file.\n\nA direct link to the raw content file, used to *display* image/binary\nartifacts and for downloads — distinct from ``GET …/content``, which\nserves resolved markdown/HTML text. References inside the body are NOT\nresolved here; the bytes are served as stored.\n\nAccessible to the artifact owner or any authenticated caller when the\nartifact is marked public. ``w`` / ``h`` are baked into the signed URL\nso the CloudFront image behavior's Lambda@Edge resizer serves a cached\nvariant; ignored for non-image MIMEs.",
+        "description": "Mint a presigned URL for the artifact's content file.\n\nA direct link to the raw content file: used to *display* image/binary\nartifacts, for downloads, and as the way clients read a markdown body.\nThe bytes are served as stored, so embedded ``streamify-file://`` markers\nstay unresolved and clients mint each referenced file through\n``POST /artifacts/{artifact_id}/files/{file_id}/content/presigned-urls``.\n\nThis route records the artifact being opened.\n\nUses lenient auth: a valid token resolves the owner (so private artifacts\nthey own are reachable), while a missing or stale token degrades to\nanonymous (public-only) instead of a 401 — that is what lets the public\nshare viewer (``/s/a/{slug}``) read a public artifact's body without a\nsession. ``w`` / ``h`` are baked into the signed URL so the CloudFront\nimage behavior's Lambda@Edge resizer serves a cached variant; ignored for\nnon-image MIMEs.",
         "operationId": "create_artifact_content_presigned_download_url_api_v1_artifacts__artifact_id__content_presigned_urls_post",
         "security": [
           {
@@ -2000,6 +1904,149 @@
               "title": "Revision"
             },
             "description": "Revision number to retrieve"
+          },
+          {
+            "name": "w",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 4096,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Image resize width (ignored for non-images)",
+              "title": "W"
+            },
+            "description": "Image resize width (ignored for non-images)"
+          },
+          {
+            "name": "h",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "maximum": 4096,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Image resize height (ignored for non-images)",
+              "title": "H"
+            },
+            "description": "Image resize height (ignored for non-images)"
+          },
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresignedDownloadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/artifacts/{artifact_id}/files/{file_id}/content/presigned-urls": {
+      "post": {
+        "tags": [
+          "Artifacts"
+        ],
+        "summary": "Create Artifact File Content Presigned Download Url",
+        "description": "Mint a URL for a file linked to a readable artifact.\n\nThis is the authorization-preserving primitive clients use when resolving\n``streamify-file://`` markers. Artifact ownership/public access gates the\nrequest, and only files linked to that artifact are signable.\n\nDeliberately signs the CURRENT revision only, with no way to ask for an\nolder one. The membership check authorizes a file *id*, not a revision, so\nan anonymous reader of a public artifact could otherwise mint any\nhistorical revision of a linked private file — bytes that may predate the\ncontent ever being shared. A marker names a file, not a revision, so this\nalso matches what the former server-side resolver signed.",
+        "operationId": "create_artifact_file_content_presigned_download_url_api_v1_artifacts__artifact_id__files__file_id__content_presigned_urls_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "artifact_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Artifact Id"
+            }
+          },
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "File Id"
+            }
+          },
+          {
+            "name": "expiration",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 3600,
+              "minimum": 60,
+              "default": 300,
+              "title": "Expiration"
+            }
           },
           {
             "name": "w",
@@ -4762,7 +4809,7 @@
           "Notes"
         ],
         "summary": "Get Note File Metadata",
-        "description": "Get file metadata through a note.\n\nAccessible if the parent note is public or owned by the caller.",
+        "description": "Get file metadata through a note.\n\nDownloaded files require can_show=True for every reader, including owners.",
         "operationId": "get_note_file_metadata_api_v1_notes__note_id__files__file_id__get",
         "security": [
           {
@@ -4847,14 +4894,14 @@
         }
       }
     },
-    "/api/v1/notes/{note_id}/content": {
-      "get": {
+    "/api/v1/notes/{note_id}/content/presigned-urls": {
+      "post": {
         "tags": [
           "Notes"
         ],
-        "summary": "Get Note Content",
-        "description": "Get the resolved text content for a note.\n\nReturns the note's content file (or falls back to the article's content\nfile). For markdown and HTML, ``streamify-file://`` references are\nresolved to real HTTP URLs. Accessible if the parent note is public or\nowned by the caller.",
-        "operationId": "get_note_content_api_v1_notes__note_id__content_get",
+        "summary": "Create Note Content Presigned Download Url",
+        "description": "Mint a presigned URL for the note's raw content file.\n\nSigns the note's content file, or the article's when the note has none.\nThe bytes are served as stored: clients resolve any embedded\n``streamify-file://`` markers themselves, minting each referenced file\nthrough ``POST /notes/{note_id}/files/{file_id}/content/presigned-urls``.\n\nThis route — not the per-file one below — is what records a note being\nopened, so resolving a body full of images costs one open, not one per\nimage.\n\nUses lenient auth: a valid token resolves the owner (so private notes they\nown are reachable), while a missing or stale token degrades to anonymous\n(public-only) instead of a 401, and CSRF is not enforced. That is what\nlets an anonymous share recipient read a public note's body.",
+        "operationId": "create_note_content_presigned_download_url_api_v1_notes__note_id__content_presigned_urls_post",
         "security": [
           {
             "HTTPBearer": []
@@ -4869,6 +4916,18 @@
               "type": "string",
               "format": "uuid",
               "title": "Note Id"
+            }
+          },
+          {
+            "name": "expiration",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 3600,
+              "minimum": 60,
+              "default": 300,
+              "title": "Expiration"
             }
           },
           {
@@ -4928,7 +4987,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/PresignedDownloadResponse"
+                }
               }
             }
           },
@@ -4951,7 +5012,7 @@
           "Notes"
         ],
         "summary": "Create Note Display Presigned Download Url",
-        "description": "Mint a presigned URL for the note's display file (e.g. PDF preview).\n\nAccessible to the note owner or any caller when the note is marked\npublic. Returns 404 when the note has no display file — callers can\nfall back to ``GET /notes/{note_id}/content`` for the markdown body.\n``w`` / ``h`` are baked into the signed URL for the image-resize\nLambda@Edge; ignored for non-image MIMEs.\n\nUses lenient auth: a valid token resolves the owner (so private notes they\nown are reachable), while a missing or stale token degrades to anonymous\n(public-only) instead of a 401, and CSRF is not enforced.",
+        "description": "Mint a presigned URL for the note's display file (e.g. PDF preview).\n\nAccessible to the note owner or any caller when the note is marked\npublic. Returns 404 when the note has no display file — callers can\nfall back to ``POST /notes/{note_id}/content/presigned-urls`` for the\nmarkdown body.\n``w`` / ``h`` are baked into the signed URL for the image-resize\nLambda@Edge; ignored for non-image MIMEs.\n\nUses lenient auth: a valid token resolves the owner (so private notes they\nown are reachable), while a missing or stale token degrades to anonymous\n(public-only) instead of a 401, and CSRF is not enforced.",
         "operationId": "create_note_display_presigned_download_url_api_v1_notes__note_id__display_presigned_urls_post",
         "security": [
           {
@@ -5103,7 +5164,7 @@
           "Notes"
         ],
         "summary": "Create Note File Content Presigned Download Url",
-        "description": "Create a presigned download URL for a file linked to a note.\n\nNote ownership/public access gates URL minting — a caller who can read\nthe note can read its referenced files. Mirrors the access check the\nlegacy ``GET /notes/{id}/files/{id}/content`` redirect enforced.\n``w`` / ``h`` are baked into the signed URL for the image-resize\nLambda@Edge; ignored for non-image MIMEs.\n\nUses lenient auth: a valid token resolves the owner (so private notes they\nown are reachable), while a missing or stale token degrades to anonymous\n(public-only) instead of a 401, and CSRF is not enforced.",
+        "description": "Create a presigned download URL for a file linked to a note.\n\nCallers must be able to read the note. Downloaded files additionally require\n``can_show=True`` for every reader, including the note owner.\n``w`` / ``h`` are baked into the signed URL for the image-resize\nLambda@Edge; ignored for non-image MIMEs.\n\nUses lenient auth: a valid token resolves the owner (so private notes they\nown are reachable), while a missing or stale token degrades to anonymous\n(public-only) instead of a 401, and CSRF is not enforced.",
         "operationId": "create_note_file_content_presigned_download_url_api_v1_notes__note_id__files__file_id__content_presigned_urls_post",
         "security": [
           {
@@ -7557,7 +7618,7 @@
           "Files"
         ],
         "summary": "Create Presigned Download Url",
-        "description": "Create presigned URL sub-resource for file.\n\nAccessible to the file owner (private files) or any caller (including\nanonymous viewers) when the file is marked public. Optional ``revision``\ntargets a specific historical revision instead of the current S3 key.\n\n``w`` / ``h`` are baked into the signed URL so the CloudFront image\nbehavior's Lambda@Edge resizer serves a cached variant.\n\nUses lenient auth: a valid token resolves the owner (so private files they\nown are reachable), while a missing or stale token degrades to anonymous\n(public-only) instead of a 401, and CSRF is not enforced.",
+        "description": "Create presigned URL sub-resource for file.\n\nAccessible to the file owner (private files) or any caller (including\nanonymous viewers) when the file is marked public. Optional ``revision``\ntargets a specific historical revision instead of the current S3 key.\n\n``w`` / ``h`` are baked into the signed URL so the CloudFront image\nbehavior's Lambda@Edge resizer serves a cached variant.\n\nThe bytes are served as stored, so any embedded ``streamify-file://``\nmarkers stay unresolved and clients resolve them themselves. This route\nrecords the file being opened.\n\nUses lenient auth: a valid token resolves the owner (so private files they\nown are reachable), while a missing or stale token degrades to anonymous\n(public-only) instead of a 401, and CSRF is not enforced.",
         "operationId": "create_presigned_download_url_api_v1_files__file_id__content_presigned_urls_post",
         "security": [
           {
@@ -11337,6 +11398,251 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/memories/{file}": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get a memory file",
+        "description": "Get a memory file from the current user's memory store",
+        "operationId": "get_memory_file_api_v1_users_me_memories__file__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 80,
+              "pattern": "^[A-Za-z0-9](\\.?[A-Za-z0-9_-]+)*\\.?$",
+              "title": "File"
+            }
+          },
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserMemoryFile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Write a memory file",
+        "description": "Create or update a memory file. Omit `version` to create a new file; pass the version from the last read to update it.",
+        "operationId": "write_memory_file_api_v1_users_me_memories__file__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 80,
+              "pattern": "^[A-Za-z0-9](\\.?[A-Za-z0-9_-]+)*\\.?$",
+              "title": "File"
+            }
+          },
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserMemoryWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserMemoryFile"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Delete a memory file",
+        "description": "Delete a memory file. The main notebook (MEMORY.md) cannot be deleted.",
+        "operationId": "delete_memory_file_api_v1_users_me_memories__file__delete",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "file",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 80,
+              "pattern": "^[A-Za-z0-9](\\.?[A-Za-z0-9_-]+)*\\.?$",
+              "title": "File"
+            }
+          },
+          {
+            "name": "streamify_csrf_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Csrf Token"
+            }
+          },
+          {
+            "name": "streamify_access_token",
+            "in": "cookie",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Streamify Access Token"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
           },
           "422": {
             "description": "Validation Error",
@@ -21695,6 +22001,14 @@
             "title": "Origin Files",
             "description": "User-uploaded source files (not present for URL/text notes)"
           },
+          "downloaded_files": {
+            "items": {
+              "$ref": "#/components/schemas/File"
+            },
+            "type": "array",
+            "title": "Downloaded Files",
+            "description": "Fetched source files exposed through owned notes"
+          },
           "files": {
             "additionalProperties": {
               "$ref": "#/components/schemas/File"
@@ -21731,6 +22045,7 @@
           "thumbnail_file",
           "display_file",
           "origin_files",
+          "downloaded_files",
           "files"
         ],
         "title": "Article",
@@ -22500,12 +22815,17 @@
           "topup": {
             "$ref": "#/components/schemas/BucketUsage",
             "description": "Purchased top-up credits (never expire)"
+          },
+          "trial": {
+            "$ref": "#/components/schemas/BucketUsage",
+            "description": "Signup trial credits (expire at the trial's end). Spent before the other buckets, because they are the soonest to lapse."
           }
         },
         "type": "object",
         "required": [
           "subscription",
-          "topup"
+          "topup",
+          "trial"
         ],
         "title": "BalanceResponse",
         "description": "Response for ``GET /me/billing/credits``.\n\nTotals only — ledger history is deliberately NOT included (it grows\nunbounded); a dedicated paginated endpoint can serve it if a client\never needs the history."
@@ -32201,6 +32521,15 @@
             "description": "Source files the note was created from: uploads for file notes, the generated text.md for text notes, the fetched resource for direct-URL notes; empty for scraped web pages",
             "readOnly": true
           },
+          "downloaded_files": {
+            "items": {
+              "$ref": "#/components/schemas/File"
+            },
+            "type": "array",
+            "title": "Downloaded Files",
+            "description": "Downloaded source files with can_show=True and signed URLs on owner detail reads; empty for other readers and list responses",
+            "readOnly": true
+          },
           "files": {
             "additionalProperties": {
               "$ref": "#/components/schemas/File"
@@ -32243,6 +32572,7 @@
           "published_date",
           "language",
           "origin_files",
+          "downloaded_files",
           "files"
         ],
         "title": "Note",
@@ -34169,6 +34499,19 @@
             "description": "Free trial length in days; 0 = no trial",
             "default": 0
           },
+          "trial_credit_grant": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trial Credit Grant",
+            "description": "Credits granted for the trial period instead of credit_grant; null falls back to credit_grant"
+          },
           "is_active": {
             "type": "boolean",
             "title": "Is Active",
@@ -34213,6 +34556,7 @@
           "billing_interval",
           "credit_interval",
           "trial_days",
+          "trial_credit_grant",
           "is_active",
           "display_price_cents",
           "currency"
@@ -35449,6 +35793,32 @@
             "title": "Current Period End",
             "description": "End of current billing period"
           },
+          "trial_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trial Start",
+            "description": "When the free trial began; null if the subscription never had one. Unrecoverable after conversion, so captured while the trial is live."
+          },
+          "trial_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trial End",
+            "description": "When the free trial ends; null if the subscription never had one"
+          },
           "cancel_at": {
             "anyOf": [
               {
@@ -35510,6 +35880,8 @@
           "status",
           "current_period_start",
           "current_period_end",
+          "trial_start",
+          "trial_end",
           "cancel_at",
           "canceled_at",
           "last_renewed_at",
@@ -37429,6 +37801,61 @@
         ],
         "title": "UserLogin",
         "description": "Schema for user login."
+      },
+      "UserMemoryFile": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "title": "File",
+            "description": "Normalised file name, e.g. \"MEMORY.md\""
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "File content"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version",
+            "description": "Opaque version for compare-and-set writes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file",
+          "content",
+          "version"
+        ],
+        "title": "UserMemoryFile",
+        "description": "A memory file's content and compare-and-set version."
+      },
+      "UserMemoryWrite": {
+        "properties": {
+          "content": {
+            "type": "string",
+            "maxLength": 5000,
+            "title": "Content",
+            "description": "New file content"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version",
+            "description": "Version returned by the last read; omit to create"
+          }
+        },
+        "type": "object",
+        "required": [
+          "content"
+        ],
+        "title": "UserMemoryWrite",
+        "description": "Request body for creating or updating a memory file."
       },
       "UserPreferences": {
         "properties": {
